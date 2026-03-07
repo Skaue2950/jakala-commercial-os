@@ -1,0 +1,33 @@
+name: Daily Lead Radar
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+jobs:
+  lead-radar:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run lead radar script
+        run: python scripts/lead_radar.py
+
+      - name: Commit daily lead file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add intelligence/daily-leads/
+          git commit -m "Add daily lead radar" || echo "No changes to commit"
+          git push
