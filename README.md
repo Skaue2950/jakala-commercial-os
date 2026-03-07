@@ -27,4 +27,4 @@ Operational checklists.
 log/
 Important decisions and session logs.
 
-Claude reads this repository to understand our go-to-market context.
+Claude reads this repository to understand our go-to-market context.# jakala-commercial-os
