@@ -559,6 +559,276 @@ Rules:
     )
 
 
+# ── Signals API ──────────────────────────────────────────────────────────────
+
+@app.route("/api/signals")
+def api_signals():
+    hot = [
+        {"company":"Sport Outlet","text":"CTO + CDO both vacant March 2026. Entry via CEO Tor-André Skeie. Vacancy = budget already approved.","tag":"URGENT","tagColor":"red","icon":"🔴","slug":"sport-outlet"},
+        {"company":"Trumf (NorgesGruppen)","text":"Rikke Etholm-Idsøe — new Commercial Director in newly created role. 90-day honeymoon window open now.","tag":"90-DAY WINDOW","tagColor":"red","icon":"⚡","slug":"trumf"},
+        {"company":"Vinmonopolet","text":"Espen Terland new CDO (ex-XXL 15 years). Agenda not set — honeymoon phase. Ideal discovery entry.","tag":"NEW EXEC","tagColor":"amber","icon":"🆕","slug":"vinmonopolet"},
+        {"company":"Skeidar","text":"\"Best furniture portal in the Nordics\" declared publicly by CEO. CIO Sujit Nath confirmed buyer.","tag":"NAMED BUYER","tagColor":"amber","icon":"🏗️","slug":"skeidar"},
+        {"company":"BI Handelshøyskolen","text":"Rector Karen Spens leaving August 2026. Institution in transition — new leadership will reset priorities.","tag":"TRANSITION","tagColor":"amber","icon":"🎓","slug":"bi-handelshoyskolen"},
+        {"company":"GANT Norway","text":"New CEO Fredrik Malm + IMPACT Commerce new ecom partner (Feb 2026). Integration phase = JAKALA entry.","tag":"NEW CEO","tagColor":"amber","icon":"👔","slug":"gant-norway"},
+        {"company":"H&M Sweden","text":"ICP 9/10 · Deal 9/10 · €900K unweighted. No named buyer confirmed yet. Largest untouched opportunity.","tag":"TOP PRIORITY","tagColor":"blue","icon":"💎","slug":"hm"},
+        {"company":"Matas","text":"ICP 9/10 · Deal 9/10 · €700K. AI Readiness entry. Loyalty data + personalisation play — Matas More programme.","tag":"HIGH VALUE","tagColor":"blue","icon":"💡","slug":"matas"},
+    ]
+    # Append signals from intelligence folder
+    extra = []
+    intel = BASE_DIR / "intelligence" / "daily-leads"
+    if intel.exists():
+        for f in sorted(intel.iterdir(), reverse=True)[:1]:
+            if f.suffix == ".md":
+                for line in f.read_text(encoding="utf-8").splitlines():
+                    if line.startswith("## ") and len(line) > 4:
+                        extra.append({"company": line[3:].strip(), "text": f"From daily radar {f.stem}", "tag":"RADAR","tagColor":"blue","icon":"📡","slug":""})
+    return jsonify({"signals": hot + extra[:4]})
+
+
+# ── Pitch Simulator API ───────────────────────────────────────────────────────
+
+@app.route("/api/pitch", methods=["POST"])
+def api_pitch():
+    data = request.get_json()
+    messages = data.get("messages", [])
+    account_slug = data.get("account", "")
+    scoring = data.get("scoring", False)
+
+    account_content = load_account_files(account_slug) or ""
+    account_name = account_slug.replace("-", " ").title()
+
+    # Extract buyer from stakeholders
+    stakeholders = read_file(f"Accounts/{account_slug}/stakeholders.md") or ""
+    buyer_match = re.search(r"###\s+(.+)", stakeholders)
+    title_match = re.search(r"\*\*Title:\*\*\s*(.+)", stakeholders)
+    buyer_name  = buyer_match.group(1).strip() if buyer_match else "The Decision Maker"
+    buyer_title = title_match.group(1).strip() if title_match else "CDO / CMO"
+
+    if scoring:
+        system = f"""You are a senior sales coach. The user just completed a pitch practice session trying to sell JAKALA's services to {account_name}.
+
+Review the conversation and provide a concise scorecard:
+
+**Pitch Scorecard — {account_name}**
+Score each dimension 1–10:
+- Opening hook: X/10
+- Value proposition clarity: X/10
+- Objection handling: X/10
+- Buyer fit: X/10
+- Call to action: X/10
+- **Overall: X/10**
+
+Then give 1 key strength and 1 specific improvement to make the pitch 20% more effective."""
+    else:
+        system = f"""You are {buyer_name}, {buyer_title} at {account_name}.
+
+ACCOUNT CONTEXT:
+{account_content[:2000]}
+
+YOUR PERSONA:
+- You are a senior executive who is busy, slightly sceptical, and protective of budget
+- You care deeply about business outcomes, not technology for its own sake
+- You ask tough but fair questions
+- You are open to the right partner if they demonstrate clear ROI and understand your specific challenges
+- You do NOT know about JAKALA or their services — treat them as a cold approach
+- Stay in character throughout. Respond as this buyer would in a real meeting.
+- Keep responses concise (2-5 sentences) — you're in a meeting, not writing an essay
+- Push back if the pitch is vague or generic
+- If the pitch is compelling, show genuine interest
+
+Start the conversation by briefly introducing yourself and asking what brings the salesperson to this meeting."""
+
+    def generate():
+        with client.messages.stream(
+            model=MODEL,
+            max_tokens=1024,
+            system=system,
+            messages=messages,
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+
+# ── Board Report API ──────────────────────────────────────────────────────────
+
+@app.route("/api/board-report", methods=["POST"])
+def api_board_report():
+    import traceback
+    if not PPTX_OK:
+        return jsonify({"error": "python-pptx not installed"}), 500
+    try:
+        return _do_board_report()
+    except Exception as e:
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+
+
+def _do_board_report():
+    today = datetime.date.today().isoformat()
+    accounts = get_accounts()
+    pipeline_lines = []
+    for slug in accounts[:60]:
+        ov = read_file(f"Accounts/{slug}/overview.md") or ""
+        st = read_file(f"Accounts/{slug}/strategy.md") or ""
+        icp_m  = re.search(r"ICP Score[:\s]+(\d+)/10", ov)
+        deal_m = re.search(r"Deal Score[:\s]+(\d+)/10", ov)
+        icp  = int(icp_m.group(1))  if icp_m  else 0
+        deal = int(deal_m.group(1)) if deal_m else 0
+        if icp >= 7 or deal >= 7:
+            pipeline_lines.append(f"- {slug.replace('-',' ').title()}: ICP {icp}, Deal {deal}")
+
+    top_ctx = read_file("intelligence/top-opportunities.md") or ""
+
+    prompt = f"""You are building a board-level commercial review for JAKALA Nordic.
+
+TODAY: {today}
+PIPELINE (top accounts):
+{chr(10).join(pipeline_lines[:20])}
+
+TOP OPPORTUNITIES:
+{top_ctx[:1500]}
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "exec_summary": "2-sentence pipeline status for the board",
+  "pipeline_value": "€6.8M",
+  "pipeline_status": "AMBER",
+  "top_deals": [
+    {{"name":"H&M","value":"€900K","stage":"Prospecting","gtm":"Data Revenue Unlock","next":"Identify buyer — no named contact yet"}},
+    {{"name":"Matas","value":"€700K","stage":"Prospecting","gtm":"AI Readiness","next":"Outreach to loyalty/data team"}},
+    {{"name":"Elkjøp","value":"€700K","stage":"Prospecting","gtm":"Commerce Optimization","next":"Contact Morten Syversen"}},
+    {{"name":"Varner Group","value":"€450K","stage":"Prospecting","gtm":"Data Revenue Unlock","next":"Confirm buyer — Elise Laupstad"}},
+    {{"name":"Trumf","value":"€450K","stage":"Prospecting","gtm":"Data Revenue Unlock","next":"Reach Rikke Etholm-Idsøe (new role)"}}
+  ],
+  "q2_forecast": "€420K",
+  "q2_confidence": "Base case",
+  "q3_forecast": "€850K",
+  "q3_confidence": "Upside",
+  "risks": ["Zero first meetings booked","No named buyer on top 3 accounts","Pipeline age increasing"],
+  "opportunities": ["5 hot timing signals active this week","45 ICP-scored accounts ready to contact","Trumf + Vinmonopolet honeymoon windows open"],
+  "this_week": [
+    {{"action":"Contact Sport Outlet CEO Tor-André Skeie","why":"CTO + CDO both vacant — entry window closing fast"}},
+    {{"action":"Reach Trumf Commercial Director Rikke Etholm-Idsøe","why":"New role, 90-day honeymoon window"}},
+    {{"action":"Vinmonopolet CDO Espen Terland outreach","why":"New CDO, agenda not set — perfect timing"}},
+    {{"action":"H&M buyer identification","why":"€900K — largest opportunity, buyer TBD"}},
+    {{"action":"Matas loyalty team outreach","why":"€700K, AI Readiness — data infrastructure opportunity"}}
+  ],
+  "gtm_split": {{"dru":12,"ai":11,"co":13,"xt":9}}
+}}
+
+Return ONLY the JSON — no explanation."""
+
+    response = client.messages.create(
+        model=MODEL, max_tokens=2500,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = re.sub(r"^```json\s*", "", response.content[0].text.strip())
+    raw = re.sub(r"\s*```$", "", raw)
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return jsonify({"error": "AI parse failed", "raw": raw}), 500
+
+    buf = _build_board_report(data, today)
+    return send_file(buf,
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        as_attachment=True,
+        download_name=f"JAKALA-Board-Report-{today}.pptx")
+
+
+def _build_board_report(data, today):
+    prs = _prs()
+
+    # Slide 1 — Cover
+    s = _slide(prs); _bg(s)
+    _rect(s, Inches(0), Inches(0), Inches(0.08), H, BLUE)
+    _rect(s, Inches(0), H - Inches(0.5), W, Inches(0.5), BLUE)
+    _txt(s, "JAKALA NORDIC", Inches(0.3), Inches(1.2), Inches(8), Inches(0.4), size=10, bold=True, color=MUTED)
+    _txt(s, "Commercial\nBoard Review", Inches(0.3), Inches(1.75), Inches(8.5), Inches(2.5), size=44, bold=True)
+    _txt(s, today, Inches(0.3), Inches(4.2), Inches(4), Inches(0.35), size=12, color=MUTED)
+    status = data.get("pipeline_status", "AMBER")
+    scol = GREEN if status == "GREEN" else (RED if status == "RED" else RGBColor(0xF5,0xA6,0x23))
+    _rect(s, Inches(0.3), Inches(4.75), Inches(2.2), Inches(0.45), scol)
+    _txt(s, f"STATUS: {status}", Inches(0.35), Inches(4.77), Inches(2.1), Inches(0.4), size=11, bold=True, color=WHITE)
+
+    # Slide 2 — KPIs + Exec Summary
+    s = _slide(prs); _bg(s)
+    _header(s, "PIPELINE OVERVIEW", "Nordic Commercial Pipeline — Q1–Q2 2026")
+    kpis = [
+        (data.get("pipeline_value","€6.8M"), "Total Pipeline", BLUE),
+        ("45", "Active Accounts", NAVY),
+        (data.get("q2_forecast","€420K"), "Q2 Base Case", GREEN),
+        ("18", "Named Buyers", RGBColor(0xF5,0xA6,0x23)),
+    ]
+    for i, (val, lbl, col) in enumerate(kpis):
+        x = Inches(0.4) + i * Inches(2.35)
+        _rect(s, x, Inches(1.5), Inches(2.1), Inches(1.3), col)
+        _txt(s, val, x+Inches(0.12), Inches(1.56), Inches(1.86), Inches(0.72), size=26, bold=True)
+        _txt(s, lbl, x+Inches(0.12), Inches(2.24), Inches(1.86), Inches(0.45), size=10, color=WHITE)
+    _txt(s, data.get("exec_summary",""), Inches(0.5), Inches(3.1), Inches(9.0), Inches(1.0), size=13, color=GREY)
+    _bullet_col(s, Inches(0.5), Inches(4.3), Inches(4.3), Inches(2.8), [("Key Risks", data.get("risks",[]))])
+    _bullet_col(s, Inches(5.0), Inches(4.3), Inches(4.3), Inches(2.8), [("Key Opportunities", data.get("opportunities",[]))])
+    _footer(s, f"JAKALA Nordic Board Review — {today} — Confidential")
+
+    # Slide 3 — Top 5 Deals
+    s = _slide(prs); _bg(s)
+    _header(s, "TOP OPPORTUNITIES", "Highest-Value Active Deals")
+    cols_cycle = [GREEN, BLUE, BLUE, NAVY, NAVY]
+    for i, deal in enumerate(data.get("top_deals",[])[:5]):
+        y = Inches(1.55) + i * Inches(1.04)
+        col = cols_cycle[i]
+        _rect(s, Inches(0.4), y, Inches(0.08), Inches(0.84), col)
+        _txt(s, deal.get("name",""), Inches(0.6), y+Inches(0.02), Inches(3.0), Inches(0.44), size=14, bold=True)
+        _txt(s, deal.get("gtm",""), Inches(0.6), y+Inches(0.44), Inches(3.0), Inches(0.35), size=10, color=MUTED)
+        _txt(s, deal.get("value",""), Inches(3.8), y+Inches(0.02), Inches(1.5), Inches(0.44), size=18, bold=True, color=col)
+        _txt(s, deal.get("stage",""), Inches(3.8), y+Inches(0.44), Inches(1.5), Inches(0.35), size=10, color=MUTED)
+        _txt(s, f"\u2192 {deal.get('next','')}", Inches(5.5), y+Inches(0.2), Inches(3.8), Inches(0.45), size=11, color=GREY)
+    _footer(s, f"JAKALA Nordic Board Review — {today} — Confidential")
+
+    # Slide 4 — Forecast
+    s = _slide(prs); _bg(s)
+    _header(s, "REVENUE FORECAST", "Q2–Q3 2026 Probability-Weighted")
+    for i, (period, val, conf) in enumerate([
+        ("Q2 2026 Base", data.get("q2_forecast","€420K"), data.get("q2_confidence","Base case")),
+        ("Q3 2026 Upside", data.get("q3_forecast","€850K"), data.get("q3_confidence","Upside")),
+        ("FY 2026 Target", "€1.8M", "Stretch"),
+    ]):
+        x = Inches(0.5) + i * Inches(3.1)
+        _rect(s, x, Inches(1.55), Inches(2.8), Inches(1.8), NAVY)
+        _txt(s, period, x+Inches(0.15), Inches(1.62), Inches(2.5), Inches(0.44), size=11, bold=True, color=MUTED)
+        _txt(s, val, x+Inches(0.15), Inches(2.1), Inches(2.5), Inches(0.72), size=32, bold=True, color=BLUE)
+        _txt(s, conf, x+Inches(0.15), Inches(2.8), Inches(2.5), Inches(0.4), size=11, color=GREY)
+    sp = data.get("gtm_split", {"dru":12,"ai":11,"co":13,"xt":9})
+    _bullet_col(s, Inches(0.5), Inches(3.8), Inches(4.0), Inches(3.3), [("GTM Strategy Mix", [
+        f"Commerce Optimization: {sp.get('co',0)} accounts",
+        f"Data Revenue Unlock: {sp.get('dru',0)} accounts",
+        f"AI Readiness: {sp.get('ai',0)} accounts",
+        f"Experience Transformation: {sp.get('xt',0)} accounts",
+    ])])
+    _footer(s, f"JAKALA Nordic Board Review — {today} — Confidential")
+
+    # Slide 5 — Priority Actions
+    s = _slide(prs); _bg(s)
+    _header(s, "PRIORITY ACTIONS", "This Week's Commercial Focus")
+    colors_c = [BLUE, GREEN, RED, RGBColor(0xF5,0xA6,0x23), BLUE]
+    for i, item in enumerate(data.get("this_week",[])[:5]):
+        y = Inches(1.6) + i * Inches(1.1)
+        col = colors_c[i % len(colors_c)]
+        _rect(s, Inches(0.5), y, Inches(0.52), Inches(0.52), col)
+        _txt(s, str(i+1), Inches(0.5), y, Inches(0.52), Inches(0.52), size=20, bold=True, align=PP_ALIGN.CENTER)
+        _txt(s, item.get("action",""), Inches(1.15), y, Inches(8.1), Inches(0.42), size=14, bold=True)
+        _txt(s, item.get("why",""), Inches(1.15), y+Inches(0.42), Inches(8.1), Inches(0.5), size=11, color=GREY)
+    _footer(s, f"JAKALA Nordic Board Review — {today} — Confidential")
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
+
+
 # ── Frontend ─────────────────────────────────────────────────────────────────
 
 HTML = """<!DOCTYPE html>
@@ -1153,6 +1423,173 @@ body::after {
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+/* ══════════════════════════════════════════
+   BOARD REPORT BUTTON
+══════════════════════════════════════════ */
+.btn-board {
+  padding: 8px 16px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--purple), #9B6BFF);
+  color: #fff; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 700;
+  transition: all 0.18s; box-shadow: 0 4px 14px rgba(123,92,245,0.3);
+  white-space: nowrap; align-self: flex-start;
+}
+.btn-board:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(123,92,245,0.45); }
+.btn-board:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ══════════════════════════════════════════
+   PIPELINE RADAR
+══════════════════════════════════════════ */
+#tab-radar { overflow-y: auto; }
+#radar-wrap { padding: 28px 36px; }
+.radar-title { font-size: 22px; font-weight: 800; color: var(--white); letter-spacing: -0.4px; }
+.radar-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; margin-bottom: 22px; }
+.radar-layout { display: flex; gap: 22px; align-items: flex-start; }
+.radar-svg-container {
+  flex: 1; max-width: 580px;
+  background: rgba(255,255,255,0.018); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; padding: 10px;
+}
+#radar-svg { width: 100%; height: auto; display: block; }
+@keyframes radarSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+#radar-sweep { animation: radarSweep 4s linear infinite; transform-origin: 300px 300px; }
+.radar-sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+.radar-panel {
+  background: rgba(255,255,255,0.022); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+}
+.radar-panel-title { font-size: 9.5px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 11.5px; color: var(--muted2); }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.rhi { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
+.rhi:last-child { border-bottom: none; }
+.rhi:hover { opacity: 0.75; }
+.rhi-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rhi-name { flex: 1; font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rhi-score { font-size: 10px; font-weight: 800; color: var(--muted); }
+
+/* ══════════════════════════════════════════
+   PITCH SIMULATOR
+══════════════════════════════════════════ */
+#tab-simulator { overflow: hidden; display: none; flex-direction: column; }
+#tab-simulator.active { display: flex; }
+#sim-setup {
+  padding: 22px 32px 18px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(6,6,26,0.9);
+}
+.sim-title { font-size: 18px; font-weight: 800; color: var(--white); letter-spacing: -0.3px; }
+.sim-sub { font-size: 12px; color: var(--muted2); margin-top: 3px; margin-bottom: 14px; }
+.sim-controls { display: flex; gap: 12px; align-items: flex-end; }
+.sim-select-wrap { flex: 1; }
+.sim-select-wrap label { display: block; font-size: 9.5px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 1.8px; margin-bottom: 7px; }
+.sim-select-wrap select {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  color: var(--text); font-size: 13px; font-family: var(--font); outline: none;
+}
+.sim-select-wrap select:focus { border-color: rgba(246,87,74,0.5); }
+.btn-sim-start {
+  padding: 9px 18px; border-radius: 8px;
+  background: linear-gradient(135deg, #A52A2A, var(--red));
+  color: #fff; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700;
+  transition: all 0.18s; box-shadow: 0 4px 14px rgba(246,87,74,0.3);
+  white-space: nowrap;
+}
+.btn-sim-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(246,87,74,0.45); }
+#sim-persona-bar {
+  padding: 8px 32px; flex-shrink: 0;
+  display: none; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(246,87,74,0.04);
+}
+#sim-persona-bar.active { display: flex; }
+.sim-persona {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px; border-radius: 7px;
+  background: var(--red-dim); border: 1px solid rgba(246,87,74,0.22);
+}
+.sim-persona-icon { font-size: 18px; }
+.sim-persona-name { font-size: 12px; font-weight: 700; color: var(--red); }
+.sim-persona-sub { font-size: 10.5px; color: var(--muted2); }
+.btn-score {
+  padding: 6px 13px; border-radius: 6px;
+  background: transparent; border: 1px solid rgba(0,212,160,0.3);
+  color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s; white-space: nowrap; margin-left: auto;
+}
+.btn-score:hover { background: var(--green-dim); }
+#sim-messages {
+  flex: 1; overflow-y: auto; padding: 20px 32px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+#sim-messages::-webkit-scrollbar { width: 3px; }
+#sim-messages::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+.sim-note { text-align: center; font-size: 10.5px; color: var(--muted); padding: 2px 0; }
+.sim-opp .msg-bubble { background: rgba(246,87,74,0.07) !important; border: 1px solid rgba(246,87,74,0.18) !important; }
+.sim-opp .msg-role { color: var(--red) !important; }
+#sim-input-area {
+  padding: 12px 32px 16px; border-top: 1px solid var(--border);
+  background: rgba(6,6,26,0.85); backdrop-filter: blur(16px); flex-shrink: 0;
+}
+#sim-input-row { display: flex; gap: 10px; align-items: flex-end; }
+#sim-input {
+  flex: 1; padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  color: var(--text); font-size: 13px; font-family: var(--font);
+  resize: none; outline: none; min-height: 42px; max-height: 120px; line-height: 1.5;
+  transition: border-color 0.18s;
+}
+#sim-input:focus { border-color: rgba(246,87,74,0.4); }
+#sim-send-btn {
+  padding: 10px 18px; border-radius: 10px;
+  background: linear-gradient(135deg, #A52A2A, var(--red));
+  color: #fff; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; transition: all 0.18s;
+  box-shadow: 0 4px 12px rgba(246,87,74,0.3);
+}
+#sim-send-btn:hover { transform: translateY(-1px); }
+#sim-send-btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+/* ══════════════════════════════════════════
+   SIGNAL FEED
+══════════════════════════════════════════ */
+#tab-signals { overflow-y: auto; }
+#signals-wrap { padding: 28px 36px; max-width: 860px; }
+.signals-title { font-size: 22px; font-weight: 800; color: var(--white); letter-spacing: -0.4px; }
+.signals-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; margin-bottom: 22px; }
+.signal-card {
+  background: rgba(255,255,255,0.022); border: 1px solid var(--border);
+  border-radius: 10px; padding: 15px 18px; margin-bottom: 10px;
+  display: flex; align-items: flex-start; gap: 14px;
+  transition: border-color 0.18s, transform 0.15s;
+}
+.signal-card:hover { transform: translateX(4px); border-color: var(--border-hi); }
+.signal-card.urg { border-color: rgba(246,87,74,0.3); background: rgba(246,87,74,0.03); }
+.signal-card.amb { border-color: rgba(245,166,35,0.2); }
+.sc-ico {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.sc-ico.red   { background: var(--red-dim);   border: 1px solid rgba(246,87,74,0.2); }
+.sc-ico.amber { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.2); }
+.sc-ico.blue  { background: var(--blue-dim);  border: 1px solid rgba(21,62,237,0.2); }
+.sc-body { flex: 1; min-width: 0; }
+.sc-co { font-size: 14px; font-weight: 700; color: var(--white); }
+.sc-txt { font-size: 12px; color: var(--muted2); margin-top: 3px; line-height: 1.5; }
+.sc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; }
+.sc-tag { font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+.sc-tag.red   { background: var(--red-dim);   color: var(--red); }
+.sc-tag.amber { background: var(--amber-dim); color: var(--amber); }
+.sc-tag.blue  { background: var(--blue-dim2); color: var(--blue-light); }
+.sc-act {
+  padding: 4px 11px; border-radius: 5px; font-size: 10.5px; font-weight: 700;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted2); cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.sc-act:hover { border-color: rgba(21,62,237,0.4); color: var(--blue-light); background: var(--blue-dim); }
 </style>
 </head>
 <body>
@@ -1181,6 +1618,15 @@ body::after {
   <button class="nav-btn" onclick="showTab('accounts')" id="nav-accounts">
     <span class="icon">🏢</span> Accounts
   </button>
+  <button class="nav-btn" onclick="showTab('radar')" id="nav-radar">
+    <span class="icon">📡</span> Pipeline Radar
+  </button>
+  <button class="nav-btn" onclick="showTab('simulator')" id="nav-simulator">
+    <span class="icon">🎭</span> Pitch Simulator
+  </button>
+  <button class="nav-btn" onclick="showTab('signals')" id="nav-signals">
+    <span class="icon">⚡</span> Signal Feed
+  </button>
 
   <div class="sidebar-label" style="margin-top:6px">Quick Skills</div>
   <button class="skill-btn" onclick="insertSkill('morning')">🌅 Morning Briefing</button>
@@ -1208,10 +1654,13 @@ body::after {
           <div class="dash-headline">Nordic Commercial Pipeline</div>
           <div class="dash-tagline">JAKALA · DK / NO / SE · Q1–Q2 2026</div>
         </div>
-        <div class="dash-meta">
-          <div class="dm-label">Current time</div>
-          <div class="dm-time" id="dash-time">--:--</div>
-          <div class="dm-date" id="dash-date">Loading…</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+          <button class="btn-board" id="board-report-btn" onclick="generateBoardReport()">📊 Board Report</button>
+          <div class="dash-meta">
+            <div class="dm-label">Current time</div>
+            <div class="dm-time" id="dash-time">--:--</div>
+            <div class="dm-date" id="dash-date">Loading…</div>
+          </div>
         </div>
       </div>
 
@@ -1442,6 +1891,117 @@ body::after {
     </div>
   </div>
 
+
+  <!-- ── PIPELINE RADAR ── -->
+  <div class="tab-pane" id="tab-radar">
+    <div id="radar-wrap">
+      <div class="radar-title">Pipeline Radar</div>
+      <div class="radar-sub">Each blip = one account &nbsp;·&nbsp; Distance from centre = deal score &nbsp;·&nbsp; Quadrant = GTM strategy &nbsp;·&nbsp; Colour = urgency &nbsp;·&nbsp; Click any blip to open account</div>
+      <div class="radar-layout">
+        <div class="radar-svg-container">
+          <svg id="radar-svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="sweepGrad" cx="0%" cy="0%" r="100%">
+                <stop offset="0%" stop-color="#153EED" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="#153EED" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <!-- Rings -->
+            <circle cx="300" cy="300" r="240" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <circle cx="300" cy="300" r="155" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <circle cx="300" cy="300" r="78"  fill="none" stroke="rgba(21,62,237,0.15)"   stroke-width="1"/>
+            <!-- Axis lines -->
+            <line x1="300" y1="55"  x2="300" y2="545" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="55"  y1="300" x2="545" y2="300" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <!-- Ring labels -->
+            <text x="305" y="225" fill="rgba(0,212,160,0.4)" font-size="8" font-family="Inter,sans-serif">HOT</text>
+            <text x="305" y="148" fill="rgba(75,110,247,0.4)" font-size="8" font-family="Inter,sans-serif">WARM</text>
+            <text x="305" y="68"  fill="rgba(255,255,255,0.2)" font-size="8" font-family="Inter,sans-serif">COLD</text>
+            <!-- Quadrant labels -->
+            <text x="330" y="78"  fill="rgba(21,62,237,0.55)"   font-size="10" font-family="Inter,sans-serif" font-weight="600">Data Revenue Unlock</text>
+            <text x="98"  y="78"  fill="rgba(0,212,160,0.55)"   font-size="10" font-family="Inter,sans-serif" font-weight="600">AI Readiness</text>
+            <text x="330" y="528" fill="rgba(123,92,245,0.55)"  font-size="10" font-family="Inter,sans-serif" font-weight="600">Commerce Optimization</text>
+            <text x="70"  y="528" fill="rgba(245,166,35,0.55)"  font-size="10" font-family="Inter,sans-serif" font-weight="600">Experience Transform.</text>
+            <!-- Rotating sweep -->
+            <g id="radar-sweep">
+              <path d="M 300 300 L 300 60 A 240 240 0 0 1 470 130 Z" fill="url(#sweepGrad)"/>
+            </g>
+            <!-- Blips (populated by JS) -->
+            <g id="radar-blips"></g>
+            <!-- Tooltip (populated by JS) -->
+            <g id="radar-tt" display="none">
+              <rect id="tt-bg" rx="5" fill="rgba(4,4,15,0.95)" stroke="rgba(21,62,237,0.5)" stroke-width="1"/>
+              <text id="tt-name" fill="white" font-size="11.5" font-family="Inter,sans-serif" font-weight="700"/>
+              <text id="tt-deal" fill="#8080B0" font-size="10" font-family="Inter,sans-serif"/>
+              <text id="tt-val"  fill="#4B6EF7" font-size="10.5" font-family="Inter,sans-serif" font-weight="700"/>
+            </g>
+          </svg>
+        </div>
+        <div class="radar-sidebar">
+          <div class="radar-panel">
+            <div class="radar-panel-title">Legend</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#00D4A0;box-shadow:0 0 5px #00D4A0"></span>Deal 8–10 — HOT</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#4B6EF7;box-shadow:0 0 5px #4B6EF7"></span>Deal 6–7 — WARM</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#F5A623;box-shadow:0 0 5px #F5A623"></span>Deal 4–5 — COOL</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#F6574A;box-shadow:0 0 5px #F6574A"></span>Deal &lt;4 — COLD</div>
+          </div>
+          <div class="radar-panel">
+            <div class="radar-panel-title">Hottest Deals</div>
+            <div id="radar-hot-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PITCH SIMULATOR ── -->
+  <div class="tab-pane" id="tab-simulator">
+    <div id="sim-setup">
+      <div class="sim-title">🎭 Pitch Simulator</div>
+      <div class="sim-sub">Claude becomes the buyer. Practice your pitch before the real meeting — then get scored.</div>
+      <div class="sim-controls">
+        <div class="sim-select-wrap">
+          <label>Target Account</label>
+          <select id="sim-account"><option value="">— Select account to practice pitch on —</option></select>
+        </div>
+        <button class="btn-sim-start" onclick="startPitchSession()">▶ Start Session</button>
+      </div>
+    </div>
+    <div id="sim-persona-bar">
+      <div class="sim-persona">
+        <div class="sim-persona-icon">🎯</div>
+        <div>
+          <div class="sim-persona-name" id="sim-persona-name">Buyer</div>
+          <div class="sim-persona-sub" id="sim-persona-sub">Playing the decision maker</div>
+        </div>
+      </div>
+      <button class="btn-score" onclick="scorePitch()">📊 Score My Pitch</button>
+    </div>
+    <div id="sim-messages">
+      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:12px;opacity:0.4">🎭</div>
+        <div style="font-size:15px;font-weight:700;color:var(--white)">No session active</div>
+        <div style="font-size:13px;margin-top:6px">Select an account above and hit Start Session</div>
+      </div>
+    </div>
+    <div id="sim-input-area" style="display:none">
+      <div id="sim-input-row">
+        <textarea id="sim-input" placeholder="Type your pitch…" rows="1"
+          onkeydown="handleSimKey(event)" oninput="autoResize(this)"></textarea>
+        <button id="sim-send-btn" onclick="sendSimMessage()">Send ↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIGNAL FEED ── -->
+  <div class="tab-pane" id="tab-signals">
+    <div id="signals-wrap">
+      <div class="signals-title">⚡ Signal Feed</div>
+      <div class="signals-sub">Live commercial signals from the Nordic market. Click "Write Outreach" to generate a message and load the account.</div>
+      <div id="signals-content"></div>
+    </div>
+  </div>
+
 </div>
 
 <div id="toast"></div>
@@ -1465,8 +2025,10 @@ async function boot() {
     renderAccountList(allAccounts);
     renderAccountsGrid(allAccounts);
     populateNotesSelect(allAccounts);
+    populateSimSelect();
     renderDashboard(allAccounts);
     setTimeout(animateDashboard, 400);
+    renderSignalFeed();
   } catch(e) {
     console.error('Boot error:', e);
   }
@@ -1489,6 +2051,7 @@ function showTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
+  if (name === 'radar') setTimeout(renderRadar, 50);
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -1911,6 +2474,332 @@ function showToast(msg, error = false) {
   t.textContent = msg;
   t.className = 'show' + (error ? ' error' : '');
   setTimeout(() => t.className = '', 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BOARD REPORT
+// ══════════════════════════════════════════════════════════════════════════════
+async function generateBoardReport() {
+  const btn = document.getElementById('board-report-btn');
+  btn.disabled = true; btn.textContent = 'Building report\u2026';
+  try {
+    const res = await fetch('/api/board-report', { method: 'POST' });
+    if (!res.ok) { showToast('Board report failed', true); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'JAKALA-Board-Report-' + new Date().toISOString().slice(0,10) + '.pptx';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Board Report downloaded \u2713');
+  } catch(e) {
+    showToast('Download failed', true);
+  } finally {
+    btn.disabled = false; btn.textContent = '\uD83D\uDCCA Board Report';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PIPELINE RADAR
+// ══════════════════════════════════════════════════════════════════════════════
+const STRAT_MAP = {
+  'hm':'dru','varner-group':'dru','trumf':'dru','norgesgruppen':'dru','oda':'dru',
+  'europris':'dru','nille':'dru','vinmonopolet':'dru','coop-norge':'dru','naf':'dru',
+  'matas':'ai','dustin-group':'ai','bestseller':'ai','dnb':'ai','saxo-bank':'ai',
+  'lyko':'ai','apotea':'ai','lindex':'ai','komplett':'ai','imerco':'ai','pandora':'ai',
+  'elkjop':'co','clas-ohlson':'co','jysk':'co','boozt':'co','xxl-sport':'co',
+  'bohus':'co','skeidar':'co','halfords':'co','sport-outlet':'co','jernia':'co',
+  'webhallen':'co','xxl-fraser-group':'co','salling-group':'co',
+  'helly-hansen':'xt','loccitane':'xt','plantasjen':'xt','norrona':'xt',
+  'kapphahl':'xt','gant-norway':'xt','follestad':'xt','polarn-o-pyret':'xt',
+};
+const RADAR_VALS = {
+  'hm':'€900K','matas':'€700K','elkjop':'€700K','varner-group':'€450K',
+  'trumf':'€450K','clas-ohlson':'€350K','boozt':'€300K','jysk':'€280K',
+  'helly-hansen':'€250K','skeidar':'€220K','dnb':'€200K','komplett':'€200K',
+  'vinmonopolet':'€180K','norgesgruppen':'€400K',
+};
+
+function slugToQuadrant(slug) {
+  if (STRAT_MAP[slug]) return STRAT_MAP[slug];
+  const dru = ['trumf','norges','oda','europris','nille','vino','coop','naf','xxl-fraser'];
+  const ai  = ['matas','dustin','best','dnb','saxo','lyko','apotea','lindex','komplett'];
+  const co  = ['elkjop','clas','jysk','boozt','sport','bohus','skeidar','halfords','jernia'];
+  const xt  = ['helly','locc','plantasjen','norrona','kapphahl','gant','follestad'];
+  if (dru.some(k => slug.includes(k))) return 'dru';
+  if (ai.some(k  => slug.includes(k))) return 'ai';
+  if (co.some(k  => slug.includes(k))) return 'co';
+  if (xt.some(k  => slug.includes(k))) return 'xt';
+  let h = 0; for (const c of slug) h = ((h * 31) + c.charCodeAt(0)) >>> 0;
+  return ['dru','ai','co','xt'][h % 4];
+}
+
+function radarPos(slug, deal) {
+  const baseAngles = { dru:45, ai:315, co:135, xt:225 };
+  let hash = 0; for (const c of slug) hash = ((hash * 31) + c.charCodeAt(0)) >>> 0;
+  const q = slugToQuadrant(slug);
+  const spread = ((hash % 50000) / 50000 - 0.5) * 46;
+  const deg = (baseAngles[q] || 45) + spread;
+  const rad = (deg - 90) * Math.PI / 180;
+  const ds = parseInt(deal) || 0;
+  const r = ds >= 9 ? 32 + (hash % 40) :
+            ds >= 7 ? 82 + (hash % 58) :
+            ds >= 5 ? 148 + (hash % 56) :
+                      198 + (hash % 36);
+  return { x: 300 + r * Math.cos(rad), y: 300 + r * Math.sin(rad) };
+}
+
+function renderRadar() {
+  const blipsG = document.getElementById('radar-blips');
+  const hotList = document.getElementById('radar-hot-list');
+  if (!blipsG || !allAccounts.length) return;
+
+  const scored = allAccounts
+    .filter(a => a.deal !== '\u2014' && parseInt(a.deal) >= 5)
+    .sort((a,b) => parseInt(b.deal) - parseInt(a.deal));
+
+  if (hotList) {
+    hotList.innerHTML = scored.slice(0, 9).map(a => {
+      const ds = parseInt(a.deal);
+      const col = ds >= 8 ? '#00D4A0' : ds >= 6 ? '#4B6EF7' : '#F5A623';
+      return '<div class="rhi" data-slug="' + a.slug + '" data-name="' + a.name + '" onclick="selectAccount(this.dataset.slug,this.dataset.name)">' +
+        '<div class="rhi-dot" style="background:' + col + ';box-shadow:0 0 6px ' + col + '"></div>' +
+        '<div class="rhi-name">' + a.name + '</div>' +
+        '<div class="rhi-score">' + ds + '/10</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  let html = '';
+  for (const a of scored) {
+    const ds = parseInt(a.deal) || 0;
+    const pos = radarPos(a.slug, ds);
+    const col = ds >= 8 ? '#00D4A0' : ds >= 6 ? '#4B6EF7' : ds >= 5 ? '#F5A623' : '#F6574A';
+    const r   = Math.max(5, Math.min(13, 4 + ds * 1.0));
+    const val = RADAR_VALS[a.slug] || '';
+    const safeSlug = a.slug.replace(/'/g, "\\'");
+    const safeName = a.name.replace(/'/g, "\\'");
+    html += '<g class="r-blip" style="cursor:pointer" data-slug="' + a.slug + '" data-name="' + a.name + '" data-ds="' + ds + '" data-val="' + val + '"' +
+      ' onclick="selectAccount(\'' + safeSlug + '\',\'' + safeName + '\')">' +
+      '<circle cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="' + (r+4) + '" fill="' + col + '" opacity="0.1"/>' +
+      '<circle cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="' + r + '" fill="' + col + '" opacity="0.88">' +
+        '<animate attributeName="r" values="' + r + ';' + (r+1.5) + ';' + r + '" dur="2.2s" repeatCount="indefinite"/>' +
+      '</circle>' +
+    '</g>';
+  }
+  blipsG.innerHTML = html;
+
+  blipsG.querySelectorAll('.r-blip').forEach(g => {
+    g.addEventListener('mouseenter', function() {
+      const tt = document.getElementById('radar-tt');
+      const ttBg = document.getElementById('tt-bg');
+      const ttName = document.getElementById('tt-name');
+      const ttDeal = document.getElementById('tt-deal');
+      const ttVal  = document.getElementById('tt-val');
+      if (!tt) return;
+      const cx = parseFloat(g.querySelector('circle').getAttribute('cx'));
+      const cy = parseFloat(g.querySelector('circle').getAttribute('cy'));
+      ttName.textContent = this.dataset.name;
+      ttDeal.textContent = 'Deal ' + this.dataset.ds + '/10';
+      ttVal.textContent  = this.dataset.val || '';
+      const w = Math.max(ttName.textContent.length, 12) * 7.5 + 20;
+      const tx = cx + 14, ty = cy - 50;
+      ttBg.setAttribute('x', tx - 6); ttBg.setAttribute('y', ty - 14);
+      ttBg.setAttribute('width', w); ttBg.setAttribute('height', 56);
+      ttName.setAttribute('x', tx); ttName.setAttribute('y', ty);
+      ttDeal.setAttribute('x', tx); ttDeal.setAttribute('y', ty + 17);
+      ttVal.setAttribute('x',  tx); ttVal.setAttribute('y',  ty + 33);
+      tt.setAttribute('display', 'block');
+    });
+    g.addEventListener('mouseleave', () => {
+      const tt = document.getElementById('radar-tt');
+      if (tt) tt.setAttribute('display', 'none');
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PITCH SIMULATOR
+// ══════════════════════════════════════════════════════════════════════════════
+let simMessages = [];
+let simAccount  = null;
+
+function populateSimSelect() {
+  const sel = document.getElementById('sim-account');
+  if (!sel || sel.options.length > 1) return;
+  allAccounts.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.slug; opt.textContent = a.name;
+    sel.appendChild(opt);
+  });
+}
+
+async function startPitchSession() {
+  const slug = document.getElementById('sim-account').value;
+  if (!slug) { showToast('Select an account first', true); return; }
+
+  simAccount  = slug;
+  simMessages = [];
+
+  const name = allAccounts.find(a => a.slug === slug)?.name || slug.replace(/-/g,' ').replace(/\\b\\w/g, c => c.toUpperCase());
+  const msgs = document.getElementById('sim-messages');
+  msgs.innerHTML = '';
+  addSimNote('Session started \u2014 ' + name + ' \u00b7 Start with your opening pitch');
+  document.getElementById('sim-persona-name').textContent = name + ' Buyer';
+  document.getElementById('sim-persona-sub').textContent  = 'Claude is playing the decision maker';
+  document.getElementById('sim-persona-bar').classList.add('active');
+  document.getElementById('sim-input-area').style.display = 'block';
+  document.getElementById('sim-input').focus();
+
+  // Trigger first buyer message
+  simMessages.push({ role: 'user', content: 'Hello, I appreciate you taking the time to meet.' });
+  const bubble = appendSimMsg('opponent', '');
+  let full = '';
+  try {
+    const res = await fetch('/api/pitch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: simMessages, account: simAccount })
+    });
+    const reader = res.body.getReader(); const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      for (const line of decoder.decode(value).split('\\n')) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try { const { text: t } = JSON.parse(line.slice(6)); full += t; bubble.innerHTML = renderMarkdown(full); msgs.scrollTop = 99999; } catch(e) {}
+        }
+      }
+    }
+    simMessages.push({ role: 'assistant', content: full });
+    // Remove the fake opener from history, keep only the buyer reply
+    simMessages = [{ role: 'assistant', content: full }];
+  } catch(e) { bubble.innerHTML = '<em style="color:var(--red)">Connection error.</em>'; }
+}
+
+function addSimNote(text) {
+  const msgs = document.getElementById('sim-messages');
+  const el = document.createElement('div');
+  el.className = 'sim-note';
+  el.textContent = '\u00b7 ' + text + ' \u00b7';
+  msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendSimMsg(role, content) {
+  const msgs = document.getElementById('sim-messages');
+  const el = document.createElement('div');
+  el.className = 'msg ' + (role === 'opponent' ? 'assistant sim-opp' : 'user');
+  const label = role === 'opponent'
+    ? (simAccount || '').replace(/-/g,' ').replace(/\\b\\w/g, c => c.toUpperCase()) + ' Buyer'
+    : 'You';
+  const roleStyle = role === 'opponent' ? ' style="color:var(--red)"' : '';
+  el.innerHTML = '<div class="msg-role"' + roleStyle + '>' + label + '</div>' +
+                 '<div class="msg-bubble">' + renderMarkdown(content) + '</div>';
+  msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
+  return el.querySelector('.msg-bubble');
+}
+
+async function sendSimMessage() {
+  const input = document.getElementById('sim-input');
+  const text = input.value.trim();
+  if (!text || !simAccount) return;
+
+  input.value = ''; input.style.height = 'auto';
+  document.getElementById('sim-send-btn').disabled = true;
+
+  simMessages.push({ role: 'user', content: text });
+  appendSimMsg('user', text);
+  const bubble = appendSimMsg('opponent', '');
+  let full = '';
+
+  try {
+    const res = await fetch('/api/pitch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: simMessages, account: simAccount })
+    });
+    const reader = res.body.getReader(); const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      const msgs = document.getElementById('sim-messages');
+      for (const line of decoder.decode(value).split('\\n')) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try { const { text: t } = JSON.parse(line.slice(6)); full += t; bubble.innerHTML = renderMarkdown(full); msgs.scrollTop = 99999; } catch(e) {}
+        }
+      }
+    }
+    simMessages.push({ role: 'assistant', content: full });
+  } catch(e) { bubble.innerHTML = '<em style="color:var(--red)">Error.</em>'; }
+  document.getElementById('sim-send-btn').disabled = false;
+  document.getElementById('sim-input').focus();
+}
+
+async function scorePitch() {
+  if (!simMessages.length || !simAccount) { showToast('Start a pitch session first', true); return; }
+  addSimNote('Scoring your pitch\u2026');
+  const scorePrompt = [
+    ...simMessages,
+    { role: 'user', content: 'STOP the roleplay. You are now a senior B2B sales coach. Score this pitch conversation 1\u201310 across: Opening hook, Value proposition clarity, Objection handling, Buyer fit, Call to action. Give an Overall score. Then 1 key strength and 1 specific improvement to make it 20% more effective.' }
+  ];
+  const bubble = appendSimMsg('opponent', '');
+  let full = '';
+  try {
+    const res = await fetch('/api/pitch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: scorePrompt, account: simAccount, scoring: true })
+    });
+    const reader = res.body.getReader(); const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      const msgs = document.getElementById('sim-messages');
+      for (const line of decoder.decode(value).split('\\n')) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try { const { text: t } = JSON.parse(line.slice(6)); full += t; bubble.innerHTML = renderMarkdown(full); msgs.scrollTop = 99999; } catch(e) {}
+        }
+      }
+    }
+  } catch(e) { bubble.innerHTML = '<em style="color:var(--red)">Scoring failed.</em>'; }
+}
+
+function handleSimKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSimMessage(); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SIGNAL FEED
+// ══════════════════════════════════════════════════════════════════════════════
+async function renderSignalFeed() {
+  const content = document.getElementById('signals-content');
+  if (!content) return;
+  content.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px 0">Loading signals\u2026</div>';
+  try {
+    const res = await fetch('/api/signals');
+    const data = await res.json();
+    const sigs = data.signals || [];
+    content.innerHTML = sigs.map(s => {
+      const cardCls = s.tagColor === 'red' ? 'urg' : s.tagColor === 'amber' ? 'amb' : '';
+      const icoCls  = s.tagColor === 'red' ? 'red' : s.tagColor === 'amber' ? 'amber' : 'blue';
+      const hasAcc  = s.slug && allAccounts.some(a => a.slug === s.slug);
+      return '<div class="signal-card ' + cardCls + '">' +
+        '<div class="sc-ico ' + icoCls + '">' + (s.icon || '\u26a1') + '</div>' +
+        '<div class="sc-body">' +
+          '<div class="sc-co">' + s.company + '</div>' +
+          '<div class="sc-txt">' + s.text + '</div>' +
+        '</div>' +
+        '<div class="sc-right">' +
+          '<span class="sc-tag ' + s.tagColor + '">' + s.tag + '</span>' +
+          (hasAcc ? '<button class="sc-act" data-slug="' + s.slug + '" data-name="' + s.company + '" onclick="signalOutreach(this.dataset.slug,this.dataset.name)">Write Outreach</button>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    content.innerHTML = '<div style="color:var(--red);font-size:12px">Failed to load signals</div>';
+  }
+}
+
+function signalOutreach(slug, name) {
+  selectAccount(slug, name);
+  document.getElementById('chat-input').value = 'Write a LinkedIn outreach message for ' + name + ' based on the active signal. Language: English. Match tone to the urgency.';
+  autoResize(document.getElementById('chat-input'));
+  showToast('Account loaded \u2014 outreach ready \u2191');
 }
 </script>
 </body>
