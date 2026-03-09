@@ -7,8 +7,8 @@ Search for relevant signals in:
 - Norway
 - Sweden
 - Denmark
-- United Kingdom
-- France
+
+**Geographic scope is strictly Nordic — DK, NO, SE only. Ignore signals from UK, France, and all other markets.**
 
 Focus on industries defined in intelligence/market-watch.md.
 
