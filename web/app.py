@@ -2,10 +2,20 @@ import os
 import re
 import json
 import datetime
+import io
 from pathlib import Path
-from flask import Flask, request, jsonify, render_template_string, Response, stream_with_context
+from flask import Flask, request, jsonify, render_template_string, Response, stream_with_context, send_file
 import anthropic
 from dotenv import load_dotenv
+
+try:
+    from pptx import Presentation
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN
+    PPTX_OK = True
+except ImportError:
+    PPTX_OK = False
 
 load_dotenv()
 
@@ -308,6 +318,239 @@ def api_save_notes():
         write_file(f"Accounts/{slug}/next-actions.md", next_actions)
 
     return jsonify({"ok": True})
+
+
+# ── PPTX generation ──────────────────────────────────────────────────────────
+
+BLUE  = RGBColor(0x15,0x3E,0xED) if PPTX_OK else None
+NAVY  = RGBColor(0x02,0x02,0x66) if PPTX_OK else None
+RED   = RGBColor(0xF6,0x57,0x4A) if PPTX_OK else None
+GREEN = RGBColor(0x00,0xD4,0xA0) if PPTX_OK else None
+WHITE = RGBColor(0xFF,0xFF,0xFF) if PPTX_OK else None
+GREY  = RGBColor(0xBB,0xBB,0xDD) if PPTX_OK else None
+MUTED = RGBColor(0x88,0x88,0xAA) if PPTX_OK else None
+BG    = RGBColor(0x04,0x04,0x0F) if PPTX_OK else None
+CARD  = RGBColor(0x0A,0x0A,0x22) if PPTX_OK else None
+W = Inches(9.84) if PPTX_OK else None
+H = Inches(7.48) if PPTX_OK else None
+FONT  = "Calibri"
+
+
+def _prs():
+    prs = Presentation()
+    prs.slide_width  = W
+    prs.slide_height = H
+    return prs
+
+def _slide(prs):
+    return prs.slides.add_slide(prs.slide_layouts[6])
+
+def _bg(slide):
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = BG
+
+def _rect(slide, x, y, w, h, color):
+    s = slide.shapes.add_shape(1, x, y, w, h)
+    s.fill.solid(); s.fill.fore_color.rgb = color
+    s.line.fill.background()
+    return s
+
+def _txt(slide, text, x, y, w, h, size=14, bold=False, color=None, align=None):
+    if color is None: color = WHITE
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame; tf.word_wrap = True
+    p = tf.paragraphs[0]
+    if align: p.alignment = align
+    r = p.add_run(); r.text = str(text)
+    r.font.name = FONT; r.font.size = Pt(size)
+    r.font.bold = bold; r.font.color.rgb = color
+    return tb
+
+def _add_para(tf, text, size=13, bold=False, color=None, space=6):
+    if color is None: color = WHITE
+    p = tf.add_paragraph(); p.space_before = Pt(space)
+    r = p.add_run(); r.text = str(text)
+    r.font.name = FONT; r.font.size = Pt(size)
+    r.font.bold = bold; r.font.color.rgb = color
+
+def _header(slide, tag, title):
+    _rect(slide, Inches(0), Inches(0), W, Inches(0.08), BLUE)
+    _txt(slide, tag,   Inches(0.5), Inches(0.14), Inches(8), Inches(0.35),
+         size=9, bold=True, color=BLUE)
+    _txt(slide, title, Inches(0.5), Inches(0.54), Inches(8.5), Inches(0.75),
+         size=24, bold=True)
+
+def _footer(slide, text):
+    _rect(slide, Inches(0), H - Inches(0.32), W, Inches(0.32), BLUE)
+    _txt(slide, text, Inches(0.3), H - Inches(0.30), Inches(9), Inches(0.28),
+         size=9, color=WHITE)
+
+def _bullet_col(slide, x, y, w, h, sections):
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame; tf.word_wrap = True
+    first = True
+    for header, bullets in sections:
+        _add_para(tf, header, 12, True, BLUE, 0 if first else 10)
+        first = False
+        for b in bullets:
+            _add_para(tf, f"• {b}", 11, False, WHITE, 3)
+
+def build_account_deck(account_name, data):
+    """Build a 5-slide discovery deck from Claude-generated JSON data."""
+    prs = _prs()
+
+    # Slide 1 — Cover
+    s = _slide(prs); _bg(s)
+    _rect(s, Inches(0), H - Inches(0.5), W, Inches(0.5), BLUE)
+    _rect(s, Inches(0), Inches(0), Inches(0.08), H, BLUE)
+    _txt(s, "JAKALA COMMERCIAL", Inches(0.3), Inches(1.2), Inches(8), Inches(0.4),
+         size=10, bold=True, color=MUTED)
+    _txt(s, account_name, Inches(0.3), Inches(1.75), Inches(8.5), Inches(2.2),
+         size=48, bold=True)
+    _txt(s, data.get("subtitle","Commercial Discovery"), Inches(0.3), Inches(3.9),
+         Inches(7), Inches(0.65), size=22, bold=True, color=BLUE)
+    _txt(s, data.get("date", datetime.date.today().isoformat()),
+         Inches(0.3), Inches(5.6), Inches(4), Inches(0.35), size=11, color=MUTED)
+
+    # Slide 2 — Why now
+    s = _slide(prs); _bg(s)
+    _header(s, "COMMERCIAL CONTEXT", data.get("context_title","Why Now"))
+    _bullet_col(s, Inches(0.5), Inches(1.5), Inches(4.0), Inches(5.2),
+                [("Signals & Timing", data.get("context_points",[]))])
+    _bullet_col(s, Inches(5.0), Inches(1.5), Inches(4.34), Inches(5.2),
+                [("Business Pressure", data.get("pressure_points",[]))])
+    _footer(s, f"JAKALA — {account_name} — Confidential")
+
+    # Slide 3 — GTM Strategy
+    s = _slide(prs); _bg(s)
+    _header(s, "GTM STRATEGY", data.get("gtm_title","Our Entry Approach"))
+    _rect(s, Inches(0.5), Inches(1.5), Inches(3.8), Inches(0.55), NAVY)
+    _txt(s, data.get("gtm_strategy","—"), Inches(0.6), Inches(1.52), Inches(3.6),
+         Inches(0.5), size=14, bold=True, color=BLUE)
+    _bullet_col(s, Inches(0.5), Inches(2.2), Inches(4.0), Inches(4.5),
+                [("Entry Offer", data.get("entry_points",[])),
+                 ("Expansion Path", data.get("expansion_points",[]))])
+    _bullet_col(s, Inches(5.0), Inches(1.5), Inches(4.34), Inches(5.2),
+                [("Likely Buyer", data.get("buyer_points",[])),
+                 ("Why JAKALA Wins", data.get("why_jakala",[]))])
+    _footer(s, f"JAKALA — {account_name} — Confidential")
+
+    # Slide 4 — Business case
+    s = _slide(prs); _bg(s)
+    _header(s, "THE BUSINESS CASE", data.get("value_title","Value & Impact"))
+    # Stat cards
+    stats = data.get("stats", [])
+    for i, st in enumerate(stats[:3]):
+        x = Inches(0.5) + i * Inches(3.1)
+        _rect(s, x, Inches(1.5), Inches(2.8), Inches(1.2), NAVY)
+        _txt(s, st.get("value","—"), x + Inches(0.15), Inches(1.55),
+             Inches(2.5), Inches(0.65), size=30, bold=True, color=BLUE)
+        _txt(s, st.get("label",""), x + Inches(0.15), Inches(2.1),
+             Inches(2.5), Inches(0.45), size=11, color=WHITE)
+    _bullet_col(s, Inches(0.5), Inches(2.85), Inches(4.0), Inches(4.0),
+                [("Impact Framing", data.get("value_points",[]))])
+    _bullet_col(s, Inches(5.0), Inches(2.85), Inches(4.34), Inches(4.0),
+                [("Risk of Inaction", data.get("risk_points",[]))])
+    _footer(s, f"JAKALA — {account_name} — Confidential")
+
+    # Slide 5 — Next steps
+    s = _slide(prs); _bg(s)
+    _header(s, "NEXT STEPS", data.get("next_title","Proposed Actions"))
+    next_steps = data.get("next_steps",[])
+    colors = [BLUE, GREEN, RED]
+    for i, step in enumerate(next_steps[:4]):
+        y = Inches(1.55) + i * Inches(1.2)
+        col = colors[i % len(colors)]
+        _rect(s, Inches(0.5), y, Inches(0.52), Inches(0.52), col)
+        _txt(s, str(i+1), Inches(0.5), y, Inches(0.52), Inches(0.52),
+             size=20, bold=True, align=PP_ALIGN.CENTER)
+        _txt(s, step.get("title",""), Inches(1.15), y, Inches(8.1), Inches(0.42),
+             size=14, bold=True)
+        _txt(s, step.get("desc",""), Inches(1.15), y + Inches(0.4), Inches(8.1),
+             Inches(0.55), size=11, color=GREY)
+    _footer(s, f"JAKALA — {account_name} — Confidential")
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
+
+
+@app.route("/api/generate-deck/<slug>", methods=["POST"])
+def api_generate_deck(slug):
+    if not PPTX_OK:
+        return jsonify({"error": "python-pptx not installed"}), 500
+
+    account_content = load_account_files(slug)
+    account_name = slug.replace("-", " ").title()
+    today = datetime.date.today().isoformat()
+
+    prompt = f"""You are building a 5-slide commercial discovery deck for JAKALA about: {account_name}
+
+ACCOUNT DATA:
+{account_content or '(no files)'}
+
+TODAY: {today}
+
+Return ONLY valid JSON (no markdown fences) with this exact structure:
+{{
+  "subtitle": "Commercial Discovery — [GTM Strategy Name]",
+  "date": "{today}",
+  "context_title": "Why {account_name}, Why Now",
+  "context_points": ["signal 1", "signal 2", "signal 3"],
+  "pressure_points": ["business pressure 1", "pressure 2", "pressure 3"],
+  "gtm_title": "Our Entry Approach",
+  "gtm_strategy": "[one of: Data Revenue Unlock / AI Readiness Accelerator / Commerce Optimization / Experience Transformation]",
+  "entry_points": ["entry offer detail 1", "detail 2"],
+  "expansion_points": ["expansion 1", "expansion 2"],
+  "buyer_points": ["Name — Title", "why they care"],
+  "why_jakala": ["differentiator 1", "differentiator 2"],
+  "value_title": "The Business Case",
+  "stats": [
+    {{"value": "€Xm", "label": "Estimated revenue impact"}},
+    {{"value": "X/10", "label": "Deal score"}},
+    {{"value": "Xwks", "label": "Time to first value"}}
+  ],
+  "value_points": ["value framing 1", "value 2", "value 3"],
+  "risk_points": ["risk of inaction 1", "risk 2"],
+  "next_title": "Proposed Next Steps",
+  "next_steps": [
+    {{"title": "action 1", "desc": "description"}},
+    {{"title": "action 2", "desc": "description"}},
+    {{"title": "action 3", "desc": "description"}}
+  ]
+}}
+
+Rules:
+- Be specific — use real names, real signals from account data
+- Keep each bullet under 10 words
+- GTM strategy must match the account's best fit
+- Return ONLY the JSON object"""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = response.content[0].text.strip()
+    raw = re.sub(r"^```json\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to parse AI response", "raw": raw}), 500
+
+    buf = build_account_deck(account_name, data)
+    filename = f"JAKALA-{slug}-discovery-{today}.pptx"
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
@@ -688,6 +931,13 @@ body::after {
 }
 #clear-account { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; }
 #clear-account:hover { color: var(--red); }
+#deck-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+  background: transparent; border: 1px solid rgba(0,212,160,0.35);
+  color: var(--green); cursor: pointer; transition: all 0.15s; display: none; white-space: nowrap;
+}
+#deck-btn:hover { background: var(--green-dim); }
+#deck-btn.loading { opacity: 0.5; cursor: not-allowed; }
 
 #messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
 #messages::-webkit-scrollbar { width: 3px; }
@@ -1102,6 +1352,7 @@ body::after {
         <span id="selected-account-name"></span>
         <button id="clear-account" onclick="clearAccount()">✕</button>
       </span>
+      <button id="deck-btn" onclick="generateDeck()">⬇ Generate Deck</button>
     </div>
     <div id="messages">
       <div id="welcome">
@@ -1372,6 +1623,7 @@ function selectAccount(slug, name) {
   renderAccountList(allAccounts);
   document.getElementById('selected-account-tag').style.display = 'flex';
   document.getElementById('selected-account-name').textContent = name;
+  document.getElementById('deck-btn').style.display = 'block';
   showTab('chat');
   document.getElementById('welcome').style.display = 'none';
   addSystemNote('Account loaded: ' + name);
@@ -1381,6 +1633,31 @@ function clearAccount() {
   selectedAccount = null;
   renderAccountList(allAccounts);
   document.getElementById('selected-account-tag').style.display = 'none';
+  document.getElementById('deck-btn').style.display = 'none';
+}
+
+async function generateDeck() {
+  if (!selectedAccount) return;
+  const btn = document.getElementById('deck-btn');
+  btn.classList.add('loading');
+  btn.textContent = 'Building deck…';
+  try {
+    const res = await fetch('/api/generate-deck/' + selectedAccount, { method: 'POST' });
+    if (!res.ok) { showToast('Deck generation failed', true); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'JAKALA-' + selectedAccount + '-discovery.pptx';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Deck downloaded \u2713');
+  } catch(e) {
+    showToast('Download failed', true);
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = '\u2b07 Generate Deck';
+  }
 }
 
 // ── Accounts grid ─────────────────────────────────────────────────────────────
