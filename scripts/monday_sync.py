@@ -21,7 +21,7 @@ from datetime import date
 # ─── KONFIGURATION ────────────────────────────────────────────────────────────
 
 API_KEY  = os.environ.get("MONDAY_API_KEY", "")
-BOARD_ID = "18072287934"   # Jakala DXP: Global Sales Pipeline 2025
+BOARD_ID = "18402701202"   # Jakala DXP: Global Sales Pipeline 2025
 API_URL  = "https://api.monday.com/v2"
 
 ACCOUNTS_DIR = Path(__file__).parent.parent / "Accounts"
