@@ -1,9 +1,10 @@
-name: Daily Lead Radar
+name: Weekly Lead Radar
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"
+    # Every Monday at 06:30 CET (05:30 UTC)
+    - cron: "30 5 * * 1"
 
 jobs:
   lead-radar:
@@ -21,13 +22,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run lead radar script
-        run: python scripts/lead_radar.py
+      - name: Install dependencies
+        run: pip install anthropic
 
-      - name: Commit daily lead file
+      - name: Run lead radar (AI-powered)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 scripts/lead_radar.py
+
+      - name: Commit radar file
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name "JAKALA GTM OS"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add intelligence/daily-leads/
-          git commit -m "Add daily lead radar" || echo "No changes to commit"
+          git commit -m "Weekly lead radar — $(date +%Y-%m-%d)" || echo "No changes to commit"
           git push
