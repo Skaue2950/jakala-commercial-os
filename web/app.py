@@ -559,6 +559,185 @@ Rules:
     )
 
 
+# ── Partnership API ──────────────────────────────────────────────────────────
+
+@app.route("/api/validate-partner", methods=["POST"])
+def api_validate_partner():
+    data      = request.get_json()
+    partner   = data.get("partner", "").strip()
+    market    = data.get("market", "Nordic")
+    context   = data.get("context", "")
+    if not partner:
+        return jsonify({"error": "Partner name required"}), 400
+
+    gtm      = read_file("knowledge/gtm-strategy.md") or ""
+    services = read_file("knowledge/jakala-services.md") or ""
+    offerings= read_file("knowledge/offerings.md") or ""
+    today    = datetime.date.today().isoformat()
+
+    prompt = f"""You are a senior JAKALA partnership strategist evaluating a potential partner.
+
+TODAY: {today}
+JAKALA CONTEXT:
+- Nordic GTM focus: Denmark, Norway, Sweden
+- Core services: Commerce Experience, Product Experience / Speedtrain PIM, DXP, Generative AI, CDP/CRM, BI, Data Architecture, Pricing, Hello Growth (SaaS)
+- GTM strategies: Data Revenue Unlock · AI Readiness Accelerator · Commerce Optimization · Experience Transformation
+- Buyer personas: CTO, CDO, CMO, Head of Ecommerce, Head of Data
+- Active delivery: Maxbo (Norway) — Speedtrain onboarding
+
+GTM STRATEGY SUMMARY:
+{gtm[:1000]}
+
+SERVICES:
+{services[:1200]}
+
+PARTNER TO EVALUATE: {partner}
+MARKET FOCUS: {market}
+ADDITIONAL CONTEXT: {context or "None provided"}
+
+Evaluate this partnership across 5 dimensions and return a structured assessment.
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "partner": "{partner}",
+  "market": "{market}",
+  "verdict": "STRONG FIT" | "POTENTIAL FIT" | "WEAK FIT" | "NOT RECOMMENDED",
+  "verdict_reason": "One sentence summary of the verdict",
+  "overall_score": 7,
+  "dimensions": [
+    {{
+      "name": "GTM Fit",
+      "score": 8,
+      "max": 10,
+      "rationale": "Does this partner serve the same buyer personas and complement JAKALA's GTM strategies?",
+      "finding": "2-3 sentence specific assessment"
+    }},
+    {{
+      "name": "Revenue Potential",
+      "score": 7,
+      "max": 10,
+      "rationale": "Joint pipeline, referrals, co-delivery, or new market access potential",
+      "finding": "2-3 sentence specific assessment"
+    }},
+    {{
+      "name": "Market Positioning",
+      "score": 8,
+      "max": 10,
+      "rationale": "Does the partnership enhance JAKALA credibility and reach in {market}?",
+      "finding": "2-3 sentence specific assessment"
+    }},
+    {{
+      "name": "Channel Conflict Risk",
+      "score": 6,
+      "max": 10,
+      "rationale": "Risk of competing with JAKALA for the same deals or services (higher score = lower risk)",
+      "finding": "2-3 sentence specific assessment"
+    }},
+    {{
+      "name": "Activation Speed",
+      "score": 7,
+      "max": 10,
+      "rationale": "How quickly can this partnership generate tangible pipeline or revenue?",
+      "finding": "2-3 sentence specific assessment"
+    }}
+  ],
+  "gtm_match": ["Data Revenue Unlock", "Commerce Optimization"],
+  "buyer_overlap": ["CTO", "Head of Ecommerce"],
+  "joint_offer": "One specific joint offer or entry point that combines both companies",
+  "target_accounts": ["Account 1", "Account 2", "Account 3"],
+  "risks": ["Risk 1", "Risk 2"],
+  "first_step": "Concrete first action to activate this partnership",
+  "partner_type": "Technology Vendor" | "System Integrator" | "Consulting Firm" | "Platform Vendor" | "Agency" | "Data Provider" | "Other"
+}}
+
+Rules:
+- Be specific — if you know what this company does, use that knowledge
+- Score honestly — a weak fit should score 3-4, not 6-7
+- Target accounts should be from the Nordic pipeline (NO/SE/DK) if possible
+- Return ONLY the JSON"""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = re.sub(r"^```json\s*", "", response.content[0].text.strip())
+    raw = re.sub(r"\s*```$", "", raw)
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        return jsonify({"error": "AI parse failed", "raw": raw}), 500
+
+    # Save to intelligence/partnerships/
+    save_partner_result(partner, market, result, today)
+    return jsonify(result)
+
+
+def save_partner_result(partner, market, data, today):
+    p = BASE_DIR / "intelligence" / "partnerships"
+    p.mkdir(parents=True, exist_ok=True)
+    slug = re.sub(r"[^a-z0-9]+", "-", partner.lower()).strip("-")
+    fname = p / f"{slug}-{today}.md"
+    lines = [
+        f"# Partnership Assessment — {partner}",
+        f"Date: {today} | Market: {market} | Verdict: {data.get('verdict','—')}",
+        "",
+        f"**Overall Score:** {data.get('overall_score','—')}/10",
+        f"**Type:** {data.get('partner_type','—')}",
+        f"**Verdict:** {data.get('verdict_reason','—')}",
+        "",
+        "## Dimension Scores",
+    ]
+    for d in data.get("dimensions", []):
+        lines.append(f"- **{d['name']}:** {d['score']}/{d['max']} — {d['finding']}")
+    lines += [
+        "",
+        f"## Joint Offer\n{data.get('joint_offer','—')}",
+        "",
+        f"## GTM Match\n{', '.join(data.get('gtm_match',[]))}",
+        "",
+        f"## Target Accounts\n{', '.join(data.get('target_accounts',[]))}",
+        "",
+        f"## First Step\n{data.get('first_step','—')}",
+        "",
+        f"## Risks\n" + "\n".join(f"- {r}" for r in data.get("risks", [])),
+    ]
+    fname.write_text("\n".join(lines), encoding="utf-8")
+
+
+@app.route("/api/partner-history")
+def api_partner_history():
+    p = BASE_DIR / "intelligence" / "partnerships"
+    if not p.exists():
+        return jsonify([])
+    results = []
+    for f in sorted(p.glob("*.md"), reverse=True)[:20]:
+        content = f.read_text(encoding="utf-8")
+        verdict_m = re.search(r"Verdict: (.+)", content)
+        score_m   = re.search(r"Overall Score:\*\* (\d+)/10", content)
+        market_m  = re.search(r"Market: (\w+)", content)
+        name_m    = re.search(r"# Partnership Assessment — (.+)", content)
+        results.append({
+            "file":    f.stem,
+            "name":    name_m.group(1).strip()  if name_m    else f.stem,
+            "verdict": verdict_m.group(1).strip() if verdict_m else "—",
+            "score":   score_m.group(1)          if score_m   else "—",
+            "market":  market_m.group(1)         if market_m  else "—",
+        })
+    return jsonify(results)
+
+
+@app.route("/api/monthly-partnerships")
+def api_monthly_partnerships():
+    p = BASE_DIR / "intelligence" / "partnerships"
+    if not p.exists():
+        return jsonify({"content": None})
+    files = sorted(p.glob("monthly-*.md"), reverse=True)
+    if not files:
+        return jsonify({"content": None})
+    return jsonify({"content": files[0].read_text(encoding="utf-8")})
+
+
 # ── Signals API ──────────────────────────────────────────────────────────────
 
 @app.route("/api/signals")
@@ -1590,6 +1769,104 @@ body::after {
   color: var(--muted2); cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
 .sc-act:hover { border-color: rgba(21,62,237,0.4); color: var(--blue-light); background: var(--blue-dim); }
+
+/* ══════════════════════════════════════════
+   PARTNERSHIP INTELLIGENCE
+══════════════════════════════════════════ */
+#tab-partners { overflow-y: auto; }
+#partners-wrap { padding: 28px 36px; max-width: 900px; }
+.partners-title { font-size: 22px; font-weight: 800; color: var(--white); letter-spacing: -0.4px; }
+.partners-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; margin-bottom: 26px; }
+
+.partner-form-card {
+  background: rgba(255,255,255,0.022); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px; margin-bottom: 22px;
+}
+.partner-form-title { font-size: 11px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+.partner-form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.pf-group { display: flex; flex-direction: column; gap: 6px; }
+.pf-group label { font-size: 9.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.pf-group input, .pf-group select, .pf-group textarea {
+  padding: 9px 13px; border-radius: 7px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  color: var(--text); font-size: 13px; font-family: var(--font); outline: none;
+  transition: border-color 0.18s;
+}
+.pf-group input:focus, .pf-group select:focus, .pf-group textarea:focus { border-color: rgba(123,92,245,0.5); }
+.pf-group.grow { flex: 1; min-width: 200px; }
+.pf-group select option { background: var(--bg3); }
+.btn-validate {
+  padding: 10px 20px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--purple), #9B6BFF);
+  color: #fff; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700;
+  transition: all 0.18s; box-shadow: 0 4px 14px rgba(123,92,245,0.3);
+  white-space: nowrap; align-self: flex-end;
+}
+.btn-validate:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(123,92,245,0.45); }
+.btn-validate:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Validation result card */
+#partner-result { display: none; }
+.verdict-banner {
+  padding: 14px 20px; border-radius: 10px; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+.verdict-banner.strong  { background: rgba(0,212,160,0.1);  border: 1px solid rgba(0,212,160,0.3); }
+.verdict-banner.potential { background: rgba(21,62,237,0.1); border: 1px solid rgba(21,62,237,0.3); }
+.verdict-banner.weak    { background: rgba(245,166,35,0.1);  border: 1px solid rgba(245,166,35,0.3); }
+.verdict-banner.not-rec { background: rgba(246,87,74,0.1);   border: 1px solid rgba(246,87,74,0.3); }
+.verdict-icon { font-size: 28px; }
+.verdict-label { font-size: 16px; font-weight: 800; }
+.verdict-label.strong  { color: var(--green); }
+.verdict-label.potential { color: var(--blue-light); }
+.verdict-label.weak    { color: var(--amber); }
+.verdict-label.not-rec { color: var(--red); }
+.verdict-reason { font-size: 12.5px; color: var(--muted2); margin-top: 3px; }
+.verdict-score { margin-left: auto; font-size: 32px; font-weight: 900; color: var(--white); }
+.verdict-score span { font-size: 14px; font-weight: 500; color: var(--muted); }
+
+.dim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.dim-card {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  border-radius: 9px; padding: 14px;
+}
+.dim-name { font-size: 10px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.dim-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.dim-score-num { font-size: 22px; font-weight: 900; color: var(--white); }
+.dim-score-max { font-size: 12px; color: var(--muted); }
+.dim-bar-track { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+.dim-bar-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+.dim-finding { font-size: 11.5px; color: var(--muted2); line-height: 1.5; }
+
+.partner-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.pmeta-card {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  border-radius: 9px; padding: 14px;
+}
+.pmeta-label { font-size: 9.5px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.pmeta-value { font-size: 12.5px; color: var(--text); line-height: 1.5; }
+.pmeta-tag {
+  display: inline-block; padding: 3px 9px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  background: var(--purple); color: #fff; margin: 2px 3px 2px 0;
+}
+
+.partner-history-title { font-size: 10px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 12px; }
+.ph-row {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+  background: rgba(255,255,255,0.018); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.15s;
+}
+.ph-row:hover { border-color: var(--border-hi); }
+.ph-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+.ph-market { font-size: 10px; color: var(--muted); }
+.ph-verdict {
+  font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px;
+}
+.ph-verdict.strong   { background: rgba(0,212,160,0.12); color: var(--green); }
+.ph-verdict.potential { background: var(--blue-dim2); color: var(--blue-light); }
+.ph-verdict.weak     { background: rgba(245,166,35,0.12); color: var(--amber); }
+.ph-score { font-size: 13px; font-weight: 800; color: var(--white); }
 </style>
 </head>
 <body>
@@ -1626,6 +1903,9 @@ body::after {
   </button>
   <button class="nav-btn" onclick="showTab('signals')" id="nav-signals">
     <span class="icon">⚡</span> Signal Feed
+  </button>
+  <button class="nav-btn" onclick="showTab('partners')" id="nav-partners">
+    <span class="icon">🤝</span> Partnerships
   </button>
 
   <div class="sidebar-label" style="margin-top:6px">Quick Skills</div>
@@ -1993,6 +2273,84 @@ body::after {
     </div>
   </div>
 
+  <!-- ── PARTNERSHIPS ── -->
+  <div class="tab-pane" id="tab-partners">
+    <div id="partners-wrap">
+      <div class="partners-title">🤝 Partnership Intelligence</div>
+      <div class="partners-sub">Valider en potentiel partner mod JAKALA's GTM-strategi, positionering og revenue-potentiale — eller se månedlige markedsanalyser.</div>
+
+      <!-- Validator form -->
+      <div class="partner-form-card">
+        <div class="partner-form-title">Valider en partner</div>
+        <div class="partner-form-row">
+          <div class="pf-group grow">
+            <label>Virksomhed / Partner</label>
+            <input type="text" id="partner-name" placeholder="fx Akeneo, Contentful, Algolia, Sitoo…" />
+          </div>
+          <div class="pf-group">
+            <label>Marked</label>
+            <select id="partner-market">
+              <option value="Nordic">Nordic (NO/SE/DK)</option>
+              <option value="Norway">Norge</option>
+              <option value="Sweden">Sverige</option>
+              <option value="Denmark">Danmark</option>
+            </select>
+          </div>
+          <div class="pf-group grow">
+            <label>Kontekst (valgfri)</label>
+            <input type="text" id="partner-context" placeholder="fx 'PIM-vendor', 'mødes med CEO næste uge', 'de arbejder med Elkjøp'…" />
+          </div>
+          <button class="btn-validate" id="validate-btn" onclick="validatePartner()">Valider ↗</button>
+        </div>
+      </div>
+
+      <!-- Result card -->
+      <div id="partner-result">
+        <div id="verdict-banner" class="verdict-banner">
+          <div class="verdict-icon" id="verdict-icon">—</div>
+          <div>
+            <div class="verdict-label" id="verdict-label">—</div>
+            <div class="verdict-reason" id="verdict-reason">—</div>
+          </div>
+          <div class="verdict-score"><span id="verdict-score">—</span><span>/10</span></div>
+        </div>
+
+        <div class="dim-grid" id="dim-grid"></div>
+
+        <div class="partner-meta-grid">
+          <div class="pmeta-card">
+            <div class="pmeta-label">GTM Match</div>
+            <div class="pmeta-value" id="pm-gtm"></div>
+          </div>
+          <div class="pmeta-card">
+            <div class="pmeta-label">Buyer Overlap</div>
+            <div class="pmeta-value" id="pm-buyers"></div>
+          </div>
+          <div class="pmeta-card">
+            <div class="pmeta-label">Fælles Entry Offer</div>
+            <div class="pmeta-value" id="pm-offer"></div>
+          </div>
+          <div class="pmeta-card">
+            <div class="pmeta-label">Target Accounts</div>
+            <div class="pmeta-value" id="pm-accounts"></div>
+          </div>
+          <div class="pmeta-card">
+            <div class="pmeta-label">Første skridt</div>
+            <div class="pmeta-value" id="pm-step"></div>
+          </div>
+          <div class="pmeta-card">
+            <div class="pmeta-label">Risici</div>
+            <div class="pmeta-value" id="pm-risks"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="partner-history-title">Tidligere valideringer</div>
+      <div id="partner-history"></div>
+    </div>
+  </div>
+
   <!-- ── SIGNAL FEED ── -->
   <div class="tab-pane" id="tab-signals">
     <div id="signals-wrap">
@@ -2051,7 +2409,8 @@ function showTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
-  if (name === 'radar') setTimeout(renderRadar, 50);
+  if (name === 'radar')    setTimeout(renderRadar, 50);
+  if (name === 'partners') setTimeout(loadPartnerHistory, 50);
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -2474,6 +2833,109 @@ function showToast(msg, error = false) {
   t.textContent = msg;
   t.className = 'show' + (error ? ' error' : '');
   setTimeout(() => t.className = '', 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PARTNERSHIP VALIDATOR
+// ══════════════════════════════════════════════════════════════════════════════
+async function validatePartner() {
+  const name    = document.getElementById('partner-name').value.trim();
+  const market  = document.getElementById('partner-market').value;
+  const context = document.getElementById('partner-context').value.trim();
+  if (!name) { showToast('Angiv partnerens navn', true); return; }
+
+  const btn = document.getElementById('validate-btn');
+  btn.disabled = true; btn.textContent = 'Analyserer\u2026';
+  document.getElementById('partner-result').style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/validate-partner', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partner: name, market, context })
+    });
+    const data = await res.json();
+    if (data.error) { showToast('Fejl: ' + data.error, true); return; }
+    renderPartnerResult(data);
+    loadPartnerHistory();
+  } catch(e) {
+    showToast('Request fejlede', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Valider \u2197';
+  }
+}
+
+function renderPartnerResult(d) {
+  const verdict = (d.verdict || '').toLowerCase().replace(/\s+/g, '-').replace('not-recommended','not-rec');
+  const icons   = { 'strong-fit': '\u2705', 'potential-fit': '\uD83D\uDCA1', 'weak-fit': '\u26A0\uFE0F', 'not-rec': '\u274C' };
+  const colors  = { 'strong-fit': 'strong', 'potential-fit': 'potential', 'weak-fit': 'weak', 'not-rec': 'not-rec' };
+  const cls     = colors[verdict] || 'potential';
+
+  // Banner
+  const banner = document.getElementById('verdict-banner');
+  banner.className = 'verdict-banner ' + cls;
+  document.getElementById('verdict-icon').textContent   = icons[verdict] || '\uD83D\uDCA1';
+  document.getElementById('verdict-label').textContent  = d.verdict || '\u2014';
+  document.getElementById('verdict-label').className    = 'verdict-label ' + cls;
+  document.getElementById('verdict-reason').textContent = d.verdict_reason || '\u2014';
+  document.getElementById('verdict-score').textContent  = d.overall_score || '\u2014';
+
+  // Dimension grid
+  const dimColors = { 10:'#00D4A0', 9:'#00D4A0', 8:'#4B6EF7', 7:'#4B6EF7', 6:'#F5A623', 5:'#F5A623', 4:'#F6574A', 3:'#F6574A', 2:'#F6574A', 1:'#F6574A' };
+  const dimGrid = document.getElementById('dim-grid');
+  dimGrid.innerHTML = (d.dimensions || []).map(dim => {
+    const pct = Math.round((dim.score / dim.max) * 100);
+    const col = dimColors[dim.score] || '#8080B0';
+    return '<div class="dim-card">' +
+      '<div class="dim-name">' + dim.name + '</div>' +
+      '<div class="dim-score-row">' +
+        '<div class="dim-score-num">' + dim.score + '</div>' +
+        '<div class="dim-score-max">/' + dim.max + '</div>' +
+        '<div class="dim-bar-track"><div class="dim-bar-fill" style="width:0;background:' + col + '" data-w="' + pct + '%"></div></div>' +
+      '</div>' +
+      '<div class="dim-finding">' + (dim.finding || '') + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Animate bars
+  setTimeout(() => {
+    dimGrid.querySelectorAll('.dim-bar-fill').forEach(el => {
+      el.style.width = el.getAttribute('data-w');
+    });
+  }, 80);
+
+  // Meta fields
+  document.getElementById('pm-gtm').innerHTML      = (d.gtm_match    || []).map(t => '<span class="pmeta-tag">' + t + '</span>').join('');
+  document.getElementById('pm-buyers').innerHTML   = (d.buyer_overlap || []).map(t => '<span class="pmeta-tag">' + t + '</span>').join('');
+  document.getElementById('pm-offer').textContent  = d.joint_offer   || '\u2014';
+  document.getElementById('pm-accounts').innerHTML = (d.target_accounts || []).map(t => '<span class="pmeta-tag">' + t + '</span>').join('');
+  document.getElementById('pm-step').textContent   = d.first_step    || '\u2014';
+  document.getElementById('pm-risks').innerHTML    = (d.risks || []).map(r => '\u2022 ' + r).join('<br>');
+
+  document.getElementById('partner-result').style.display = 'block';
+  document.getElementById('partner-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadPartnerHistory() {
+  const container = document.getElementById('partner-history');
+  if (!container) return;
+  try {
+    const res  = await fetch('/api/partner-history');
+    const data = await res.json();
+    if (!data.length) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px">Ingen tidligere valideringer endnu.</div>';
+      return;
+    }
+    const vmap = { 'STRONG FIT':'strong', 'POTENTIAL FIT':'potential', 'WEAK FIT':'weak', 'NOT RECOMMENDED':'not-rec' };
+    container.innerHTML = data.map(p => {
+      const cls = vmap[p.verdict] || 'potential';
+      return '<div class="ph-row">' +
+        '<div class="ph-name">' + p.name + '</div>' +
+        '<div class="ph-market">' + p.market + '</div>' +
+        '<div class="ph-verdict ' + cls + '">' + p.verdict + '</div>' +
+        '<div class="ph-score">' + p.score + '/10</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {}
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
