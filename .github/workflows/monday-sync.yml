@@ -1,0 +1,28 @@
+name: Monday.com Weekly Sync
+
+on:
+  schedule:
+    # Every Monday at 07:00 CET (06:00 UTC)
+    - cron: "0 6 * * 1"
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Monday.com sync
+        env:
+          MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
+        run: python3 scripts/monday_sync.py --skip-existing

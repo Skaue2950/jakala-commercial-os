@@ -29,9 +29,6 @@ venv/
 # Claude local settings
 .claude/
 
-# Scripts with tokens
-scripts/
-
 # Static dashboard (not part of app)
 dashboard/
 
