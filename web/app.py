@@ -479,9 +479,15 @@ def build_account_deck(account_name, data):
 
 @app.route("/api/generate-deck/<slug>", methods=["POST"])
 def api_generate_deck(slug):
+    import traceback
     if not PPTX_OK:
         return jsonify({"error": "python-pptx not installed"}), 500
+    try:
+        return _do_generate_deck(slug)
+    except Exception as e:
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
+def _do_generate_deck(slug):
     account_content = load_account_files(slug)
     account_name = slug.replace("-", " ").title()
     today = datetime.date.today().isoformat()
