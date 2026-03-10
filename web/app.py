@@ -4,7 +4,7 @@ import json
 import datetime
 import io
 from pathlib import Path
-from flask import Flask, request, jsonify, render_template_string, Response, stream_with_context, send_file
+from flask import Flask, request, jsonify, render_template_string, Response, stream_with_context, send_file, session, redirect, url_for
 import anthropic
 from dotenv import load_dotenv
 
@@ -20,6 +20,8 @@ except ImportError:
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "jakala-gtm-os-secret")
+APP_PASSWORD = os.getenv("APP_PASSWORD", "JakalaQ12026")
 BASE_DIR = Path(__file__).parent.parent  # jakala-commercial-os root
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-6"
@@ -134,6 +136,70 @@ def detect_accounts_in_message(message):
         if display in msg_lower or slug in msg_lower:
             found.append(slug)
     return found
+
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+LOGIN_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JAKALA GTM OS — Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 48px 40px; width: 100%; max-width: 380px; }
+  .logo { color: #fff; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 32px; opacity: 0.5; }
+  h1 { color: #fff; font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+  p { color: #666; font-size: 13px; margin-bottom: 32px; }
+  label { display: block; color: #888; font-size: 12px; font-weight: 500; margin-bottom: 8px; letter-spacing: 0.04em; }
+  input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; font-size: 14px; padding: 12px 14px; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: #444; }
+  button { width: 100%; background: #fff; border: none; border-radius: 8px; color: #000; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 20px; padding: 13px; transition: opacity 0.15s; }
+  button:hover { opacity: 0.85; }
+  .error { background: #1a0a0a; border: 1px solid #3a1a1a; border-radius: 8px; color: #f87171; font-size: 13px; margin-bottom: 20px; padding: 10px 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">JAKALA Nordic</div>
+  <h1>GTM OS</h1>
+  <p>Enter your access password to continue.</p>
+  {% if error %}<div class="error">Incorrect password. Try again.</div>{% endif %}
+  <form method="POST">
+    <label>PASSWORD</label>
+    <input type="password" name="password" autofocus placeholder="••••••••••••">
+    <button type="submit">Sign in →</button>
+  </form>
+</div>
+</body>
+</html>"""
+
+
+@app.before_request
+def require_login():
+    if request.endpoint in ("login", "static"):
+        return
+    if not session.get("authenticated"):
+        return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = False
+    if request.method == "POST":
+        if request.form.get("password") == APP_PASSWORD:
+            session["authenticated"] = True
+            return redirect(url_for("index"))
+        error = True
+    return render_template_string(LOGIN_HTML, error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 # ── API routes ───────────────────────────────────────────────────────────────
