@@ -30,7 +30,7 @@ MODEL = "claude-sonnet-4-6"
 
 def read_file(rel_path):
     p = BASE_DIR / rel_path
-    return p.read_text(encoding="utf-8") if p.exists() else None
+    return p.read_text(encoding="utf-8", errors="replace") if p.exists() else None
 
 def write_file(rel_path, content):
     p = BASE_DIR / rel_path
@@ -2932,14 +2932,14 @@ async function validatePartner() {
 
 function renderPartnerResult(d) {
   const verdict = (d.verdict || '').toLowerCase().replace(/\s+/g, '-').replace('not-recommended','not-rec');
-  const icons   = { 'strong-fit': '\u2705', 'potential-fit': '\uD83D\uDCA1', 'weak-fit': '\u26A0\uFE0F', 'not-rec': '\u274C' };
+  const icons   = { 'strong-fit': '\u2705', 'potential-fit': '💡', 'weak-fit': '\u26A0\uFE0F', 'not-rec': '\u274C' };
   const colors  = { 'strong-fit': 'strong', 'potential-fit': 'potential', 'weak-fit': 'weak', 'not-rec': 'not-rec' };
   const cls     = colors[verdict] || 'potential';
 
   // Banner
   const banner = document.getElementById('verdict-banner');
   banner.className = 'verdict-banner ' + cls;
-  document.getElementById('verdict-icon').textContent   = icons[verdict] || '\uD83D\uDCA1';
+  document.getElementById('verdict-icon').textContent   = icons[verdict] || '💡';
   document.getElementById('verdict-label').textContent  = d.verdict || '\u2014';
   document.getElementById('verdict-label').className    = 'verdict-label ' + cls;
   document.getElementById('verdict-reason').textContent = d.verdict_reason || '\u2014';
@@ -3024,7 +3024,7 @@ async function generateBoardReport() {
   } catch(e) {
     showToast('Download failed', true);
   } finally {
-    btn.disabled = false; btn.textContent = '\uD83D\uDCCA Board Report';
+    btn.disabled = false; btn.textContent = '📊 Board Report';
   }
 }
 
