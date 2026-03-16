@@ -1253,9 +1253,21 @@ body::after {
 }
 
 /* Account list */
-#account-list { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+#account-list { max-height: 260px; overflow-y: auto; padding-bottom: 8px; }
 #account-list::-webkit-scrollbar { width: 3px; }
 #account-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+.sidebar-accounts-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: calc(100% - 14px); margin: 4px 7px 2px;
+  padding: 8px 11px; border-radius: 7px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--muted2); cursor: pointer;
+  font-size: 12px; font-weight: 600; text-align: left;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  transition: all 0.18s;
+}
+.sidebar-accounts-toggle:hover { background: rgba(255,255,255,0.035); color: var(--text); }
+.sidebar-accounts-toggle.open { color: var(--white); }
 
 #account-search {
   margin: 8px 10px;
@@ -1984,9 +1996,14 @@ body::after {
   <button class="skill-btn" onclick="insertSkill('revenue')">💰 Revenue Simulation</button>
   <button class="skill-btn" onclick="insertSkill('signal')">📡 Signal to Action</button>
 
-  <div class="sidebar-label" style="margin-top:6px">Accounts</div>
-  <input type="text" id="account-search" placeholder="Search accounts…" oninput="filterAccounts()">
-  <div id="account-list"></div>
+  <button class="sidebar-accounts-toggle" id="accounts-toggle" onclick="toggleAccountsPanel()">
+    <span>🏢 Accounts</span>
+    <span id="accounts-chevron" style="font-size:10px;transition:transform 0.2s">▼</span>
+  </button>
+  <div id="accounts-panel" style="max-height:0;overflow:hidden;transition:max-height 0.25s ease">
+    <input type="text" id="account-search" placeholder="Search accounts…" oninput="filterAccounts()" style="margin:4px 7px 4px;width:calc(100% - 14px)">
+    <div id="account-list"></div>
+  </div>
 </div>
 
 <!-- ══════════════════ MAIN ══════════════════ -->
@@ -2604,6 +2621,22 @@ function renderAccountList(accounts) {
       '</span>' +
     '</div>';
   }).join('');
+}
+
+function toggleAccountsPanel() {
+  const panel = document.getElementById('accounts-panel');
+  const toggle = document.getElementById('accounts-toggle');
+  const chevron = document.getElementById('accounts-chevron');
+  const isOpen = panel.style.maxHeight !== '0px' && panel.style.maxHeight !== '';
+  if (isOpen) {
+    panel.style.maxHeight = '0';
+    toggle.classList.remove('open');
+    chevron.style.transform = 'rotate(0deg)';
+  } else {
+    panel.style.maxHeight = '320px';
+    toggle.classList.add('open');
+    chevron.style.transform = 'rotate(180deg)';
+  }
 }
 
 function filterAccounts() {
