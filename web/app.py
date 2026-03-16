@@ -3106,10 +3106,8 @@ function renderRadar() {
     const col = ds >= 8 ? '#00D4A0' : ds >= 6 ? '#4B6EF7' : ds >= 5 ? '#F5A623' : '#F6574A';
     const r   = Math.max(5, Math.min(13, 4 + ds * 1.0));
     const val = RADAR_VALS[a.slug] || '';
-    const safeSlug = a.slug.replace(/'/g, "\\'");
-    const safeName = a.name.replace(/'/g, "\\'");
     html += '<g class="r-blip" style="cursor:pointer" data-slug="' + a.slug + '" data-name="' + a.name + '" data-ds="' + ds + '" data-val="' + val + '"' +
-      ' onclick="selectAccount(\'' + safeSlug + '\',\'' + safeName + '\')">' +
+      ' onclick="selectAccount(this.dataset.slug,this.dataset.name)">' +
       '<circle cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="' + (r+4) + '" fill="' + col + '" opacity="0.1"/>' +
       '<circle cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="' + r + '" fill="' + col + '" opacity="0.88">' +
         '<animate attributeName="r" values="' + r + ';' + (r+1.5) + ';' + r + '" dur="2.2s" repeatCount="indefinite"/>' +
