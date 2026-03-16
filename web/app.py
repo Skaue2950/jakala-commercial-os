@@ -3336,7 +3336,10 @@ function signalOutreach(slug, name) {
 
 @app.route("/")
 def index():
-    return render_template_string(HTML)
+    resp = app.make_response(render_template_string(HTML))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 if __name__ == "__main__":
