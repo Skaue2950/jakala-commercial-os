@@ -1099,10 +1099,10 @@ HTML = """<!DOCTYPE html>
   --amber:      #F5A623;
   --amber-dim:  rgba(245,166,35,0.12);
   --purple:     #7B5CF5;
-  --bg:         #03030E;
-  --bg2:        #06061A;
-  --bg3:        #0A0A22;
-  --bg4:        #0F0F2E;
+  --bg:         #0D0D20;
+  --bg2:        #111128;
+  --bg3:        #161632;
+  --bg4:        #1A1A3A;
   --border:     rgba(255,255,255,0.055);
   --border-hi:  rgba(255,255,255,0.11);
   --text:       #E0E0F0;
@@ -1161,7 +1161,7 @@ body::after {
 #sidebar {
   width: var(--sidebar);
   min-width: var(--sidebar);
-  background: rgba(6,6,26,0.96);
+  background: rgba(14,14,38,0.97);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1962,46 +1962,46 @@ body::after {
 
   <div class="sidebar-label">Navigate</div>
   <button class="nav-btn" onclick="showTab('dashboard')" id="nav-dashboard">
-    <span class="icon">⚡</span> Command Center
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span> Command Center
   </button>
   <button class="nav-btn active" onclick="showTab('chat')" id="nav-chat">
-    <span class="icon">💬</span> GTM Assistant
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 10a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h8a2 2 0 012 2z"/></svg></span> GTM Assistant
   </button>
   <button class="nav-btn" onclick="showTab('notes')" id="nav-notes">
-    <span class="icon">📝</span> Meeting Notes
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg></span> Meeting Notes
   </button>
   <button class="nav-btn" onclick="showTab('accounts')" id="nav-accounts">
-    <span class="icon">🏢</span> Accounts
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="11" rx="1"/><path d="M6 15V9h4v6"/><path d="M2 7h12"/><path d="M5 1h6v3H5z"/></svg></span> Accounts
   </button>
   <button class="nav-btn" onclick="showTab('radar')" id="nav-radar">
-    <span class="icon">📡</span> Pipeline Radar
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg></span> Pipeline Radar
   </button>
   <button class="nav-btn" onclick="showTab('simulator')" id="nav-simulator">
-    <span class="icon">🎭</span> Pitch Simulator
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="10" rx="1"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="5" y1="15" x2="11" y2="15"/></svg></span> Pitch Simulator
   </button>
   <button class="nav-btn" onclick="showTab('signals')" id="nav-signals">
-    <span class="icon">⚡</span> Signal Feed
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,9 4,4 7,11 10,5 13,8 15,6"/></svg></span> Signal Feed
   </button>
   <button class="nav-btn" onclick="showTab('partners')" id="nav-partners">
-    <span class="icon">🤝</span> Partnerships
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 6.5l1-1a3 3 0 014.24 4.24l-2 2a3 3 0 01-4.24-4.24"/><path d="M6.5 9.5l-1 1a3 3 0 01-4.24-4.24l2-2a3 3 0 014.24 4.24"/></svg></span> Partnerships
   </button>
 
   <div class="sidebar-label" style="margin-top:6px">Quick Skills</div>
-  <button class="skill-btn" onclick="insertSkill('morning')">🌅 Morning Briefing</button>
-  <button class="skill-btn" onclick="insertSkill('warroom')">⚔️ War Room</button>
-  <button class="skill-btn" onclick="insertSkill('forecast')">📊 Q2 Forecast</button>
-  <button class="skill-btn" onclick="insertSkill('outreach')">✉️ Outreach</button>
-  <button class="skill-btn" onclick="insertSkill('pitch')">🎯 Pitch Partner</button>
-  <button class="skill-btn" onclick="insertSkill('brief')">📋 Pre-Meeting Brief</button>
-  <button class="skill-btn" onclick="insertSkill('revenue')">💰 Revenue Simulation</button>
-  <button class="skill-btn" onclick="insertSkill('signal')">📡 Signal to Action</button>
+  <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
+  <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
+  <button class="skill-btn" onclick="insertSkill('forecast')">Q2 Forecast</button>
+  <button class="skill-btn" onclick="insertSkill('outreach')">Outreach</button>
+  <button class="skill-btn" onclick="insertSkill('pitch')">Pitch Partner</button>
+  <button class="skill-btn" onclick="insertSkill('brief')">Pre-Meeting Brief</button>
+  <button class="skill-btn" onclick="insertSkill('revenue')">Revenue Simulation</button>
+  <button class="skill-btn" onclick="insertSkill('signal')">Signal to Action</button>
 
   <button class="sidebar-accounts-toggle" id="accounts-toggle" onclick="toggleAccountsPanel()">
-    <span>🏢 Accounts</span>
-    <span id="accounts-chevron" style="font-size:10px;transition:transform 0.2s">▼</span>
+    <span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="11" rx="1"/><path d="M6 15V9h4v6"/><path d="M2 7h12"/><path d="M5 1h6v3H5z"/></svg> Accounts</span>
+    <svg id="accounts-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;flex-shrink:0"><polyline points="4,6 8,10 12,6"/></svg>
   </button>
-  <div id="accounts-panel" style="max-height:0;overflow:hidden;transition:max-height 0.25s ease">
-    <input type="text" id="account-search" placeholder="Search accounts…" oninput="filterAccounts()" style="margin:4px 7px 4px;width:calc(100% - 14px)">
+  <div id="accounts-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
+    <input type="text" id="account-search" placeholder="Search accounts…" oninput="filterAccounts()" style="margin:4px 7px 6px;width:calc(100% - 14px)">
     <div id="account-list"></div>
   </div>
 </div>
@@ -2630,10 +2630,12 @@ function toggleAccountsPanel() {
   const isOpen = panel.style.maxHeight !== '0px' && panel.style.maxHeight !== '';
   if (isOpen) {
     panel.style.maxHeight = '0';
+    panel.style.overflow = 'hidden';
     toggle.classList.remove('open');
     chevron.style.transform = 'rotate(0deg)';
   } else {
-    panel.style.maxHeight = '320px';
+    panel.style.maxHeight = '400px';
+    panel.style.overflow = 'hidden';
     toggle.classList.add('open');
     chevron.style.transform = 'rotate(180deg)';
   }
