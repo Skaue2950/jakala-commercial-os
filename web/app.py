@@ -1253,7 +1253,7 @@ body::after {
 }
 
 /* Account list */
-#account-list { max-height: 260px; overflow-y: auto; padding-bottom: 8px; }
+#account-list { max-height: 480px; overflow-y: auto; padding-bottom: 8px; }
 #account-list::-webkit-scrollbar { width: 3px; }
 #account-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 .sidebar-accounts-toggle {
@@ -1285,12 +1285,12 @@ body::after {
 
 .account-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 7px 11px; margin: 1px 7px; border-radius: 6px;
+  padding: 9px 13px; margin: 2px 7px; border-radius: 6px;
   cursor: pointer; transition: all 0.12s;
 }
-.account-item:hover { background: rgba(255,255,255,0.035); }
+.account-item:hover { background: rgba(255,255,255,0.05); }
 .account-item.selected { background: var(--blue-dim2); border: 1px solid rgba(21,62,237,0.2); }
-.account-item .aname { flex: 1; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-item .aname { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acc-badges { display: flex; gap: 4px; margin-left: 6px; align-items: center; }
 .spill {
   font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
@@ -2634,7 +2634,7 @@ function toggleAccountsPanel() {
     toggle.classList.remove('open');
     chevron.style.transform = 'rotate(0deg)';
   } else {
-    panel.style.maxHeight = '400px';
+    panel.style.maxHeight = '560px';
     panel.style.overflow = 'hidden';
     toggle.classList.add('open');
     chevron.style.transform = 'rotate(180deg)';
