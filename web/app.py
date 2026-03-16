@@ -1986,15 +1986,20 @@ body::after {
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 6.5l1-1a3 3 0 014.24 4.24l-2 2a3 3 0 01-4.24-4.24"/><path d="M6.5 9.5l-1 1a3 3 0 01-4.24-4.24l2-2a3 3 0 014.24 4.24"/></svg></span> Partnerships
   </button>
 
-  <div class="sidebar-label" style="margin-top:6px">Quick Skills</div>
-  <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
-  <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
-  <button class="skill-btn" onclick="insertSkill('forecast')">Q2 Forecast</button>
-  <button class="skill-btn" onclick="insertSkill('outreach')">Outreach</button>
-  <button class="skill-btn" onclick="insertSkill('pitch')">Pitch Partner</button>
-  <button class="skill-btn" onclick="insertSkill('brief')">Pre-Meeting Brief</button>
-  <button class="skill-btn" onclick="insertSkill('revenue')">Revenue Simulation</button>
-  <button class="skill-btn" onclick="insertSkill('signal')">Signal to Action</button>
+  <button class="sidebar-accounts-toggle" id="skills-toggle" onclick="toggleSkillsPanel()">
+    <span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><line x1="8" y1="11" x2="8.01" y2="11"/></svg> Quick Skills</span>
+    <svg id="skills-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;flex-shrink:0"><polyline points="4,6 8,10 12,6"/></svg>
+  </button>
+  <div id="skills-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
+    <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
+    <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
+    <button class="skill-btn" onclick="insertSkill('forecast')">Q2 Forecast</button>
+    <button class="skill-btn" onclick="insertSkill('outreach')">Outreach</button>
+    <button class="skill-btn" onclick="insertSkill('pitch')">Pitch Partner</button>
+    <button class="skill-btn" onclick="insertSkill('brief')">Pre-Meeting Brief</button>
+    <button class="skill-btn" onclick="insertSkill('revenue')">Revenue Simulation</button>
+    <button class="skill-btn" onclick="insertSkill('signal')">Signal to Action</button>
+  </div>
 
   <button class="sidebar-accounts-toggle" id="accounts-toggle" onclick="toggleAccountsPanel()">
     <span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="11" rx="1"/><path d="M6 15V9h4v6"/><path d="M2 7h12"/><path d="M5 1h6v3H5z"/></svg> Accounts</span>
@@ -2621,6 +2626,22 @@ function renderAccountList(accounts) {
       '</span>' +
     '</div>';
   }).join('');
+}
+
+function toggleSkillsPanel() {
+  const panel = document.getElementById('skills-panel');
+  const toggle = document.getElementById('skills-toggle');
+  const chevron = document.getElementById('skills-chevron');
+  const isOpen = panel.style.maxHeight !== '0px' && panel.style.maxHeight !== '';
+  if (isOpen) {
+    panel.style.maxHeight = '0';
+    toggle.classList.remove('open');
+    chevron.style.transform = 'rotate(0deg)';
+  } else {
+    panel.style.maxHeight = '300px';
+    toggle.classList.add('open');
+    chevron.style.transform = 'rotate(180deg)';
+  }
 }
 
 function toggleAccountsPanel() {
