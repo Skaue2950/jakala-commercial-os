@@ -830,6 +830,137 @@ def api_signals():
     return jsonify({"signals": hot + extra[:4]})
 
 
+# ── Live Dashboard API ────────────────────────────────────────────────────────
+
+@app.route("/api/dashboard-live")
+def api_dashboard_live():
+    dash = read_file("intelligence/pipeline-dashboard.md") or ""
+
+    # --- KPI parsing ---
+    def _find(pattern, text, default=""):
+        m = re.search(pattern, text)
+        return m.group(1).strip() if m else default
+
+    pipeline_val  = _find(r'Pipeline Value \(total\)\s*\|\s*([^\n|]+)', dash, "€10.5M")
+    buyers_raw    = _find(r'Named buyers confirmed\s*\|\s*(\d+)', dash, "28")
+    named_buyers  = int(buyers_raw) if buyers_raw.isdigit() else 28
+    forecast_raw  = _find(r'Base case Q2 forecast\s*\|\s*\*\*(€[\d,K]+)', dash, "€600K")
+    discovery_raw = _find(r'Accounts in Discovery\s*\|\s*(\d+)', dash, "14")
+    discovery_n   = int(discovery_raw) if discovery_raw.isdigit() else 14
+    last_updated  = _find(r'Last updated:\s*(.+)', dash, "unknown")
+    weighted_raw  = _find(r'Probability-weighted forecast.*?\|\s*\*\*(€[\d.,M]+)', dash, "€1.8M")
+
+    status = "AMBER"
+    if "**Status: RED" in dash:   status = "RED"
+    elif "**Status: GREEN" in dash: status = "GREEN"
+
+    # --- Parse top deals table ---
+    deals = []
+    in_table = False
+    for line in dash.splitlines():
+        if "| Rank |" in line and "Account" in line:
+            in_table = True
+            continue
+        if in_table and line.startswith("|"):
+            if re.match(r'^\|\s*[-:]+', line):
+                continue
+            cells = [c.strip() for c in line.split("|")]
+            cells = [c for c in cells if c != ""]
+            if len(cells) >= 8 and cells[0].isdigit():
+                deals.append({
+                    "rank":      cells[0],
+                    "name":      cells[1],
+                    "country":   cells[2],
+                    "offering":  cells[3],
+                    "icp":       cells[4],
+                    "win_pct":   cells[5],
+                    "entry_val": cells[6],
+                    "weighted":  cells[7],
+                    "buyer":     cells[8] if len(cells) > 8 else "TBD",
+                    "status":    cells[9] if len(cells) > 9 else "Active",
+                })
+        elif in_table and not line.startswith("|"):
+            in_table = False
+
+    # --- Days stale per deal (from next-actions.md mtime) ---
+    slug_map = {a: a for a in get_accounts()}
+    now_ts = datetime.datetime.now().timestamp()
+    for d in deals:
+        raw_slug = d["name"].lower()
+        for ch, rep in [(" nordic",""),(" group",""),("ø","o"),("å","a"),("æ","ae"),(" ","-"),("'","")]:
+            raw_slug = raw_slug.replace(ch, rep)
+        # Try exact match and first-word match
+        candidates = [raw_slug, raw_slug.split("-")[0]]
+        d["days_stale"] = None
+        d["slug"] = ""
+        for cand in candidates:
+            na = BASE_DIR / "Accounts" / cand / "next-actions.md"
+            if na.exists():
+                d["days_stale"] = int((now_ts - na.stat().st_mtime) / 86400)
+                d["slug"] = cand
+                break
+
+    # --- Today's priority (top deal with named buyer) ---
+    priority = None
+    for d in deals:
+        buyer = d.get("buyer", "TBD")
+        if buyer and buyer != "TBD" and "TBD" not in buyer:
+            buyer_name = re.split(r'\(', buyer)[0].strip()
+            priority = {
+                "name":     buyer_name,
+                "company":  d["name"],
+                "country":  d["country"],
+                "win_pct":  d["win_pct"],
+                "weighted": d["weighted"],
+                "offering": d["offering"],
+                "status":   d.get("status", ""),
+                "slug":     d.get("slug", ""),
+            }
+            break
+
+    # --- Fresh signals from daily-leads files ---
+    live_signals = []
+    intel_dir = BASE_DIR / "intelligence" / "daily-leads"
+    if intel_dir.exists():
+        for f in sorted(intel_dir.iterdir(), reverse=True)[:3]:
+            if f.suffix != ".md":
+                continue
+            content = f.read_text(encoding="utf-8", errors="replace")
+            for m in re.finditer(r'^##\s+(.+)$\s+([\s\S]+?)(?=\n##|\Z)', content, re.MULTILINE):
+                company = m.group(1).strip()
+                body    = m.group(2).strip()[:180]
+                live_signals.append({"company": company, "text": body, "date": f.stem})
+                if len(live_signals) >= 6:
+                    break
+            if len(live_signals) >= 6:
+                break
+
+    # --- Country split ---
+    country_split = []
+    for m in re.finditer(r'\|\s*(Norway|Sweden|Denmark)\s*\|\s*(€[\d.M]+)[^|]*\|\s*(\d+)\s*\|', dash):
+        country_split.append({
+            "country":  m.group(1),
+            "pipeline": m.group(2),
+            "accounts": int(m.group(3)),
+        })
+
+    return jsonify({
+        "pipeline_total":   pipeline_val.strip(),
+        "pipeline_weighted": weighted_raw.strip(),
+        "named_buyers":     named_buyers,
+        "forecast_base":    forecast_raw.strip(),
+        "discovery_count":  discovery_n,
+        "account_count":    len(get_accounts()),
+        "status":           status,
+        "last_updated":     last_updated,
+        "top_deals":        deals[:6],
+        "live_signals":     live_signals,
+        "priority":         priority,
+        "country_split":    country_split,
+        "timestamp":        datetime.datetime.utcnow().isoformat() + "Z",
+    })
+
+
 # ── Pitch Simulator API ───────────────────────────────────────────────────────
 
 @app.route("/api/pitch", methods=["POST"])
@@ -1945,6 +2076,41 @@ body::after {
 .ph-verdict.potential { background: var(--blue-dim2); color: var(--blue-light); }
 .ph-verdict.weak     { background: rgba(245,166,35,0.12); color: var(--amber); }
 .ph-score { font-size: 13px; font-weight: 800; color: var(--white); }
+
+/* ── Deal Velocity Cards ─────────────────────────────────────────── */
+.dv-card {
+  background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+  position: relative; overflow: hidden;
+}
+.dv-card:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+.dv-card.stale-hot { border-color: rgba(246,87,74,0.4); }
+.dv-card.stale-warm { border-color: rgba(245,166,35,0.3); }
+.dv-stale-bar {
+  position: absolute; top: 0; left: 0; height: 3px; border-radius: 10px 10px 0 0;
+}
+.dv-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.dv-name { font-size: 14px; font-weight: 700; color: var(--white); }
+.dv-country { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.dv-win { font-size: 22px; font-weight: 900; }
+.dv-win-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.dv-metrics { display: flex; gap: 10px; margin-bottom: 10px; }
+.dv-metric { flex: 1; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 7px 10px; text-align: center; }
+.dv-metric-val { font-size: 13px; font-weight: 800; color: var(--white); }
+.dv-metric-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 1px; }
+.dv-offering { font-size: 10.5px; color: var(--muted2); margin-bottom: 6px; }
+.dv-stale-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+}
+.dv-stale-tag.fresh { background: rgba(0,212,160,0.1); color: var(--green); }
+.dv-stale-tag.warm  { background: rgba(245,166,35,0.12); color: var(--amber); }
+.dv-stale-tag.hot   { background: rgba(246,87,74,0.12); color: var(--red); }
+.dv-buyer { font-size: 10px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+}
 </style>
 </head>
 <body>
@@ -2034,6 +2200,45 @@ body::after {
         </div>
       </div>
 
+      <!-- Live status bar -->
+      <div id="live-status-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:11px;color:var(--muted)">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div id="live-dot" style="width:7px;height:7px;border-radius:50%;background:#00D4A0;box-shadow:0 0 6px #00D4A0;animation:pulse 2s infinite"></div>
+          <span id="live-label">LIVE</span>
+        </div>
+        <span>·</span>
+        <span>Sidst opdateret: <span id="live-last-updated">—</span></span>
+        <span>·</span>
+        <span>Næste opdatering om <span id="live-countdown" style="color:var(--text);font-weight:600">5:00</span></span>
+        <span style="margin-left:auto">
+          <button onclick="loadLiveDashboard(true)" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit">↻ Opdater nu</button>
+        </span>
+      </div>
+
+      <!-- Today's Priority hero card -->
+      <div id="today-priority-card" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(21,62,237,0.12),rgba(123,92,245,0.08));border:1px solid rgba(21,62,237,0.35);border-radius:12px;padding:18px 22px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;right:0;width:120px;height:100%;background:linear-gradient(90deg,transparent,rgba(21,62,237,0.06));pointer-events:none"></div>
+        <div style="font-size:9.5px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">⚡ Dagens prioritet</div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div id="tp-name" style="font-size:19px;font-weight:800;color:var(--white);margin-bottom:3px">—</div>
+            <div id="tp-meta" style="font-size:12px;color:var(--muted2);margin-bottom:8px">—</div>
+            <div id="tp-reason" style="font-size:11.5px;color:var(--muted);line-height:1.5">—</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;flex-shrink:0">
+            <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 16px">
+              <div id="tp-win" style="font-size:22px;font-weight:900;color:#00D4A0">—</div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Win %</div>
+            </div>
+            <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 16px">
+              <div id="tp-weighted" style="font-size:22px;font-weight:900;color:var(--white)">—</div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Weighted</div>
+            </div>
+            <button onclick="insertSkill('contact');showTab('chat')" style="background:#153EED;color:#fff;border:none;border-radius:8px;padding:12px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Generér besked →</button>
+          </div>
+        </div>
+      </div>
+
       <!-- KPI row -->
       <div class="kpi-row">
         <div class="kpi">
@@ -2081,50 +2286,20 @@ body::after {
         <div class="dash-card">
           <div class="dash-card-head">
             <div class="dash-card-title">Hot Signals</div>
-            <div class="dash-card-tag">Act this week</div>
+            <div class="dash-card-tag" id="signals-updated">Live fra intelligence</div>
           </div>
-          <div id="signals-list">
-            <div class="signal">
-              <div class="signal-icon">🔴</div>
-              <div style="flex:1">
-                <div class="signal-co">Sport Outlet</div>
-                <div class="signal-txt">CTO + CDO both vacant March 2026. Contact CEO Tor-André Skeie directly.</div>
-              </div>
-              <div class="signal-tag">URGENT</div>
-            </div>
-            <div class="signal">
-              <div class="signal-icon">⚡</div>
-              <div style="flex:1">
-                <div class="signal-co">Trumf (NorgesGruppen)</div>
-                <div class="signal-txt">Rikke Etholm-Idsøe — new Commercial Director role. First 90-day window open.</div>
-              </div>
-              <div class="signal-tag">90-DAY WINDOW</div>
-            </div>
-            <div class="signal">
-              <div class="signal-icon">🆕</div>
-              <div style="flex:1">
-                <div class="signal-co">Vinmonopolet</div>
-                <div class="signal-txt">Espen Terland new CDO (ex-XXL 15 yrs). Agenda not yet set — honeymoon phase.</div>
-              </div>
-              <div class="signal-tag amber">NEW EXEC</div>
-            </div>
-            <div class="signal">
-              <div class="signal-icon">🏗️</div>
-              <div style="flex:1">
-                <div class="signal-co">Skeidar</div>
-                <div class="signal-txt">CIO Sujit Nath identified. "Best furniture portal" ambition declared publicly.</div>
-              </div>
-              <div class="signal-tag amber">NAMED BUYER</div>
-            </div>
-            <div class="signal">
-              <div class="signal-icon">🎓</div>
-              <div style="flex:1">
-                <div class="signal-co">BI Handelshøyskolen</div>
-                <div class="signal-txt">Rector Karen Spens leaving August 2026. Transition window open now.</div>
-              </div>
-              <div class="signal-tag amber">TRANSITION</div>
-            </div>
-          </div>
+          <div id="signals-list"><div style="color:var(--muted);font-size:12px;padding:12px 0">Indlæser signaler…</div></div>
+        </div>
+      </div>
+
+      <!-- Deal Velocity Cards -->
+      <div class="dash-card" style="margin-top:18px">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Top 6 Deals — Velocity</div>
+          <div class="dash-card-tag">Win % · Weighted value · Dage uden handling</div>
+        </div>
+        <div id="deal-velocity-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding-top:4px">
+          <div style="color:var(--muted);font-size:12px">Indlæser deals…</div>
         </div>
       </div>
 
@@ -2476,6 +2651,7 @@ async function boot() {
     populateSimSelect();
     renderDashboard(allAccounts);
     setTimeout(animateDashboard, 400);
+    loadLiveDashboard();
     renderSignalFeed();
   } catch(e) {
     console.error('Boot error:', e);
@@ -2579,12 +2755,127 @@ function renderDashboard(accounts) {
   });
 }
 
-function animateDashboard() {
-  countUp('kpi-pipeline', 6.8,  1.4, 1);
-  countUp('kpi-buyers',   18,   1.1, 0);
-  countUp('kpi-forecast', 420,  1.3, 0);
+// ── Live Dashboard ────────────────────────────────────────────────────────────
+let _liveRefreshTimer = null;
+let _liveCountdown = 300; // 5 min in seconds
 
-  // Named-target count-up for dynamic fields
+async function loadLiveDashboard(manual = false) {
+  // Reset countdown
+  _liveCountdown = 300;
+  clearInterval(_liveRefreshTimer);
+  _liveRefreshTimer = setInterval(() => {
+    _liveCountdown--;
+    const m = Math.floor(_liveCountdown / 60);
+    const s = String(_liveCountdown % 60).padStart(2, '0');
+    const el = document.getElementById('live-countdown');
+    if (el) el.textContent = m + ':' + s;
+    if (_liveCountdown <= 0) loadLiveDashboard();
+  }, 1000);
+
+  try {
+    const res = await fetch('/api/dashboard-live');
+    const d = await res.json();
+
+    // --- KPIs ---
+    // Pipeline: parse number from e.g. "€10.5M Commerce/Data + DKK 1.2M Hello Growth"
+    const pipM = (d.pipeline_total || '').match(/([\d.]+)M/);
+    const pipNum = pipM ? parseFloat(pipM[1]) : 6.8;
+    countUp('kpi-pipeline', pipNum, 1.4, 1);
+    countUp('kpi-buyers',   d.named_buyers || 18, 1.1, 0);
+
+    // Forecast: parse number from e.g. "€600K"
+    const fcM = (d.forecast_base || '').match(/([\d,]+)K/);
+    const fcNum = fcM ? parseInt(fcM[1].replace(',','')) : 600;
+    countUp('kpi-forecast', fcNum, 1.3, 0);
+
+    // Status badge on pipeline KPI
+    const statusBadge = document.querySelector('.kpi-badge.amber, .kpi-badge.red, .kpi-badge.green');
+    if (statusBadge && d.status) {
+      statusBadge.className = 'kpi-badge ' + d.status.toLowerCase();
+      statusBadge.textContent = '● ' + d.status;
+    }
+
+    // Last updated
+    const lu = document.getElementById('live-last-updated');
+    if (lu) lu.textContent = d.last_updated || 'ukuendt';
+
+    // --- Today's Priority Hero Card ---
+    if (d.priority) {
+      const p = d.priority;
+      const card = document.getElementById('today-priority-card');
+      if (card) card.style.display = 'block';
+      const nameEl = document.getElementById('tp-name');
+      if (nameEl) nameEl.textContent = p.name || '—';
+      const metaEl = document.getElementById('tp-meta');
+      if (metaEl) metaEl.textContent = (p.company || '') + ' · ' + (p.country || '') + ' · ' + (p.offering || '');
+      const reasonEl = document.getElementById('tp-reason');
+      if (reasonEl) reasonEl.textContent = p.status || 'Klar til outreach';
+      const winEl = document.getElementById('tp-win');
+      if (winEl) winEl.textContent = p.win_pct || '—';
+      const wEl = document.getElementById('tp-weighted');
+      if (wEl) wEl.textContent = p.weighted || '—';
+    }
+
+    // --- Deal Velocity Cards ---
+    const dvc = document.getElementById('deal-velocity-cards');
+    if (dvc && d.top_deals && d.top_deals.length) {
+      dvc.innerHTML = d.top_deals.map(deal => {
+        const stale = deal.days_stale;
+        const staleClass = stale === null ? '' : stale > 14 ? 'stale-hot' : stale > 7 ? 'stale-warm' : '';
+        const staleBarColor = stale > 14 ? '#F6574A' : stale > 7 ? '#F5A623' : '#00D4A0';
+        const staleBarW = stale === null ? 0 : Math.min(100, (stale / 21) * 100);
+        const staleTagClass = stale === null ? 'fresh' : stale > 14 ? 'hot' : stale > 7 ? 'warm' : 'fresh';
+        const staleLabel = stale === null ? 'Aktiv' : stale === 0 ? 'I dag' : stale + ' dage siden';
+        const buyerShort = (deal.buyer || 'TBD').split('(')[0].trim().slice(0, 30);
+        const winColor = parseInt(deal.win_pct) >= 60 ? 'var(--green)' : parseInt(deal.win_pct) >= 40 ? 'var(--amber)' : 'var(--red)';
+        return '<div class="dv-card ' + staleClass + '" onclick="selectAccount(\'' + (deal.slug || '') + '\',\'' + deal.name.replace(/'/g,"\\'") + '\')">' +
+          '<div class="dv-stale-bar" style="width:' + staleBarW + '%;background:' + staleBarColor + '"></div>' +
+          '<div class="dv-header">' +
+            '<div><div class="dv-name">' + deal.name + '</div><div class="dv-country">' + deal.country + ' · ' + deal.offering + '</div></div>' +
+            '<div style="text-align:right"><div class="dv-win" style="color:' + winColor + '">' + deal.win_pct + '</div><div class="dv-win-label">win %</div></div>' +
+          '</div>' +
+          '<div class="dv-metrics">' +
+            '<div class="dv-metric"><div class="dv-metric-val">' + deal.entry_val + '</div><div class="dv-metric-label">Unweighted</div></div>' +
+            '<div class="dv-metric"><div class="dv-metric-val" style="color:#7B5CF5">' + deal.weighted + '</div><div class="dv-metric-label">Weighted</div></div>' +
+            '<div class="dv-metric"><div class="dv-metric-val">' + (deal.icp || '—') + '</div><div class="dv-metric-label">ICP</div></div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;justify-content:space-between">' +
+            '<span class="dv-stale-tag ' + staleTagClass + '">● ' + staleLabel + '</span>' +
+            (buyerShort && buyerShort !== 'TBD' ? '<span class="dv-buyer">👤 ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)">⚠ Buyer TBD</span>') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // --- Live Signals ---
+    const sl = document.getElementById('signals-list');
+    if (sl) {
+      // Always show hot hardcoded signals first, append live signals below
+      const hardcoded = [
+        {icon:'🔴', co:'Sport Outlet', txt:'CTO + CDO both vacant March 2026. Contact CEO Tor-André Skeie directly.', tag:'URGENT', tagClass:''},
+        {icon:'⚡', co:'Trumf (NorgesGruppen)', txt:'Rikke Etholm-Idsøe — new Commercial Director. 90-day honeymoon window open.', tag:'90-DAY WINDOW', tagClass:''},
+        {icon:'🆕', co:'Vinmonopolet', txt:'Espen Terland new CDO (ex-XXL 15 yrs). Agenda not yet set.', tag:'NEW EXEC', tagClass:'amber'},
+        {icon:'💎', co:'Siteimprove', txt:'Jen Jones — CMO day 5. Honeymoon window: 3-5x response rate vs 30 days later.', tag:'URGENT', tagClass:''},
+      ];
+      let html = hardcoded.map(s =>
+        '<div class="signal"><div class="signal-icon">' + s.icon + '</div><div style="flex:1"><div class="signal-co">' + s.co + '</div><div class="signal-txt">' + s.txt + '</div></div><div class="signal-tag ' + s.tagClass + '">' + s.tag + '</div></div>'
+      ).join('');
+      if (d.live_signals && d.live_signals.length) {
+        html += '<div style="font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:2px;margin:12px 0 6px">Fra daglig radar</div>';
+        html += d.live_signals.slice(0,3).map(s =>
+          '<div class="signal"><div class="signal-icon">📡</div><div style="flex:1"><div class="signal-co">' + s.company + '</div><div class="signal-txt">' + (s.text || '').slice(0,100) + '</div></div><div class="signal-tag" style="background:var(--blue-dim2);color:var(--blue-light)">' + (s.date || 'RADAR') + '</div></div>'
+        ).join('');
+      }
+      sl.innerHTML = html;
+    }
+
+  } catch(e) {
+    console.warn('Live dashboard load failed:', e);
+  }
+}
+
+function animateDashboard() {
+  // KPIs now loaded via loadLiveDashboard — fallback only
   ['kpi-accounts','strat-dru','strat-ai','strat-co','strat-xt'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -2592,8 +2883,6 @@ function animateDashboard() {
       countUp(id, t, 1.2, 0);
     }
   });
-
-  // Animate bars
   document.querySelectorAll('[data-w]').forEach(el => {
     setTimeout(() => { el.style.width = el.getAttribute('data-w'); }, 100);
   });
