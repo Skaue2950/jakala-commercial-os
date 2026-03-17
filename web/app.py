@@ -2287,6 +2287,7 @@ body::after {
   </button>
   <div id="skills-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
     <button class="skill-btn" onclick="insertSkill('contact')" style="background:#111;color:#fff;font-weight:700;">⚡ Who To Contact Today</button>
+    <button class="skill-btn" onclick="insertSkill('blueprint')" style="background:linear-gradient(135deg,rgba(21,62,237,0.18),rgba(123,92,245,0.12));border-color:rgba(21,62,237,0.4);color:#6B8EF7;font-weight:700;">🏗 Deal Blueprint</button>
     <button class="skill-btn" onclick="insertSkill('prospect')">🔍 Prospect Hunt</button>
     <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
     <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
@@ -3322,6 +3323,7 @@ function insertSkill(key) {
   const acc = selectedAccount ? selectedAccount.replace(/-/g,' ') : null;
   const prompts = {
     contact:  'Run /contact-today \u2014 who should I contact today and with exactly what message?',
+    blueprint: acc ? 'Run /deal-blueprint for ' + acc + ' \u2014 full commercial execution plan: narrative, offer architecture, buying journey, risk register, and 7-day sprint.' : 'Run /deal-blueprint \u2014 which account? Select one from the sidebar first, or tell me the account name.',
     prospect: 'Run /prospect-hunt \u2014 tell me: which industry, which country (DK/NO/SE or Nordic), and any keyword or signal to focus on?',
     morning:  'Give me the morning CCO briefing \u2014 top signals, pipeline health, and my 3 priorities for today.',
     warroom:  'Run the commercial war room \u2014 full situation assessment. Nordic pipeline only (DK/NO/SE).',
@@ -3843,6 +3845,7 @@ function signalOutreach(slug, name) {
 
 const STATIC_COMMANDS = [
   { icon:'⚡', label:'Hvem kontakter jeg i dag?',  sub:'Who To Contact Today',    action: function(){ closePalette(); insertSkill('contact'); } },
+  { icon:'🏗', label:'Deal Blueprint',             sub:'Komplet kommerciel eksekutionsplan', action: function(){ closePalette(); insertSkill('blueprint'); } },
   { icon:'🔍', label:'Prospect Hunt',              sub:'Find nye leads',           action: function(){ closePalette(); insertSkill('prospect'); } },
   { icon:'⚔️', label:'Commercial War Room',        sub:'Fuld situation assessment',action: function(){ closePalette(); insertSkill('warroom'); } },
   { icon:'☀️', label:'Morning Briefing',           sub:'CCO daglig briefing',      action: function(){ closePalette(); insertSkill('morning'); } },
