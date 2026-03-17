@@ -1991,6 +1991,7 @@ body::after {
     <svg id="skills-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;flex-shrink:0"><polyline points="4,6 8,10 12,6"/></svg>
   </button>
   <div id="skills-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
+    <button class="skill-btn" onclick="insertSkill('contact')" style="background:#111;color:#fff;font-weight:700;">⚡ Who To Contact Today</button>
     <button class="skill-btn" onclick="insertSkill('prospect')">🔍 Prospect Hunt</button>
     <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
     <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
@@ -2871,6 +2872,7 @@ function insertSkill(key) {
   showTab('chat');
   const acc = selectedAccount ? selectedAccount.replace(/-/g,' ') : null;
   const prompts = {
+    contact:  'Run /contact-today \u2014 who should I contact today and with exactly what message?',
     prospect: 'Run /prospect-hunt \u2014 tell me: which industry, which country (DK/NO/SE or Nordic), and any keyword or signal to focus on?',
     morning:  'Give me the morning CCO briefing \u2014 top signals, pipeline health, and my 3 priorities for today.',
     warroom:  'Run the commercial war room \u2014 full situation assessment. Nordic pipeline only (DK/NO/SE).',
