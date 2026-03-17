@@ -4018,7 +4018,7 @@ async function streamOutreach(slug, name, buyer) {
       const { done, value } = await reader.read();
       if (done) break;
       const chunk = decoder.decode(value);
-      for (const line of chunk.split('\n')) {
+      for (const line of chunk.split('\\n')) {
         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
           try {
             const tok = JSON.parse(line.slice(6));
@@ -4054,7 +4054,7 @@ function openOutreachInChat() {
   closeOutreachModal();
   if (_outreachContext.slug) selectAccount(_outreachContext.slug, _outreachContext.name);
   const inp = document.getElementById('chat-input');
-  inp.value = 'Her er den genererede outreach til ' + _outreachContext.name + '. Kan du justere tonen og gøre den mere personlig baseret på account-filerne?\n\n' + _outreachFull;
+  inp.value = 'Her er den genererede outreach til ' + _outreachContext.name + '. Kan du justere tonen og gøre den mere personlig baseret på account-filerne?\\n\\n' + _outreachFull;
   autoResize(inp);
   showTab('chat');
   document.getElementById('welcome').style.display = 'none';
