@@ -2819,7 +2819,7 @@ async function loadLiveDashboard(manual = false) {
     // --- Deal Velocity Cards ---
     const dvc = document.getElementById('deal-velocity-cards');
     if (dvc && d.top_deals && d.top_deals.length) {
-      dvc.innerHTML = d.top_deals.map(deal => {
+      const cards = d.top_deals.map(function(deal) {
         const stale = deal.days_stale;
         const staleClass = stale === null ? '' : stale > 14 ? 'stale-hot' : stale > 7 ? 'stale-warm' : '';
         const staleBarColor = stale > 14 ? '#F6574A' : stale > 7 ? '#F5A623' : '#00D4A0';
@@ -2827,24 +2827,34 @@ async function loadLiveDashboard(manual = false) {
         const staleTagClass = stale === null ? 'fresh' : stale > 14 ? 'hot' : stale > 7 ? 'warm' : 'fresh';
         const staleLabel = stale === null ? 'Aktiv' : stale === 0 ? 'I dag' : stale + ' dage siden';
         const buyerShort = (deal.buyer || 'TBD').split('(')[0].trim().slice(0, 30);
+        const hasBuyer = buyerShort && buyerShort !== 'TBD';
         const winColor = parseInt(deal.win_pct) >= 60 ? 'var(--green)' : parseInt(deal.win_pct) >= 40 ? 'var(--amber)' : 'var(--red)';
-        return '<div class="dv-card ' + staleClass + '" onclick="selectAccount(\'' + (deal.slug || '') + '\',\'' + deal.name.replace(/'/g,"\\'") + '\')">' +
+        const div = document.createElement('div');
+        div.className = 'dv-card ' + staleClass;
+        div.dataset.slug = deal.slug || '';
+        div.dataset.name = deal.name || '';
+        div.onclick = function() { selectAccount(this.dataset.slug, this.dataset.name); };
+        div.innerHTML =
           '<div class="dv-stale-bar" style="width:' + staleBarW + '%;background:' + staleBarColor + '"></div>' +
           '<div class="dv-header">' +
-            '<div><div class="dv-name">' + deal.name + '</div><div class="dv-country">' + deal.country + ' · ' + deal.offering + '</div></div>' +
-            '<div style="text-align:right"><div class="dv-win" style="color:' + winColor + '">' + deal.win_pct + '</div><div class="dv-win-label">win %</div></div>' +
+            '<div><div class="dv-name">' + (deal.name || '') + '</div>' +
+            '<div class="dv-country">' + (deal.country || '') + ' · ' + (deal.offering || '') + '</div></div>' +
+            '<div style="text-align:right"><div class="dv-win" style="color:' + winColor + '">' + (deal.win_pct || '—') + '</div>' +
+            '<div class="dv-win-label">win %</div></div>' +
           '</div>' +
           '<div class="dv-metrics">' +
-            '<div class="dv-metric"><div class="dv-metric-val">' + deal.entry_val + '</div><div class="dv-metric-label">Unweighted</div></div>' +
-            '<div class="dv-metric"><div class="dv-metric-val" style="color:#7B5CF5">' + deal.weighted + '</div><div class="dv-metric-label">Weighted</div></div>' +
+            '<div class="dv-metric"><div class="dv-metric-val">' + (deal.entry_val || '—') + '</div><div class="dv-metric-label">Unweighted</div></div>' +
+            '<div class="dv-metric"><div class="dv-metric-val" style="color:#7B5CF5">' + (deal.weighted || '—') + '</div><div class="dv-metric-label">Weighted</div></div>' +
             '<div class="dv-metric"><div class="dv-metric-val">' + (deal.icp || '—') + '</div><div class="dv-metric-label">ICP</div></div>' +
           '</div>' +
-          '<div style="display:flex;align-items:center;justify-content:space-between">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">' +
             '<span class="dv-stale-tag ' + staleTagClass + '">● ' + staleLabel + '</span>' +
-            (buyerShort && buyerShort !== 'TBD' ? '<span class="dv-buyer">👤 ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)">⚠ Buyer TBD</span>') +
-          '</div>' +
-        '</div>';
-      }).join('');
+            (hasBuyer ? '<span class="dv-buyer">👤 ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)">⚠ Buyer TBD</span>') +
+          '</div>';
+        return div;
+      });
+      dvc.innerHTML = '';
+      cards.forEach(function(c) { dvc.appendChild(c); });
     }
 
     // --- Live Signals ---
