@@ -2111,9 +2111,138 @@ body::after {
 @keyframes pulse {
   0%,100% { opacity: 1; } 50% { opacity: 0.4; }
 }
+
+/* ── Command Palette ─────────────────────────────────────────────── */
+#cmd-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px); z-index: 9000; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+}
+#cmd-overlay.open { display: flex; }
+#cmd-box {
+  width: 100%; max-width: 580px; background: #0e0e1a; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+}
+#cmd-input-wrap {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+#cmd-input-wrap svg { flex-shrink: 0; color: var(--muted); }
+#cmd-input {
+  flex: 1; background: none; border: none; outline: none; font-size: 16px;
+  color: var(--white); font-family: inherit; caret-color: #153EED;
+}
+#cmd-input::placeholder { color: var(--muted); }
+#cmd-kb { font-size: 10px; color: var(--muted); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; flex-shrink:0; }
+#cmd-results { max-height: 380px; overflow-y: auto; padding: 6px; }
+.cmd-section { font-size: 9px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; padding: 8px 10px 4px; }
+.cmd-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border-radius: 8px; cursor: pointer; transition: background 0.1s;
+}
+.cmd-item:hover, .cmd-item.selected { background: rgba(21,62,237,0.15); }
+.cmd-item.selected { background: rgba(21,62,237,0.2); }
+.cmd-icon { font-size: 15px; width: 22px; text-align: center; flex-shrink: 0; }
+.cmd-label { flex: 1; font-size: 13.5px; color: var(--text); }
+.cmd-sub { font-size: 10.5px; color: var(--muted); }
+.cmd-arrow { font-size: 11px; color: var(--muted2); }
+#cmd-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--muted); }
+#cmd-footer {
+  display: flex; gap: 16px; padding: 8px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06); font-size: 10px; color: var(--muted2);
+}
+.cmd-hint { display: flex; align-items: center; gap: 5px; }
+.cmd-hint kbd { background: rgba(255,255,255,0.07); border-radius: 3px; padding: 1px 5px; font-family: inherit; }
+
+/* ── Outreach Modal ──────────────────────────────────────────────── */
+#outreach-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); z-index: 9100; align-items: center; justify-content: center;
+}
+#outreach-overlay.open { display: flex; }
+#outreach-box {
+  width: 100%; max-width: 620px; background: #0e0e1a; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  display: flex; flex-direction: column; max-height: 80vh;
+}
+#outreach-header {
+  padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+#outreach-title { font-size: 16px; font-weight: 800; color: var(--white); }
+#outreach-subtitle { font-size: 11px; color: var(--muted); margin-top: 3px; }
+#outreach-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 0; line-height: 1; }
+#outreach-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+#outreach-text {
+  font-size: 13.5px; color: var(--text); line-height: 1.7; white-space: pre-wrap;
+  min-height: 80px;
+}
+#outreach-cursor { display: inline-block; width: 2px; height: 14px; background: #153EED; margin-left: 1px; animation: blink 1s infinite; vertical-align: middle; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+#outreach-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+#outreach-loading .dot { width: 6px; height: 6px; border-radius: 50%; background: #153EED; animation: bounce 1.2s infinite; }
+#outreach-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+#outreach-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: scale(0.6); } 40% { transform: scale(1); } }
+#outreach-actions {
+  padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; gap: 10px; align-items: center;
+}
+#outreach-copy-btn {
+  background: #153EED; color: #fff; border: none; border-radius: 8px;
+  padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+#outreach-copy-btn:hover { background: #1a4af0; }
+#outreach-chat-btn {
+  background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: inherit;
+}
+#outreach-regen-btn {
+  background: none; color: var(--muted); border: none; font-size: 12px; cursor: pointer; font-family: inherit; margin-left: auto;
+}
 </style>
 </head>
 <body>
+
+<!-- ══════════════════ COMMAND PALETTE ══════════════════ -->
+<div id="cmd-overlay" onclick="if(event.target===this)closePalette()">
+  <div id="cmd-box">
+    <div id="cmd-input-wrap">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+      <input id="cmd-input" placeholder="Søg kommando eller account…" oninput="cmdFilter()" onkeydown="cmdKey(event)" autocomplete="off" spellcheck="false">
+      <span id="cmd-kb">ESC</span>
+    </div>
+    <div id="cmd-results"></div>
+    <div id="cmd-footer">
+      <span class="cmd-hint"><kbd>↑↓</kbd> naviger</span>
+      <span class="cmd-hint"><kbd>↵</kbd> udfør</span>
+      <span class="cmd-hint"><kbd>ESC</kbd> luk</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ OUTREACH MODAL ══════════════════ -->
+<div id="outreach-overlay" onclick="if(event.target===this)closeOutreachModal()">
+  <div id="outreach-box">
+    <div id="outreach-header">
+      <div>
+        <div id="outreach-title">Genererer outreach…</div>
+        <div id="outreach-subtitle">LinkedIn · klar til afsendelse</div>
+      </div>
+      <button id="outreach-close" onclick="closeOutreachModal()">✕</button>
+    </div>
+    <div id="outreach-body">
+      <div id="outreach-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:4px">Skriver besked…</span></div>
+      <div id="outreach-text" style="display:none"></div>
+    </div>
+    <div id="outreach-actions">
+      <button id="outreach-copy-btn" onclick="copyOutreach()" style="display:none">📋 Kopiér besked</button>
+      <button id="outreach-chat-btn" onclick="openOutreachInChat()" style="display:none">Åbn i chat →</button>
+      <button id="outreach-regen-btn" onclick="regenOutreach()" style="display:none">↻ Generér igen</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════ SIDEBAR ══════════════════ -->
 <div id="sidebar">
@@ -2191,7 +2320,14 @@ body::after {
           <div class="dash-tagline">JAKALA · DK / NO / SE · Q1–Q2 2026</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
-          <button class="btn-board" id="board-report-btn" onclick="generateBoardReport()">📊 Board Report</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="openPalette()" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:border-color 0.15s" onmouseenter="this.style.borderColor='rgba(255,255,255,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.1)'">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+              Søg
+              <kbd style="background:rgba(255,255,255,0.08);border-radius:3px;padding:1px 5px;font-size:10px;font-family:inherit">⌘K</kbd>
+            </button>
+            <button class="btn-board" id="board-report-btn" onclick="generateBoardReport()">📊 Board Report</button>
+          </div>
           <div class="dash-meta">
             <div class="dm-label">Current time</div>
             <div class="dm-time" id="dash-time">--:--</div>
@@ -2850,7 +2986,21 @@ async function loadLiveDashboard(manual = false) {
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">' +
             '<span class="dv-stale-tag ' + staleTagClass + '">● ' + staleLabel + '</span>' +
             (hasBuyer ? '<span class="dv-buyer">👤 ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)">⚠ Buyer TBD</span>') +
+          '</div>' +
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">' +
+            '<button class="dv-outreach-btn" style="width:100%;background:rgba(21,62,237,0.12);border:1px solid rgba(21,62,237,0.3);color:#6B8EF7;border-radius:6px;padding:7px 0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s">✉ Generér outreach</button>' +
           '</div>';
+        // Wire up outreach button without bubbling to card click
+        const btn = div.querySelector('.dv-outreach-btn');
+        const capturedSlug  = deal.slug  || '';
+        const capturedName  = deal.name  || '';
+        const capturedBuyer = buyerShort || '';
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openOutreachModal(capturedSlug, capturedName, capturedBuyer);
+        });
+        btn.addEventListener('mouseenter', function(){ this.style.background = 'rgba(21,62,237,0.22)'; });
+        btn.addEventListener('mouseleave', function(){ this.style.background = 'rgba(21,62,237,0.12)'; });
         return div;
       });
       dvc.innerHTML = '';
@@ -3685,6 +3835,230 @@ function signalOutreach(slug, name) {
   document.getElementById('chat-input').value = 'Write a LinkedIn outreach message for ' + name + ' based on the active signal. Language: English. Match tone to the urgency.';
   autoResize(document.getElementById('chat-input'));
   showToast('Account loaded \u2014 outreach ready \u2191');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ⌘K COMMAND PALETTE
+// ══════════════════════════════════════════════════════════════════
+
+const STATIC_COMMANDS = [
+  { icon:'⚡', label:'Hvem kontakter jeg i dag?',  sub:'Who To Contact Today',    action: function(){ closePalette(); insertSkill('contact'); } },
+  { icon:'🔍', label:'Prospect Hunt',              sub:'Find nye leads',           action: function(){ closePalette(); insertSkill('prospect'); } },
+  { icon:'⚔️', label:'Commercial War Room',        sub:'Fuld situation assessment',action: function(){ closePalette(); insertSkill('warroom'); } },
+  { icon:'☀️', label:'Morning Briefing',           sub:'CCO daglig briefing',      action: function(){ closePalette(); insertSkill('morning'); } },
+  { icon:'📊', label:'Q2 Forecast',                sub:'Probability-weighted',     action: function(){ closePalette(); insertSkill('forecast'); } },
+  { icon:'✉️', label:'Outreach Generator',         sub:'LinkedIn / email',         action: function(){ closePalette(); insertSkill('outreach'); } },
+  { icon:'🎯', label:'Pitch Partner',              sub:'Prep til meeting',         action: function(){ closePalette(); insertSkill('pitch'); } },
+  { icon:'📋', label:'Pre-Meeting Brief',          sub:'90-sekunders battle card', action: function(){ closePalette(); insertSkill('brief'); } },
+  { icon:'💰', label:'Revenue Simulation',         sub:'3 scenarier',             action: function(){ closePalette(); insertSkill('revenue'); } },
+  { icon:'📡', label:'Signal to Action',           sub:'Konverter signal til plan',action: function(){ closePalette(); insertSkill('signal'); } },
+  { icon:'📈', label:'Dashboard',                  sub:'Command Center',           action: function(){ closePalette(); showTab('dashboard'); } },
+  { icon:'💬', label:'GTM Assistant',              sub:'AI chat',                  action: function(){ closePalette(); showTab('chat'); } },
+  { icon:'📝', label:'Meeting Notes',              sub:'Processor mødenotater',    action: function(){ closePalette(); showTab('notes'); } },
+  { icon:'🏢', label:'Accounts',                   sub:'Alle accounts',            action: function(){ closePalette(); showTab('accounts'); } },
+  { icon:'🎮', label:'Pitch Simulator',            sub:'Øv din pitch',            action: function(){ closePalette(); showTab('simulator'); } },
+];
+
+let _cmdSelected = 0;
+let _cmdVisible  = [];
+
+function openPalette() {
+  document.getElementById('cmd-overlay').classList.add('open');
+  const inp = document.getElementById('cmd-input');
+  inp.value = '';
+  setTimeout(function(){ inp.focus(); }, 50);
+  cmdFilter();
+}
+
+function closePalette() {
+  document.getElementById('cmd-overlay').classList.remove('open');
+}
+
+function cmdFilter() {
+  const q = (document.getElementById('cmd-input').value || '').toLowerCase().trim();
+  const results = document.getElementById('cmd-results');
+
+  // Build command list: static + accounts
+  const accountCmds = (allAccounts || []).map(function(a) {
+    return {
+      icon: '🏢',
+      label: a.name,
+      sub: (a.country !== '\u2014' ? a.country + ' · ' : '') + (a.icp !== '\u2014' ? 'ICP ' + a.icp : ''),
+      action: (function(slug, name){ return function(){ closePalette(); selectAccount(slug, name); showTab('chat'); }; })(a.slug, a.name)
+    };
+  });
+
+  const all = STATIC_COMMANDS.concat(accountCmds);
+  _cmdVisible = q ? all.filter(function(c){
+    return c.label.toLowerCase().indexOf(q) !== -1 || (c.sub || '').toLowerCase().indexOf(q) !== -1;
+  }) : all;
+
+  _cmdSelected = 0;
+
+  if (_cmdVisible.length === 0) {
+    results.innerHTML = '<div id="cmd-empty">Ingen resultater for "' + q + '"</div>';
+    return;
+  }
+
+  // Split into skills vs accounts
+  const skillItems = _cmdVisible.filter(function(c){ return c.icon !== '🏢'; });
+  const accItems   = _cmdVisible.filter(function(c){ return c.icon === '🏢'; });
+
+  let html = '';
+  if (skillItems.length) {
+    if (!q) html += '<div class="cmd-section">Handlinger</div>';
+    skillItems.forEach(function(c, i) {
+      html += '<div class="cmd-item' + (i === 0 && !accItems.length - 1 ? ' selected' : '') + '" data-idx="' + i + '" onclick="cmdExecute(' + i + ')">' +
+        '<span class="cmd-icon">' + c.icon + '</span>' +
+        '<span class="cmd-label">' + c.label + '</span>' +
+        (c.sub ? '<span class="cmd-sub">' + c.sub + '</span>' : '') +
+        '<span class="cmd-arrow">↵</span>' +
+      '</div>';
+    });
+  }
+  if (accItems.length) {
+    if (!q) html += '<div class="cmd-section">Accounts</div>';
+    accItems.forEach(function(c, i) {
+      const idx = skillItems.length + i;
+      html += '<div class="cmd-item" data-idx="' + idx + '" onclick="cmdExecute(' + idx + ')">' +
+        '<span class="cmd-icon">' + c.icon + '</span>' +
+        '<span class="cmd-label">' + c.label + '</span>' +
+        (c.sub ? '<span class="cmd-sub">' + c.sub + '</span>' : '') +
+        '<span class="cmd-arrow">↵</span>' +
+      '</div>';
+    });
+  }
+  results.innerHTML = html;
+  cmdHighlight();
+}
+
+function cmdHighlight() {
+  document.querySelectorAll('.cmd-item').forEach(function(el, i) {
+    el.classList.toggle('selected', i === _cmdSelected);
+    if (i === _cmdSelected) el.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+function cmdKey(e) {
+  if (e.key === 'Escape') { closePalette(); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); _cmdSelected = Math.min(_cmdSelected + 1, _cmdVisible.length - 1); cmdHighlight(); return; }
+  if (e.key === 'ArrowUp')   { e.preventDefault(); _cmdSelected = Math.max(_cmdSelected - 1, 0); cmdHighlight(); return; }
+  if (e.key === 'Enter')     { e.preventDefault(); cmdExecute(_cmdSelected); return; }
+}
+
+function cmdExecute(idx) {
+  if (_cmdVisible[idx]) _cmdVisible[idx].action();
+}
+
+// Global ⌘K / Ctrl+K listener
+document.addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    const isOpen = document.getElementById('cmd-overlay').classList.contains('open');
+    if (isOpen) closePalette(); else openPalette();
+  }
+  if (e.key === 'Escape') closePalette();
+});
+
+
+// ══════════════════════════════════════════════════════════════════
+// ONE-CLICK OUTREACH MODAL
+// ══════════════════════════════════════════════════════════════════
+
+let _outreachContext = { slug: '', name: '', buyer: '' };
+let _outreachFull = '';
+
+function openOutreachModal(slug, name, buyer) {
+  _outreachContext = { slug: slug, name: name, buyer: buyer || '' };
+  _outreachFull = '';
+
+  document.getElementById('outreach-title').textContent = name || 'Outreach';
+  document.getElementById('outreach-subtitle').textContent = (buyer ? buyer + ' · ' : '') + 'LinkedIn · klar til afsendelse';
+  document.getElementById('outreach-loading').style.display = 'flex';
+  document.getElementById('outreach-text').style.display = 'none';
+  document.getElementById('outreach-text').textContent = '';
+  document.getElementById('outreach-copy-btn').style.display = 'none';
+  document.getElementById('outreach-chat-btn').style.display = 'none';
+  document.getElementById('outreach-regen-btn').style.display = 'none';
+  document.getElementById('outreach-overlay').classList.add('open');
+
+  streamOutreach(slug, name, buyer);
+}
+
+function closeOutreachModal() {
+  document.getElementById('outreach-overlay').classList.remove('open');
+}
+
+async function streamOutreach(slug, name, buyer) {
+  const prompt = 'Write a ready-to-send LinkedIn outreach message for ' + name +
+    (buyer ? ' — addressed to ' + buyer : '') +
+    '. Rules: max 5 sentences, open with a specific public signal about this company, frame the problem (do not pitch), end with a soft ask for 20 minutes. Peer-to-peer tone. No price. No brackets or placeholders — this must be ready to send right now.';
+
+  const textEl  = document.getElementById('outreach-text');
+  const loadEl  = document.getElementById('outreach-loading');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], account: slug })
+    });
+
+    loadEl.style.display = 'none';
+    textEl.style.display = 'block';
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    _outreachFull = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const tok = JSON.parse(line.slice(6));
+            _outreachFull += tok.text || '';
+            textEl.textContent = _outreachFull;
+          } catch(err) {}
+        }
+      }
+    }
+
+    document.getElementById('outreach-copy-btn').style.display = 'inline-flex';
+    document.getElementById('outreach-chat-btn').style.display = 'inline-flex';
+    document.getElementById('outreach-regen-btn').style.display = 'inline-flex';
+
+  } catch(err) {
+    loadEl.style.display = 'none';
+    textEl.style.display = 'block';
+    textEl.textContent = 'Fejl ved generering — prøv igen.';
+  }
+}
+
+function copyOutreach() {
+  if (!_outreachFull) return;
+  navigator.clipboard.writeText(_outreachFull).then(function() {
+    const btn = document.getElementById('outreach-copy-btn');
+    btn.textContent = '✓ Kopieret!';
+    btn.style.background = '#00A880';
+    setTimeout(function(){ btn.textContent = '📋 Kopiér besked'; btn.style.background = '#153EED'; }, 2000);
+  });
+}
+
+function openOutreachInChat() {
+  closeOutreachModal();
+  if (_outreachContext.slug) selectAccount(_outreachContext.slug, _outreachContext.name);
+  const inp = document.getElementById('chat-input');
+  inp.value = 'Her er den genererede outreach til ' + _outreachContext.name + '. Kan du justere tonen og gøre den mere personlig baseret på account-filerne?\n\n' + _outreachFull;
+  autoResize(inp);
+  showTab('chat');
+  document.getElementById('welcome').style.display = 'none';
+}
+
+function regenOutreach() {
+  openOutreachModal(_outreachContext.slug, _outreachContext.name, _outreachContext.buyer);
 }
 </script>
 </body>
