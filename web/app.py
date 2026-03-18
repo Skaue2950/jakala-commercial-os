@@ -2297,6 +2297,7 @@ body::after {
     <button class="skill-btn" onclick="insertSkill('brief')">Pre-Meeting Brief</button>
     <button class="skill-btn" onclick="insertSkill('revenue')">Revenue Simulation</button>
     <button class="skill-btn" onclick="insertSkill('signal')">Signal to Action</button>
+    <button class="skill-btn" onclick="insertSkill('strategic')">⭐ Strategic Framework</button>
   </div>
 
   <button class="sidebar-accounts-toggle" id="accounts-toggle" onclick="toggleAccountsPanel()">
@@ -3333,6 +3334,7 @@ function insertSkill(key) {
     brief:    acc ? 'Give me the pre-meeting brief for ' + acc + '. Meeting type: discovery.' : 'Give me the pre-meeting brief. Select an account from the sidebar first.',
     revenue:  acc ? 'Run the revenue simulation for ' + acc + '. Show all three levers and three scenarios.' : 'Run the revenue simulation. Select an account from the sidebar first.',
     signal:   'I have a new market signal to analyse. Here it is:',
+    strategic: acc ? 'Run /strategic for ' + acc + ' \u2014 apply the DreamTRUE framework: identify the tension, define the ICP (commercial + emotional), sharpen our uniqueness, and find the emotional trigger that drives action.' : 'Run /strategic \u2014 apply the DreamTRUE framework. What brand, product or GTM challenge should we analyse? (or select an account from the sidebar first)',
   };
   const input = document.getElementById('chat-input');
   input.value = prompts[key] || '';
