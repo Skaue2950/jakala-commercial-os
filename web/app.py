@@ -2280,6 +2280,9 @@ body::after {
   <button class="nav-btn" onclick="showTab('partners')" id="nav-partners">
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 6.5l1-1a3 3 0 014.24 4.24l-2 2a3 3 0 01-4.24-4.24"/><path d="M6.5 9.5l-1 1a3 3 0 01-4.24-4.24l2-2a3 3 0 014.24 4.24"/></svg></span> Partnerships
   </button>
+  <button class="nav-btn" onclick="insertSkill('websiteopt');showTab('chat')" id="nav-websiteopt">
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg></span> Website Optimizer
+  </button>
 
   <button class="sidebar-accounts-toggle" id="skills-toggle" onclick="toggleSkillsPanel()">
     <span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><line x1="8" y1="11" x2="8.01" y2="11"/></svg> Quick Skills</span>
