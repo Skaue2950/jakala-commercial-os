@@ -3252,7 +3252,7 @@ function renderMarkdown(text) {
     .replace(/<table>(<tr><td>[-:| ]+<\/td><\/tr>)<\/table>/g,'')
     .replace(/^- (.+)$/gm,'<li>$1</li>')
     .replace(/(<li>.*<\/li>\\n?)+/gs, m => '<ul>' + m + '</ul>')
-    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/^\\d+\. (.+)$/gm,'<li>$1</li>')
     .replace(/\\n/g,'<br>');
 }
 
