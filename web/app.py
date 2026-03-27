@@ -294,15 +294,25 @@ def api_chat():
         api_messages.append({"role": role, "content": content})
 
     def generate():
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=4096,
-            system=SYSTEM_PROMPT,
-            messages=api_messages,
-        ) as stream:
-            for text in stream.text_stream:
-                yield f"data: {json.dumps({'text': text})}\n\n"
-        yield "data: [DONE]\n\n"
+        try:
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT,
+                messages=api_messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+        except anthropic.AuthenticationError:
+            yield f"data: {json.dumps({'text': '⚠️ API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
+        except anthropic.RateLimitError:
+            yield f"data: {json.dumps({'text': '⚠️ Rate limit reached — please wait a moment and try again.'})}\n\n"
+        except anthropic.APIStatusError as e:
+            yield f"data: {json.dumps({'text': f'⚠️ API error {e.status_code}: {e.message}'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'text': f'⚠️ Unexpected error: {str(e)}'})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
@@ -1015,15 +1025,23 @@ YOUR PERSONA:
 Start the conversation by briefly introducing yourself and asking what brings the salesperson to this meeting."""
 
     def generate():
-        with client.messages.stream(
-            model=MODEL,
-            max_tokens=1024,
-            system=system,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
-                yield f"data: {json.dumps({'text': text})}\n\n"
-        yield "data: [DONE]\n\n"
+        try:
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=1024,
+                system=system,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield f"data: {json.dumps({'text': text})}\n\n"
+        except anthropic.AuthenticationError:
+            yield f"data: {json.dumps({'text': '⚠️ API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
+        except anthropic.APIStatusError as e:
+            yield f"data: {json.dumps({'text': f'⚠️ API error {e.status_code}: {e.message}'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'text': f'⚠️ Error: {str(e)}'})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
