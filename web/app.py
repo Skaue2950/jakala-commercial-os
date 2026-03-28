@@ -4166,30 +4166,17 @@ def cc_api_login():
     if not CC_DB_OK:
         return jsonify({"error": "Database not available"}), 503
     import json as _json
-    # Read body via multiple fallbacks
+    # Parse JSON from body; fall back to query params (Railway CDN may strip Content-Length)
     try:
-        body = request.environ.get('wsgi.input').read(
-            int(request.environ.get('CONTENT_LENGTH', 0) or 0)
-        )
-        data = _json.loads(body) if body else {}
+        data = request.get_json(force=True, silent=True) or {}
     except Exception:
         data = {}
-    if not data:
-        try:
-            data = request.get_json(force=True, silent=True) or {}
-        except Exception:
-            pass
-    # Also accept query params as fallback
     email = (data.get("email") or request.args.get("email") or "").strip().lower()
     pw    = (data.get("password") or request.args.get("password") or "").encode()
     db    = SessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()
-        if not user:
-            return jsonify({"error": "Invalid email or password",
-                            "_d": f"e=[{email}] cl={request.content_length} ct={request.content_type}"}), 401
-        pw_ok = bcrypt.checkpw(pw, user.password_hash.encode())
-        if not pw_ok:
+        if not user or not bcrypt.checkpw(pw, user.password_hash.encode()):
             return jsonify({"error": "Invalid email or password"}), 401
         session["cc_uid"] = user.id
         return jsonify({"ok": True, "role": user.role, "country": user.country, "name": user.name})
@@ -4828,7 +4815,8 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Signing in…';
   err.textContent = '';
   try {
-    const r = await fetch('/api/cc/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+    const params = new URLSearchParams({email, password: pw});
+    const r = await fetch(`/api/cc/login?${params}`, {method:'POST'});
     const d = await r.json();
     if (!r.ok) { err.textContent = d.error || 'Login failed'; return; }
     await initApp(d);
