@@ -4179,13 +4179,15 @@ def cc_api_login():
             data = request.get_json(force=True, silent=True) or {}
         except Exception:
             pass
-    email = (data.get("email") or "").strip().lower()
-    pw    = (data.get("password") or "").encode()
+    # Also accept query params as fallback
+    email = (data.get("email") or request.args.get("email") or "").strip().lower()
+    pw    = (data.get("password") or request.args.get("password") or "").encode()
     db    = SessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            return jsonify({"error": "Invalid email or password"}), 401
+            return jsonify({"error": "Invalid email or password",
+                            "_d": f"e=[{email}] cl={request.content_length} ct={request.content_type}"}), 401
         pw_ok = bcrypt.checkpw(pw, user.password_hash.encode())
         if not pw_ok:
             return jsonify({"error": "Invalid email or password"}), 401
