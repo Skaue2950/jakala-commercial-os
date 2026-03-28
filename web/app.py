@@ -4167,7 +4167,8 @@ def cc_api_login():
         return jsonify({"error": "Database not available"}), 503
     import json as _json
     try:
-        data = request.get_json(force=True, silent=True) or _json.loads(request.data or b'{}')
+        raw = request.get_data(cache=True)
+        data = _json.loads(raw) if raw else {}
     except Exception:
         data = {}
     email = (data.get("email") or "").strip().lower()
