@@ -4166,12 +4166,19 @@ def cc_api_login():
     if not CC_DB_OK:
         return jsonify({"error": "Database not available"}), 503
     import json as _json
-    # Read body directly via stream (most reliable in Flask 3.x)
+    # Read body via multiple fallbacks
     try:
-        body = request.stream.read()
+        body = request.environ.get('wsgi.input').read(
+            int(request.environ.get('CONTENT_LENGTH', 0) or 0)
+        )
         data = _json.loads(body) if body else {}
     except Exception:
         data = {}
+    if not data:
+        try:
+            data = request.get_json(force=True, silent=True) or {}
+        except Exception:
+            pass
     email = (data.get("email") or "").strip().lower()
     pw    = (data.get("password") or "").encode()
     db    = SessionLocal()
