@@ -4175,8 +4175,11 @@ def cc_api_login():
     db    = SessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()
-        if not user or not bcrypt.checkpw(pw, user.password_hash.encode()):
-            return jsonify({"error": "Invalid email or password"}), 401
+        if not user:
+            return jsonify({"error": "Invalid email or password", "_d": f"no user for {email}"}), 401
+        pw_ok = bcrypt.checkpw(pw, user.password_hash.encode())
+        if not pw_ok:
+            return jsonify({"error": "Invalid email or password", "_d": f"pw fail for {email}, hash={user.password_hash[:15]}"}), 401
         session["cc_uid"] = user.id
         return jsonify({"ok": True, "role": user.role, "country": user.country, "name": user.name})
     finally:
