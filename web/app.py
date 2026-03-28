@@ -4189,8 +4189,18 @@ def cc_api_logout():
 
 @app.route("/api/cc/ping", methods=["GET", "POST"])
 def cc_ping():
-    return jsonify({"ok": True, "method": request.method, "path": request.path,
-                    "ct": request.content_type, "data": request.get_data(as_text=True)[:200]})
+    import os as _os
+    db_url = _os.getenv("DATABASE_URL","NOT SET")
+    db_info = db_url[:30] + "..." if db_url != "NOT SET" else db_url
+    user_count = 0
+    try:
+        if CC_DB_OK:
+            _db = SessionLocal()
+            user_count = _db.query(User).count()
+            _db.close()
+    except Exception as _e:
+        db_info += f" | DB ERR: {_e}"
+    return jsonify({"ok": True, "cc_db_ok": CC_DB_OK, "db_url": db_info, "users": user_count})
 
 @app.route("/api/cc/me", methods=["GET"])
 def cc_api_me():
