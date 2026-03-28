@@ -4166,28 +4166,22 @@ def cc_api_login():
     if not CC_DB_OK:
         return jsonify({"error": "Database not available"}), 503
     import json as _json
-    # Try multiple parsing methods for Flask 3.x compatibility
-    data = {}
+    # Read body directly via stream (most reliable in Flask 3.x)
     try:
-        data = request.json or {}
+        body = request.stream.read()
+        data = _json.loads(body) if body else {}
     except Exception:
-        pass
-    if not data:
-        try:
-            raw = request.get_data(cache=False, as_text=True)
-            data = _json.loads(raw) if raw else {}
-        except Exception:
-            pass
+        data = {}
     email = (data.get("email") or "").strip().lower()
     pw    = (data.get("password") or "").encode()
     db    = SessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            return jsonify({"error": "Invalid email or password", "_d": f"no user for [{email}] data={list(data.keys())}"}), 401
+            return jsonify({"error": "Invalid email or password"}), 401
         pw_ok = bcrypt.checkpw(pw, user.password_hash.encode())
         if not pw_ok:
-            return jsonify({"error": "Invalid email or password", "_d": f"pw fail hash={user.password_hash[:10]}"}), 401
+            return jsonify({"error": "Invalid email or password"}), 401
         session["cc_uid"] = user.id
         return jsonify({"ok": True, "role": user.role, "country": user.country, "name": user.name})
     finally:
