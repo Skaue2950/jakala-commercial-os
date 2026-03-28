@@ -4165,7 +4165,11 @@ def cc_login_page():
 def cc_api_login():
     if not CC_DB_OK:
         return jsonify({"error": "Database not available"}), 503
-    data  = request.get_json()
+    import json as _json
+    try:
+        data = request.get_json(force=True, silent=True) or _json.loads(request.data or b'{}')
+    except Exception:
+        data = {}
     email = (data.get("email") or "").strip().lower()
     pw    = (data.get("password") or "").encode()
     db    = SessionLocal()
@@ -4182,6 +4186,11 @@ def cc_api_login():
 def cc_api_logout():
     session.pop("cc_uid", None)
     return jsonify({"ok": True})
+
+@app.route("/api/cc/ping", methods=["GET", "POST"])
+def cc_ping():
+    return jsonify({"ok": True, "method": request.method, "path": request.path,
+                    "ct": request.content_type, "data": request.get_data(as_text=True)[:200]})
 
 @app.route("/api/cc/me", methods=["GET"])
 def cc_api_me():
