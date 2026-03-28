@@ -2949,13 +2949,13 @@ async function loadLiveDashboard(manual = false) {
 
     // --- KPIs ---
     // Pipeline: parse number from e.g. "€10.5M Commerce/Data + DKK 1.2M Hello Growth"
-    const pipM = (d.pipeline_total || '').match(/([\d.]+)M/);
+    const pipM = (d.pipeline_total || '').match(/([\\d.]+)M/);
     const pipNum = pipM ? parseFloat(pipM[1]) : 6.8;
     countUp('kpi-pipeline', pipNum, 1.4, 1);
     countUp('kpi-buyers',   d.named_buyers || 18, 1.1, 0);
 
     // Forecast: parse number from e.g. "€600K"
-    const fcM = (d.forecast_base || '').match(/([\d,]+)K/);
+    const fcM = (d.forecast_base || '').match(/([\\d,]+)K/);
     const fcNum = fcM ? parseInt(fcM[1].replace(',','')) : 600;
     countUp('kpi-forecast', fcNum, 1.3, 0);
 
