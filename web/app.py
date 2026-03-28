@@ -9,6 +9,13 @@ import anthropic
 from dotenv import load_dotenv
 
 try:
+    import bcrypt
+    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction
+    CC_DB_OK = True
+except ImportError:
+    CC_DB_OK = False
+
+try:
     from pptx import Presentation
     from pptx.util import Inches, Pt
     from pptx.dml.color import RGBColor
@@ -4099,6 +4106,1114 @@ def index():
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     return resp
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CONTROL CENTER — routes, API, HTML
+# ══════════════════════════════════════════════════════════════════════════════
+
+COUNTRY_META = {
+    "no": {"flag": "🇳🇴", "name": "Norway",  "color": "#153EED"},
+    "dk": {"flag": "🇩🇰", "name": "Denmark", "color": "#C60C30"},
+    "se": {"flag": "🇸🇪", "name": "Sweden",  "color": "#006AA7"},
+    "uk": {"flag": "🇬🇧", "name": "UK",      "color": "#CF111C"},
+    "fr": {"flag": "🇫🇷", "name": "France",  "color": "#0055A4"},
+}
+
+STAGE_ORDER = ["identified", "proposed", "negotiating", "active", "completed"]
+
+# ── DB init on startup ────────────────────────────────────────────────────────
+if CC_DB_OK:
+    try:
+        init_db()
+    except Exception as e:
+        print(f"[CC] DB init warning: {e}")
+
+# ── Auth helpers ──────────────────────────────────────────────────────────────
+def cc_current_user():
+    uid = session.get("cc_uid")
+    if not uid or not CC_DB_OK:
+        return None
+    db = SessionLocal()
+    try:
+        return db.query(User).get(uid)
+    finally:
+        db.close()
+
+def cc_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("cc_uid"):
+            return redirect("/cc/login")
+        return f(*args, **kwargs)
+    return decorated
+
+# ── CC API routes ─────────────────────────────────────────────────────────────
+
+@app.route("/cc/login", methods=["GET"])
+def cc_login_page():
+    if session.get("cc_uid"):
+        return redirect("/cc")
+    return render_template_string(CC_HTML)
+
+@app.route("/api/cc/login", methods=["POST"])
+def cc_api_login():
+    if not CC_DB_OK:
+        return jsonify({"error": "Database not available"}), 503
+    data  = request.get_json()
+    email = (data.get("email") or "").strip().lower()
+    pw    = (data.get("password") or "").encode()
+    db    = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user or not bcrypt.checkpw(pw, user.password_hash.encode()):
+            return jsonify({"error": "Invalid email or password"}), 401
+        session["cc_uid"] = user.id
+        return jsonify({"ok": True, "role": user.role, "country": user.country, "name": user.name})
+    finally:
+        db.close()
+
+@app.route("/api/cc/logout", methods=["POST"])
+def cc_api_logout():
+    session.pop("cc_uid", None)
+    return jsonify({"ok": True})
+
+@app.route("/api/cc/me", methods=["GET"])
+def cc_api_me():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    return jsonify({"id": u.id, "name": u.name, "role": u.role,
+                    "country": u.country, "initials": u.initials})
+
+@app.route("/api/cc/country-data", methods=["GET"])
+def cc_country_data():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    country = request.args.get("country") or u.country
+    if u.role == "country_head" and country != u.country:
+        return jsonify({"error": "Forbidden"}), 403
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        accounts = db.query(Account).filter(Account.country == country).all()
+        industries = db.query(Industry).all()
+        services   = db.query(Service).all()
+        signals    = db.query(Signal).filter(
+            (Signal.country == country) | (Signal.country == None),
+            Signal.is_active == True
+        ).order_by(Signal.severity, Signal.date.desc()).limit(8).all()
+        predictions = db.query(Prediction).filter(Prediction.country == country).order_by(Prediction.opportunity_score.desc()).limit(5).all()
+
+        svc_map = {s.id: s for s in services}
+        ind_map = {i.id: i for i in industries}
+
+        def fmt_account(a):
+            acts = [{"id": ac.id, "service_id": ac.service_id,
+                     "service_name": svc_map[ac.service_id].short_name if ac.service_id in svc_map else "?",
+                     "service_color": svc_map[ac.service_id].color if ac.service_id in svc_map else "#888",
+                     "stage": ac.stage, "manager": ac.manager,
+                     "cost": ac.cost_estimate, "weeks": ac.timeline_weeks, "roi": ac.roi_estimate}
+                    for ac in a.activations]
+            preds = [{"risk": p.risk_score, "opp": p.opportunity_score,
+                      "service": svc_map[p.recommended_service_id].short_name if p.recommended_service_id in svc_map else "?",
+                      "confidence": p.confidence, "trigger": p.trigger_summary,
+                      "weeks": p.timeframe_weeks}
+                     for p in a.predictions]
+            return {"id": a.id, "name": a.name, "slug": a.slug,
+                    "account_type": a.account_type,
+                    "industry": ind_map[a.industry_id].name if a.industry_id in ind_map else "Other",
+                    "industry_icon": ind_map[a.industry_id].icon if a.industry_id in ind_map else "🏢",
+                    "industry_slug": ind_map[a.industry_id].slug if a.industry_id in ind_map else "",
+                    "icp": a.icp_score, "deal": a.deal_score,
+                    "pipeline": a.pipeline_value, "win_prob": a.win_probability,
+                    "buyer": a.named_buyer, "buyer_role": a.buyer_role,
+                    "revenue": a.revenue, "tech_stack": a.tech_stack,
+                    "activations": acts, "predictions": preds}
+
+        pipeline_total = sum(a.pipeline_value or 0 for a in accounts)
+        named_buyers   = sum(1 for a in accounts if a.named_buyer and a.named_buyer != "TBD")
+        active_acts    = sum(1 for a in accounts for ac in a.activations if ac.stage == "active")
+
+        meta = COUNTRY_META.get(country, {"flag": "🌍", "name": country.upper(), "color": "#153EED"})
+
+        return jsonify({
+            "country": country,
+            "meta": meta,
+            "kpis": {"pipeline": pipeline_total, "accounts": len(accounts),
+                     "buyers": named_buyers, "active_activations": active_acts},
+            "accounts": [fmt_account(a) for a in sorted(accounts, key=lambda x: -(x.deal_score or 0))],
+            "industries": [{"id": i.id, "name": i.name, "slug": i.slug, "icon": i.icon,
+                            "count": sum(1 for a in accounts if a.industry_id == i.id)}
+                           for i in industries if any(a.industry_id == i.id for a in accounts)],
+            "signals": [{"type": sg.signal_type, "severity": sg.severity, "title": sg.title,
+                         "description": sg.description, "action": sg.action_recommended,
+                         "vertical": sg.vertical}
+                        for sg in signals],
+            "predictions": [{"account": svc_map.get(p.recommended_service_id, None) and
+                              db.query(Account).get(p.account_id) and
+                              db.query(Account).get(p.account_id).name,
+                              "risk": p.risk_score, "opp": p.opportunity_score,
+                              "trigger": p.trigger_summary, "confidence": p.confidence,
+                              "service": svc_map[p.recommended_service_id].short_name if p.recommended_service_id in svc_map else "?",
+                              "weeks": p.timeframe_weeks}
+                             for p in predictions],
+        })
+    finally:
+        db.close()
+
+@app.route("/api/cc/global-data", methods=["GET"])
+def cc_global_data():
+    u = cc_current_user()
+    if not u or u.role != "global":
+        return jsonify({"error": "Forbidden"}), 403
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        countries_data = []
+        for code, meta in COUNTRY_META.items():
+            accs = db.query(Account).filter(Account.country == code).all()
+            if not accs:
+                countries_data.append({"code": code, "meta": meta,
+                                        "pipeline": 0, "accounts": 0, "buyers": 0, "top_service": "—"})
+                continue
+            pipeline   = sum(a.pipeline_value or 0 for a in accs)
+            buyers     = sum(1 for a in accs if a.named_buyer and a.named_buyer != "TBD")
+            # most common service
+            svc_counts: dict = {}
+            for a in accs:
+                for ac in a.activations:
+                    svc_counts[ac.service_id] = svc_counts.get(ac.service_id, 0) + 1
+            top_svc_id = max(svc_counts, key=svc_counts.get) if svc_counts else None
+            top_svc    = db.query(Service).get(top_svc_id).short_name if top_svc_id else "—"
+            countries_data.append({"code": code, "meta": meta,
+                                    "pipeline": pipeline, "accounts": len(accs),
+                                    "buyers": buyers, "top_service": top_svc})
+
+        # service performance across all markets
+        all_acts = db.query(Activation).all()
+        svc_pipeline: dict = {}
+        for ac in all_acts:
+            acc = db.query(Account).get(ac.account_id)
+            if acc:
+                svc_pipeline[ac.service_id] = svc_pipeline.get(ac.service_id, 0) + (acc.pipeline_value or 0)
+        services = db.query(Service).all()
+        svc_perf = sorted([{"id": s.id, "name": s.short_name, "practice": s.practice,
+                             "color": s.color, "pipeline": svc_pipeline.get(s.id, 0)}
+                           for s in services], key=lambda x: -x["pipeline"])
+        max_pipe = svc_perf[0]["pipeline"] if svc_perf else 1
+
+        global_signals = db.query(Signal).filter(Signal.is_active == True).order_by(Signal.severity, Signal.date.desc()).limit(6).all()
+
+        return jsonify({
+            "countries": countries_data,
+            "total_pipeline": sum(c["pipeline"] for c in countries_data),
+            "total_accounts": sum(c["accounts"] for c in countries_data),
+            "service_performance": [{"name": s["name"], "practice": s["practice"],
+                                      "color": s["color"], "pipeline": s["pipeline"],
+                                      "pct": round(s["pipeline"] / max_pipe * 100) if max_pipe else 0}
+                                     for s in svc_perf],
+            "signals": [{"type": sg.signal_type, "severity": sg.severity, "title": sg.title,
+                          "description": sg.description, "vertical": sg.vertical,
+                          "country": sg.country or "Global"}
+                         for sg in global_signals],
+        })
+    finally:
+        db.close()
+
+@app.route("/api/cc/predict", methods=["POST"])
+def cc_generate_prediction():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    data       = request.get_json()
+    account_id = data.get("account_id")
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        acc     = db.query(Account).get(account_id)
+        if not acc:
+            return jsonify({"error": "Account not found"}), 404
+        signals = db.query(Signal).filter(
+            (Signal.country == acc.country) | (Signal.country == None),
+            Signal.is_active == True
+        ).all()
+        ind     = db.query(Industry).get(acc.industry_id)
+        acts    = acc.activations
+        svcs    = db.query(Service).all()
+
+        prompt = f"""You are a senior commercial strategist at JAKALA, a global data and digital experience company.
+
+Analyze this account and generate an AI prediction for the next best commercial action.
+
+ACCOUNT:
+- Name: {acc.name}
+- Country: {acc.country.upper()}
+- Industry: {ind.name if ind else 'Unknown'}
+- Pipeline value: €{acc.pipeline_value:,.0f}
+- ICP score: {acc.icp_score}/10
+- Named buyer: {acc.named_buyer or 'TBD'} ({acc.buyer_role or 'Unknown role'})
+- Revenue: {acc.revenue or 'Unknown'}
+- Tech stack: {acc.tech_stack or 'Unknown'}
+- Current activations: {', '.join(a.service.name + ' (' + a.stage + ')' for a in acts) if acts else 'None'}
+
+ACTIVE MARKET SIGNALS ({ind.name if ind else 'market'} + global):
+{chr(10).join(f'- [{sg.severity.upper()}] {sg.title}: {sg.description[:200]}' for sg in signals[:4])}
+
+JAKALA SERVICES AVAILABLE:
+{chr(10).join(f'- {s.short_name} ({s.practice}): €{s.entry_price_min:,.0f}–{s.entry_price_max:,.0f} entry' for s in svcs)}
+
+Generate a prediction with:
+1. OPPORTUNITY SCORE (0-10): How strong is the commercial opportunity right now?
+2. RISK SCORE (0-10): What is the risk of revenue loss / deal stalling?
+3. RECOMMENDED SERVICE: Which JAKALA service is the best next action?
+4. TRIGGER SUMMARY (2-3 sentences): Why now? What market forces, signals or account dynamics make this the moment to act?
+5. CONFIDENCE (0-1): How confident are you in this prediction?
+6. TIMEFRAME: How many weeks until the window closes or the opportunity peaks?
+
+Respond in JSON format:
+{{"opportunity_score": 8.5, "risk_score": 3.0, "recommended_service": "Data Revenue", "trigger_summary": "...", "confidence": 0.82, "timeframe_weeks": 6}}"""
+
+        resp = client.messages.create(
+            model=MODEL, max_tokens=512,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = resp.content[0].text.strip()
+        # extract JSON
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if not match:
+            return jsonify({"error": "Could not parse prediction"}), 500
+        pred_data = json.loads(match.group())
+
+        rec_svc = next((s for s in svcs if s.short_name.lower() in pred_data.get("recommended_service", "").lower()), svcs[0])
+        pred = Prediction(
+            account_id=account_id, country=acc.country,
+            vertical=ind.name if ind else "General",
+            risk_score=pred_data.get("risk_score", 5),
+            opportunity_score=pred_data.get("opportunity_score", 5),
+            trigger_summary=pred_data.get("trigger_summary", ""),
+            recommended_service_id=rec_svc.id,
+            confidence=pred_data.get("confidence", 0.6),
+            timeframe_weeks=pred_data.get("timeframe_weeks", 8),
+        )
+        db.add(pred); db.commit()
+        pred_data["id"] = pred.id
+        pred_data["recommended_service_name"] = rec_svc.short_name
+        pred_data["recommended_service_color"] = rec_svc.color
+        return jsonify(pred_data)
+    finally:
+        db.close()
+
+# ── Control Center HTML ────────────────────────────────────────────────────────
+
+CC_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>JAKALA Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060612;--sb:#0A0A1E;--card:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.04);
+  --blue:#153EED;--blue-dim:rgba(21,62,237,.15);--blue-glow:rgba(21,62,237,.3);
+  --green:#00D4A0;--red:#F6574A;--amber:#F59E0B;--purple:#8B5CF6;
+  --w:#FFFFFF;--t:rgba(255,255,255,.88);--m:rgba(255,255,255,.45);--m2:rgba(255,255,255,.22);
+  --font:'Inter',-apple-system,sans-serif;--sb-w:258px;--radius:12px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100vh;overflow:hidden}
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .3s}
+.screen.hidden{opacity:0;pointer-events:none}
+/* ── LOGIN ── */
+#login-screen{background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(21,62,237,.18) 0%,transparent 70%),var(--bg)}
+.login-card{width:380px;padding:48px 40px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:20px;backdrop-filter:blur(20px)}
+.login-logo{font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--blue);margin-bottom:10px}
+.login-title{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--m);margin-bottom:32px}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.login-field label{font-size:12px;font-weight:600;color:var(--m);letter-spacing:.06em;text-transform:uppercase}
+.login-field input{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font:500 14px var(--font);color:var(--w);outline:none;transition:border-color .2s}
+.login-field input:focus{border-color:rgba(21,62,237,.6)}
+.login-btn{width:100%;padding:13px;background:var(--blue);border:none;border-radius:8px;font:700 14px var(--font);color:#fff;cursor:pointer;transition:opacity .2s;margin-top:8px}
+.login-btn:hover{opacity:.85}
+.login-err{font-size:12px;color:var(--red);margin-top:10px;min-height:18px}
+/* ── APP SHELL ── */
+#app-shell{position:fixed;inset:0;display:flex;flex-direction:column}
+#app-shell.hidden{display:none}
+/* ── TOP BAR ── */
+.topbar{height:54px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--border2);flex-shrink:0;gap:16px}
+.topbar-logo{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--blue)}
+.topbar-sep{width:1px;height:18px;background:var(--border)}
+.topbar-title{font-size:13px;font-weight:600;color:var(--m)}
+.topbar-country{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--w)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.topbar-user{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--m)}
+.topbar-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:var(--blue);flex-shrink:0}
+.topbar-link{font-size:12px;color:var(--m);text-decoration:none;padding:6px 10px;border-radius:6px;transition:background .15s;cursor:pointer}
+.topbar-link:hover{background:rgba(255,255,255,.06);color:var(--w)}
+/* ── MAIN LAYOUT ── */
+.main-layout{display:flex;flex:1;overflow:hidden}
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sb-w);background:var(--sb);border-right:1px solid var(--border2);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sb-section{padding:20px 14px 0}
+.sb-label{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--m2);padding:0 8px;margin-bottom:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--m);cursor:pointer;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--t)}
+.nav-item.active{background:var(--blue-dim);color:var(--w);font-weight:600}
+.nav-item .nav-icon{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+.sb-divider{height:1px;background:var(--border2);margin:14px 14px}
+.sb-signals{padding:14px 14px 0}
+.sig-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border-radius:6px}
+.sig-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sig-dot.critical{background:var(--red)}
+.sig-dot.warning{background:var(--amber)}
+.sig-dot.info{background:var(--blue)}
+.sb-country-switcher{padding:14px}
+.country-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:12px;font-weight:500;color:var(--m);cursor:pointer;margin-bottom:6px;transition:all .15s}
+.country-pill:hover{border-color:rgba(21,62,237,.4);color:var(--w)}
+.country-pill.active{background:var(--blue-dim);border-color:rgba(21,62,237,.4);color:var(--w)}
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:28px 32px}
+/* ── VIEWS ── */
+.view{display:none}.view.active{display:block}
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px}
+.kpi-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--m);margin-bottom:10px}
+.kpi-value{font-size:30px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.kpi-sub{font-size:11px;color:var(--m2);margin-top:6px}
+/* ── SECTION HEADER ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:15px;font-weight:700;letter-spacing:-.02em}
+/* ── INDUSTRY PILLS ── */
+.industry-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.ind-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);color:var(--m);background:none;cursor:pointer;transition:all .2s;white-space:nowrap}
+.ind-pill:hover{border-color:rgba(21,62,237,.4);color:var(--w)}
+.ind-pill.active{background:var(--blue-dim);border-color:rgba(21,62,237,.5);color:var(--w)}
+.ind-count{font-size:10px;background:rgba(255,255,255,.1);border-radius:10px;padding:1px 6px;margin-left:4px}
+/* ── ACCOUNT GRID ── */
+.account-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.account-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.account-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--svc-color,var(--blue));border-radius:3px 0 0 3px}
+.account-card:hover{border-color:rgba(255,255,255,.14);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.ac-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.ac-name{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.ac-value{font-size:13px;font-weight:700;color:var(--m);white-space:nowrap;margin-left:8px}
+.ac-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.ac-tag{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;background:rgba(255,255,255,.07);color:var(--m)}
+.ac-tag.icp-high{background:rgba(0,212,160,.15);color:var(--green)}
+.ac-tag.icp-mid{background:rgba(21,62,237,.15);color:#6B8EF7}
+.ac-tag.existing{background:rgba(0,212,160,.12);color:var(--green)}
+/* ── ACTIVATION PILLS ── */
+.act-section{margin-bottom:12px}
+.act-label{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--m2);margin-bottom:6px}
+.act-pills{display:flex;flex-wrap:wrap;gap:5px}
+.act-pill{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid;cursor:default}
+.act-stage-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+/* ── BUYER ROW ── */
+.buyer-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)}
+.buyer-left{display:flex;align-items:center;gap:8px}
+.buyer-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:rgba(255,255,255,.12);flex-shrink:0}
+.buyer-name{font-size:12px;font-weight:600;color:var(--t)}
+.buyer-role{font-size:10px;color:var(--m)}
+/* ── WIN BAR ── */
+.win-bar-wrap{display:flex;align-items:center;gap:8px}
+.win-bar{width:60px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.win-fill{height:100%;border-radius:2px;background:var(--fill-color,var(--green));transition:width .6s ease}
+.win-pct{font-size:11px;font-weight:700;color:var(--m)}
+/* ── SIGNALS VIEW ── */
+.signal-list{display:flex;flex-direction:column;gap:12px}
+.signal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.signal-card.critical{border-left:3px solid var(--red)}
+.signal-card.warning{border-left:3px solid var(--amber)}
+.signal-card.info{border-left:3px solid var(--blue)}
+.sig-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px}
+.sig-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.sig-badge.critical{background:rgba(246,87,74,.15);color:var(--red)}
+.sig-badge.warning{background:rgba(245,158,11,.15);color:var(--amber)}
+.sig-badge.info{background:rgba(21,62,237,.15);color:#6B8EF7}
+.sig-title{font-size:14px;font-weight:700;line-height:1.3}
+.sig-desc{font-size:12.5px;color:var(--m);line-height:1.6;margin-bottom:10px}
+.sig-action{background:rgba(21,62,237,.08);border:1px solid rgba(21,62,237,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:rgba(107,142,247,.9);line-height:1.5}
+.sig-action-label{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:4px}
+/* ── PREDICTIONS VIEW ── */
+.pred-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.pred-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.pred-scores{display:flex;gap:16px;margin:14px 0}
+.pred-score{text-align:center;flex:1}
+.pred-score-val{font-size:28px;font-weight:800;letter-spacing:-.04em}
+.pred-score-label{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--m);margin-top:3px}
+.pred-trigger{font-size:12px;color:var(--m);line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)}
+.pred-confidence{font-size:11px;font-weight:600;margin-top:8px}
+.confidence-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:4px;overflow:hidden}
+.confidence-fill{height:100%;border-radius:2px;background:var(--green)}
+.pred-gen-btn{width:100%;margin-top:14px;padding:9px;background:rgba(21,62,237,.15);border:1px solid rgba(21,62,237,.3);border-radius:8px;color:#6B8EF7;font:600 12px var(--font);cursor:pointer;transition:all .2s}
+.pred-gen-btn:hover{background:rgba(21,62,237,.25)}
+/* ── GLOBAL VIEW ── */
+.country-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
+.cc-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;text-align:center}
+.cc-card:hover{border-color:rgba(255,255,255,.14);transform:translateY(-2px)}
+.cc-flag{font-size:28px;margin-bottom:8px}
+.cc-cname{font-size:13px;font-weight:700;margin-bottom:12px}
+.cc-kpi{margin-bottom:6px}
+.cc-kpi-v{font-size:20px;font-weight:700;letter-spacing:-.03em}
+.cc-kpi-l{font-size:10px;color:var(--m)}
+/* ── SERVICE CHART ── */
+.svc-chart{display:flex;flex-direction:column;gap:12px}
+.svc-bar-row{display:flex;align-items:center;gap:14px}
+.svc-bar-name{font-size:12px;font-weight:600;width:180px;flex-shrink:0}
+.svc-bar-track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.svc-bar-fill{height:100%;border-radius:4px;transition:width .8s ease}
+.svc-bar-val{font-size:12px;font-weight:600;color:var(--m);width:80px;text-align:right;flex-shrink:0}
+/* ── DETAIL PANEL (slide-in) ── */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+.detail-overlay.open{opacity:1;pointer-events:all}
+.detail-panel{position:fixed;right:0;top:0;bottom:0;width:480px;background:#0D0D22;border-left:1px solid var(--border);z-index:101;overflow-y:auto;transform:translateX(100%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.detail-panel.open{transform:none}
+.dp-head{padding:24px;border-bottom:1px solid var(--border2);position:sticky;top:0;background:#0D0D22;z-index:1}
+.dp-close{float:right;background:none;border:none;color:var(--m);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.dp-close:hover{color:var(--w)}
+.dp-body{padding:24px}
+.dp-section{margin-bottom:24px}
+.dp-sec-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m2);margin-bottom:12px}
+.dp-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border2);font-size:13px}
+.dp-row:last-child{border-bottom:none}
+.dp-row-label{color:var(--m)}
+.dp-row-val{font-weight:600;max-width:220px;text-align:right}
+.activation-timeline{display:flex;flex-direction:column;gap:10px}
+.actl-row{display:flex;align-items:flex-start;gap:12px;padding:12px;background:rgba(255,255,255,.03);border-radius:8px}
+.actl-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.actl-svc{font-size:13px;font-weight:600;margin-bottom:3px}
+.actl-meta{font-size:11px;color:var(--m)}
+/* ── EXISTING ACCOUNTS ── */
+.ea-table{width:100%;border-collapse:collapse}
+.ea-table th{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--m2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.ea-table td{padding:12px 12px;font-size:13px;border-bottom:1px solid var(--border2);vertical-align:top}
+.ea-table tr:hover td{background:rgba(255,255,255,.02)}
+.gap-badge{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(245,159,11,.12);color:var(--amber)}
+/* ── LOADING ── */
+.loading-pulse{display:flex;align-items:center;gap:8px;color:var(--m);font-size:13px;padding:40px 0}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:pulse 1s ease-in-out infinite}
+.pulse-dot:nth-child(2){animation-delay:.15s}
+.pulse-dot:nth-child(3){animation-delay:.3s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+/* ── TOAST ── */
+#cc-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;color:var(--w);opacity:0;transition:all .3s;pointer-events:none;z-index:200}
+#cc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════════ -->
+<div class="screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">JAKALA</div>
+    <div class="login-title">Control Center</div>
+    <div class="login-sub">Commercial intelligence platform</div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@jakala.com" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign in →</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ══════════════════════════════════════════════════════════════ -->
+<div id="app-shell" class="hidden">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <span class="topbar-logo">JAKALA</span>
+    <span class="topbar-sep"></span>
+    <span class="topbar-title">Control Center</span>
+    <span class="topbar-sep"></span>
+    <span class="topbar-country" id="tb-country"></span>
+    <div class="topbar-right">
+      <a class="topbar-link" href="/" target="_blank">GTM Assistant ↗</a>
+      <div class="topbar-user">
+        <div class="topbar-avatar" id="tb-avatar"></div>
+        <span id="tb-name"></span>
+      </div>
+      <span class="topbar-link" onclick="doLogout()">Sign out</span>
+    </div>
+  </div>
+
+  <!-- Main layout -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-section">
+        <div class="sb-label">Navigation</div>
+        <div class="nav-item active" data-view="overview" onclick="switchView('overview')">
+          <span class="nav-icon">◎</span> Overview
+        </div>
+        <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
+          <span class="nav-icon">⊕</span> New Business
+        </div>
+        <div class="nav-item" data-view="existing" onclick="switchView('existing')">
+          <span class="nav-icon">⊙</span> Existing Accounts
+        </div>
+        <div class="nav-item" data-view="trends" onclick="switchView('trends')">
+          <span class="nav-icon">⚡</span> Trend Intelligence
+        </div>
+        <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
+          <span class="nav-icon">◈</span> Predictions
+        </div>
+      </div>
+      <div class="sb-divider"></div>
+      <div class="sb-signals" id="sb-signals-summary"></div>
+      <!-- Global: country switcher -->
+      <div id="sb-country-switcher" style="display:none">
+        <div class="sb-divider"></div>
+        <div style="padding:0 14px 6px">
+          <div class="sb-label">Markets</div>
+          <div id="country-switcher-list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content" id="main-content">
+
+      <!-- ── OVERVIEW ── -->
+      <div class="view active" id="view-overview">
+        <div id="overview-kpis" class="kpi-row"></div>
+        <div class="sec-header">
+          <div class="sec-title" id="industry-filter-title">All Industries</div>
+        </div>
+        <div class="industry-filter" id="industry-filter"></div>
+        <div class="account-grid" id="account-grid"></div>
+      </div>
+
+      <!-- ── NEW BIZ ── -->
+      <div class="view" id="view-new-biz">
+        <div class="sec-header"><div class="sec-title">New Business Pipeline</div></div>
+        <div class="industry-filter" id="nb-industry-filter"></div>
+        <div class="account-grid" id="nb-account-grid"></div>
+      </div>
+
+      <!-- ── EXISTING ── -->
+      <div class="view" id="view-existing">
+        <div class="sec-header"><div class="sec-title">Existing Accounts — Activation Gaps</div></div>
+        <div id="existing-content">
+          <div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading...</span></div>
+        </div>
+      </div>
+
+      <!-- ── TRENDS ── -->
+      <div class="view" id="view-trends">
+        <div class="sec-header"><div class="sec-title">Trend Intelligence</div><span style="font-size:12px;color:var(--m)">Regulation · Politics · Market · Technology</span></div>
+        <div class="signal-list" id="signal-list"></div>
+      </div>
+
+      <!-- ── PREDICTIONS ── -->
+      <div class="view" id="view-predictions">
+        <div class="sec-header">
+          <div class="sec-title">AI Predictions</div>
+          <span style="font-size:12px;color:var(--m)">Based on vertical trends, market signals & account dynamics</span>
+        </div>
+        <div class="pred-grid" id="pred-grid"></div>
+      </div>
+
+      <!-- ── GLOBAL ── -->
+      <div class="view" id="view-global">
+        <div id="global-kpis" class="kpi-row"></div>
+        <div class="sec-header" style="margin-bottom:16px"><div class="sec-title">Markets Overview</div></div>
+        <div class="country-cards" id="country-cards"></div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-top:4px">
+          <div>
+            <div class="sec-header"><div class="sec-title">Activation Services — Pipeline by Service</div></div>
+            <div class="svc-chart" id="svc-chart"></div>
+          </div>
+          <div>
+            <div class="sec-header"><div class="sec-title">Global Signals</div></div>
+            <div class="signal-list" id="global-signal-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Account detail panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="dp-head">
+    <button class="dp-close" onclick="closeDetail()">×</button>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--m2);margin-bottom:6px" id="dp-type-badge"></div>
+    <div style="font-size:20px;font-weight:800;letter-spacing:-.03em" id="dp-name"></div>
+    <div style="font-size:12px;color:var(--m);margin-top:4px" id="dp-meta"></div>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<div id="cc-toast"></div>
+
+<script>
+// ══ STATE ══════════════════════════════════════════════════════════════════════
+let currentUser = null;
+let countryData = null;
+let globalData  = null;
+let activeIndustry = 'all';
+let activeView = 'overview';
+const STAGE_COLORS = {
+  identified: {color:'#6B8EF7',bg:'rgba(21,62,237,.15)'},
+  proposed:   {color:'#F59E0B',bg:'rgba(245,158,11,.15)'},
+  negotiating:{color:'#F97316',bg:'rgba(249,115,22,.15)'},
+  active:     {color:'#00D4A0',bg:'rgba(0,212,160,.15)'},
+  completed:  {color:'#888',bg:'rgba(128,128,128,.15)'},
+};
+
+// ══ AUTH ═══════════════════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const btn   = document.querySelector('.login-btn');
+  const err   = document.getElementById('login-err');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  err.textContent = '';
+  try {
+    const r = await fetch('/api/cc/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Login failed'; return; }
+    await initApp(d);
+  } catch(e) { err.textContent = 'Connection error'; }
+  finally { btn.disabled = false; btn.textContent = 'Sign in →'; }
+}
+
+async function doLogout() {
+  await fetch('/api/cc/logout',{method:'POST'});
+  currentUser = null; countryData = null; globalData = null;
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+document.getElementById('login-pw').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ══ INIT ═══════════════════════════════════════════════════════════════════════
+async function initApp(user) {
+  currentUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+
+  const r2 = await fetch('/api/cc/me');
+  currentUser = await r2.json();
+
+  document.getElementById('tb-name').textContent  = currentUser.name;
+  document.getElementById('tb-avatar').textContent = currentUser.initials || currentUser.name.slice(0,2).toUpperCase();
+
+  if (currentUser.role === 'global') {
+    // Global view
+    document.getElementById('tb-country').textContent = '🌍  Global Markets';
+    document.querySelectorAll('.nav-item').forEach(n => n.style.display = 'none');
+    const gi = document.querySelector('[data-view="global"]') ||
+      (() => { const d = document.createElement('div'); d.className='nav-item active';d.dataset.view='global';d.onclick=()=>switchView('global');d.innerHTML='<span class="nav-icon">🌍</span> Global Overview'; document.querySelector('.sb-section').appendChild(d); return d; })();
+    gi.style.display = '';
+    document.getElementById('sb-country-switcher').style.display = 'block';
+    buildCountrySwitcher();
+    switchView('global');
+    loadGlobalData();
+  } else {
+    // Country head view
+    const meta = {'no':'🇳🇴 Norway','dk':'🇩🇰 Denmark','se':'🇸🇪 Sweden','uk':'🇬🇧 UK','fr':'🇫🇷 France'};
+    document.getElementById('tb-country').textContent = meta[currentUser.country] || currentUser.country.toUpperCase();
+    switchView('overview');
+    loadCountryData(currentUser.country);
+  }
+}
+
+// On page load, check if already logged in
+(async () => {
+  try {
+    const r = await fetch('/api/cc/me');
+    if (r.ok) { const u = await r.json(); await initApp(u); }
+  } catch(e) {}
+})();
+
+// ══ DATA LOADING ══════════════════════════════════════════════════════════════
+async function loadCountryData(country) {
+  showLoading();
+  const r = await fetch('/api/cc/country-data?country=' + country);
+  countryData = await r.json();
+  renderCountryDashboard();
+}
+
+async function loadGlobalData() {
+  showLoading();
+  const r = await fetch('/api/cc/global-data');
+  globalData = await r.json();
+  renderGlobalDashboard();
+}
+
+function showLoading() {
+  ['account-grid','nb-account-grid','signal-list','pred-grid'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = '<div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div>';
+  });
+}
+
+// ══ RENDER: COUNTRY ═══════════════════════════════════════════════════════════
+function renderCountryDashboard() {
+  if (!countryData) return;
+  const d = countryData;
+
+  // KPIs
+  const pFmt = d.kpis.pipeline >= 1000000 ? '€' + (d.kpis.pipeline/1000000).toFixed(1) + 'M' : '€' + (d.kpis.pipeline/1000).toFixed(0) + 'K';
+  document.getElementById('overview-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Pipeline Value</div><div class="kpi-value">${pFmt}</div><div class="kpi-sub">${d.kpis.accounts} accounts</div></div>
+    <div class="kpi-card"><div class="kpi-label">Named Buyers</div><div class="kpi-value">${d.kpis.buyers}</div><div class="kpi-sub">of ${d.kpis.accounts} accounts</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Activations</div><div class="kpi-value">${d.kpis.active_activations}</div><div class="kpi-sub">services in delivery</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg ICP Score</div><div class="kpi-value">${(d.accounts.reduce((s,a)=>s+(a.icp||0),0)/Math.max(d.accounts.length,1)).toFixed(1)}</div><div class="kpi-sub">out of 10</div></div>`;
+
+  // Industry filter
+  const inds = d.industries;
+  const buildFilter = (filterId, gridId) => {
+    const f = document.getElementById(filterId);
+    if (!f) return;
+    f.innerHTML = `<button class="ind-pill ${activeIndustry==='all'?'active':''}" onclick="filterIndustry('all','${filterId}','${gridId}')">All <span class="ind-count">${d.accounts.filter(a=>filterId.includes('nb')?a.account_type==='prospect':true).length}</span></button>` +
+      inds.map(i => {
+        const cnt = d.accounts.filter(a => a.industry_slug === i.slug && (filterId.includes('nb') ? a.account_type==='prospect' : true)).length;
+        return cnt ? `<button class="ind-pill" onclick="filterIndustry('${i.slug}','${filterId}','${gridId}')">${i.icon} ${i.name} <span class="ind-count">${cnt}</span></button>` : '';
+      }).join('');
+  };
+  buildFilter('industry-filter','account-grid');
+  buildFilter('nb-industry-filter','nb-account-grid');
+
+  // Account grids
+  renderAccountGrid('account-grid', d.accounts);
+  renderAccountGrid('nb-account-grid', d.accounts.filter(a => a.account_type === 'prospect'));
+
+  // Signals
+  renderSignals('signal-list', d.signals);
+
+  // Predictions
+  renderPredictions('pred-grid', d.predictions, d.accounts);
+
+  // Existing accounts
+  renderExisting(d.accounts.filter(a => a.account_type === 'existing'));
+
+  // Sidebar signals summary
+  const crit = d.signals.filter(s=>s.severity==='critical').length;
+  const warn = d.signals.filter(s=>s.severity==='warning').length;
+  document.getElementById('sb-signals-summary').innerHTML = `
+    <div class="sb-label">Signals</div>
+    ${crit ? `<div class="sig-row"><span class="sig-dot critical"></span><span style="font-size:12px;color:var(--m)">${crit} Critical</span></div>` : ''}
+    ${warn ? `<div class="sig-row"><span class="sig-dot warning"></span><span style="font-size:12px;color:var(--m)">${warn} Warnings</span></div>` : ''}
+    ${!crit && !warn ? `<div class="sig-row"><span class="sig-dot info"></span><span style="font-size:12px;color:var(--m)">No critical signals</span></div>` : ''}`;
+}
+
+function renderAccountGrid(gridId, accounts) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const filtered = activeIndustry === 'all' ? accounts : accounts.filter(a => a.industry_slug === activeIndustry);
+  if (!filtered.length) { grid.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No accounts in this industry.</div>'; return; }
+  grid.innerHTML = filtered.map(a => renderAccountCard(a)).join('');
+}
+
+function renderAccountCard(a) {
+  const topAct = a.activations[0];
+  const svcColor = topAct ? topAct.service_color : '#153EED';
+  const icpClass = (a.icp >= 8) ? 'icp-high' : (a.icp >= 6) ? 'icp-mid' : '';
+  const pFmt = a.pipeline >= 1000000 ? '€'+(a.pipeline/1000000).toFixed(1)+'M' : '€'+(a.pipeline/1000).toFixed(0)+'K';
+  const winPct = Math.round((a.win_prob || 0) * 100);
+  const winColor = winPct >= 60 ? 'var(--green)' : winPct >= 35 ? 'var(--amber)' : 'var(--red)';
+  const buyerInitials = (a.buyer || 'TBD').split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('');
+  const actPills = a.activations.map(ac => {
+    const sc = STAGE_COLORS[ac.stage] || {color:'#888',bg:'rgba(128,128,128,.15)'};
+    return `<span class="act-pill" style="color:${sc.color};border-color:${sc.color}30;background:${sc.bg}"><span class="act-stage-dot"></span>${ac.service_name}</span>`;
+  }).join('');
+
+  return `<div class="account-card" style="--svc-color:${svcColor}" onclick="openDetail(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+    <div class="ac-head">
+      <div>
+        <div class="ac-name">${a.name}</div>
+      </div>
+      <div class="ac-value">${pFmt}</div>
+    </div>
+    <div class="ac-tags">
+      <span class="ac-tag">${a.industry_icon} ${a.industry}</span>
+      ${a.icp ? `<span class="ac-tag ${icpClass}">ICP ${a.icp}</span>` : ''}
+      ${a.account_type === 'existing' ? '<span class="ac-tag existing">✓ Active</span>' : ''}
+    </div>
+    ${actPills ? `<div class="act-section"><div class="act-label">Activation Services</div><div class="act-pills">${actPills}</div></div>` : '<div style="font-size:12px;color:var(--m2);margin-bottom:12px">No activations mapped yet</div>'}
+    <div class="buyer-row">
+      <div class="buyer-left">
+        <div class="buyer-avatar">${buyerInitials || '?'}</div>
+        <div>
+          <div class="buyer-name">${a.buyer || 'Buyer TBD'}</div>
+          <div class="buyer-role">${(a.buyer_role || '').slice(0,40)}${(a.buyer_role||'').length>40?'…':''}</div>
+        </div>
+      </div>
+      <div class="win-bar-wrap">
+        <div class="win-bar"><div class="win-fill" style="width:${winPct}%;--fill-color:${winColor}"></div></div>
+        <span class="win-pct">${winPct}%</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function filterIndustry(slug, filterId, gridId) {
+  activeIndustry = slug;
+  document.querySelectorAll(`#${filterId} .ind-pill`).forEach(p => {
+    p.classList.toggle('active', p.onclick.toString().includes(`'${slug}'`));
+  });
+  const accounts = countryData ? (gridId.includes('nb') ? countryData.accounts.filter(a=>a.account_type==='prospect') : countryData.accounts) : [];
+  renderAccountGrid(gridId, accounts);
+}
+
+function renderSignals(listId, signals) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  if (!signals.length) { list.innerHTML = '<div style="color:var(--m);font-size:13px">No active signals.</div>'; return; }
+  list.innerHTML = signals.map(s => `
+    <div class="signal-card ${s.severity}">
+      <div class="sig-head">
+        <span class="sig-badge ${s.severity}">${s.severity.toUpperCase()}</span>
+        <div>
+          <div class="sig-title">${s.title}</div>
+          <div style="font-size:11px;color:var(--m2);margin-top:3px">${s.signal_type.charAt(0).toUpperCase()+s.signal_type.slice(1)} · ${s.vertical}</div>
+        </div>
+      </div>
+      <div class="sig-desc">${s.description}</div>
+      ${s.action ? `<div class="sig-action"><div class="sig-action-label">→ Recommended Action</div>${s.action}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderPredictions(gridId, predictions, accounts) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const accMap = {};
+  if (accounts) accounts.forEach(a => accMap[a.id] = a.name);
+
+  let html = predictions.map(p => {
+    const oppColor = p.opp >= 7 ? 'var(--green)' : p.opp >= 4 ? 'var(--amber)' : 'var(--red)';
+    const riskColor = p.risk >= 7 ? 'var(--red)' : p.risk >= 4 ? 'var(--amber)' : 'var(--green)';
+    const conf = Math.round((p.confidence || 0) * 100);
+    return `<div class="pred-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:14px;font-weight:700">${p.account || accMap[p.account_id] || 'Account'}</div>
+          <div style="font-size:11px;color:var(--m);margin-top:2px">${p.service} · ${p.weeks}w window</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(21,62,237,.15);color:#6B8EF7">AI PREDICTION</span>
+      </div>
+      <div class="pred-scores">
+        <div class="pred-score"><div class="pred-score-val" style="color:${oppColor}">${(p.opp||0).toFixed(1)}</div><div class="pred-score-label">Opportunity</div></div>
+        <div class="pred-score"><div class="pred-score-val" style="color:${riskColor}">${(p.risk||0).toFixed(1)}</div><div class="pred-score-label">Risk</div></div>
+      </div>
+      <div class="pred-trigger">${p.trigger || p.trigger_summary || ''}</div>
+      <div class="pred-confidence">Confidence: ${conf}%
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${conf}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Add "Generate new prediction" cards for accounts without predictions
+  if (accounts) {
+    const accountsWithPreds = new Set(predictions.map(p => p.account || ''));
+    const without = accounts.filter(a => !accountsWithPreds.has(a.name) && a.account_type === 'prospect').slice(0,3);
+    html += without.map(a => `
+      <div class="pred-card" style="border-style:dashed;opacity:.7">
+        <div style="font-size:14px;font-weight:700">${a.name}</div>
+        <div style="font-size:12px;color:var(--m);margin:10px 0">No prediction generated yet.</div>
+        <button class="pred-gen-btn" onclick="generatePrediction(${a.id},'${a.name}')">Generate AI Prediction →</button>
+      </div>`).join('');
+  }
+  grid.innerHTML = html || '<div style="color:var(--m);font-size:13px">No predictions yet.</div>';
+}
+
+function renderExisting(accounts) {
+  const el = document.getElementById('existing-content');
+  if (!el) return;
+  if (!accounts.length) {
+    el.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No existing accounts yet.</div>'; return;
+  }
+  el.innerHTML = `<table class="ea-table">
+    <thead><tr><th>Account</th><th>Industry</th><th>Active Services</th><th>Revenue</th><th>Activation Gap</th><th>Next Service</th></tr></thead>
+    <tbody>${accounts.map(a => {
+      const activeActs = a.activations.filter(ac => ac.stage === 'active');
+      const gap = a.activations.length === 0 ? 'No activations mapped' : activeActs.length === 0 ? 'All services in pipeline' : '';
+      const allSvcs = ['Data Revenue','AI Readiness','Commerce Optim.','Shopify Build'];
+      const activeSvcNames = a.activations.map(ac => ac.service_name);
+      const nextSvc = allSvcs.find(s => !activeSvcNames.some(n => n.includes(s.split(' ')[0]))) || '—';
+      return `<tr onclick="openDetail(${JSON.stringify(a).replace(/"/g,'&quot;')})" style="cursor:pointer">
+        <td><strong>${a.name}</strong></td>
+        <td>${a.industry_icon} ${a.industry}</td>
+        <td>${activeActs.map(ac=>`<span style="font-size:11px;font-weight:600;color:var(--green);background:rgba(0,212,160,.1);padding:2px 7px;border-radius:4px;margin-right:4px">${ac.service_name}</span>`).join('') || '<span style="color:var(--m2);font-size:12px">None active</span>'}</td>
+        <td style="font-size:12px;color:var(--m)">${a.revenue || '—'}</td>
+        <td>${gap ? `<span class="gap-badge">${gap}</span>` : ''}</td>
+        <td style="font-size:12px;color:var(--blue)">${nextSvc}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ══ RENDER: GLOBAL ════════════════════════════════════════════════════════════
+function renderGlobalDashboard() {
+  if (!globalData) return;
+  const d = globalData;
+
+  const pFmt = d.total_pipeline >= 1000000 ? '€'+(d.total_pipeline/1000000).toFixed(1)+'M' : '€'+(d.total_pipeline/1000).toFixed(0)+'K';
+  document.getElementById('global-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Pipeline</div><div class="kpi-value">${pFmt}</div><div class="kpi-sub">All markets</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Accounts</div><div class="kpi-value">${d.total_accounts}</div><div class="kpi-sub">5 markets</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Markets</div><div class="kpi-value">${d.countries.filter(c=>c.accounts>0).length}</div><div class="kpi-sub">of 5</div></div>
+    <div class="kpi-card"><div class="kpi-label">Services Mapped</div><div class="kpi-value">${d.service_performance.filter(s=>s.pipeline>0).length}</div><div class="kpi-sub">of 8 offerings</div></div>`;
+
+  document.getElementById('country-cards').innerHTML = d.countries.map(c => {
+    const pFmt = c.pipeline >= 1000000 ? '€'+(c.pipeline/1000000).toFixed(1)+'M' : c.pipeline > 0 ? '€'+(c.pipeline/1000).toFixed(0)+'K' : '—';
+    return `<div class="cc-card" onclick="drillCountry('${c.code}')">
+      <div class="cc-flag">${c.meta.flag}</div>
+      <div class="cc-cname">${c.meta.name}</div>
+      <div class="cc-kpi"><div class="cc-kpi-v">${pFmt}</div><div class="cc-kpi-l">Pipeline</div></div>
+      <div class="cc-kpi" style="margin-top:8px"><div style="font-size:14px;font-weight:700">${c.accounts}</div><div class="cc-kpi-l">Accounts</div></div>
+      <div style="margin-top:10px;font-size:10px;color:var(--m);padding-top:8px;border-top:1px solid var(--border2)">${c.top_service}</div>
+    </div>`;
+  }).join('');
+
+  const maxP = Math.max(...d.service_performance.map(s=>s.pipeline), 1);
+  document.getElementById('svc-chart').innerHTML = d.service_performance.filter(s=>s.pipeline>0).map(s => {
+    const pFmt = s.pipeline >= 1000000 ? '€'+(s.pipeline/1000000).toFixed(1)+'M' : '€'+(s.pipeline/1000).toFixed(0)+'K';
+    return `<div class="svc-bar-row">
+      <div class="svc-bar-name">${s.name}</div>
+      <div class="svc-bar-track"><div class="svc-bar-fill" style="width:${Math.round(s.pipeline/maxP*100)}%;background:${s.color}"></div></div>
+      <div class="svc-bar-val">${pFmt}</div>
+    </div>`;
+  }).join('');
+
+  renderSignals('global-signal-list', d.signals);
+}
+
+function drillCountry(code) {
+  // Global head drills into a specific country
+  loadCountryData(code);
+  const meta = {'no':'🇳🇴 Norway','dk':'🇩🇰 Denmark','se':'🇸🇪 Sweden','uk':'🇬🇧 UK','fr':'🇫🇷 France'};
+  document.getElementById('tb-country').textContent = meta[code];
+  // Show country nav items
+  document.querySelectorAll('.nav-item').forEach(n => { if(n.dataset.view && n.dataset.view !== 'global') n.style.display = ''; });
+  switchView('overview');
+}
+
+function buildCountrySwitcher() {
+  const codes = [{code:'no',flag:'🇳🇴',name:'Norway'},{code:'dk',flag:'🇩🇰',name:'Denmark'},{code:'se',flag:'🇸🇪',name:'Sweden'},{code:'uk',flag:'🇬🇧',name:'UK'},{code:'fr',flag:'🇫🇷',name:'France'}];
+  document.getElementById('country-switcher-list').innerHTML = codes.map(c =>
+    `<div class="country-pill" onclick="drillCountry('${c.code}')">${c.flag} ${c.name}</div>`
+  ).join('') + `<div class="country-pill active" onclick="switchView('global');loadGlobalData()">🌍 All Markets</div>`;
+}
+
+// ══ DETAIL PANEL ══════════════════════════════════════════════════════════════
+function openDetail(account) {
+  if (typeof account === 'string') account = JSON.parse(account);
+  document.getElementById('dp-type-badge').textContent = account.account_type === 'existing' ? '✓ EXISTING CLIENT' : '◎ PROSPECT';
+  document.getElementById('dp-name').textContent = account.name;
+  document.getElementById('dp-meta').textContent = `${account.industry_icon} ${account.industry}  ·  ${countryData?.meta?.flag || ''} ${countryData?.meta?.name || ''}`;
+
+  const pFmt = account.pipeline >= 1000000 ? '€'+(account.pipeline/1000000).toFixed(1)+'M' : '€'+(account.pipeline/1000).toFixed(0)+'K';
+  const winPct = Math.round((account.win_prob||0)*100);
+
+  document.getElementById('dp-body').innerHTML = `
+    <div class="dp-section">
+      <div class="dp-sec-title">Account Overview</div>
+      ${[['Pipeline Value', pFmt],['Win Probability', winPct + '%'],['ICP Score', (account.icp||'—') + '/10'],['Deal Score', (account.deal||'—') + '/10'],['Revenue', account.revenue||'—']].map(([l,v])=>`<div class="dp-row"><span class="dp-row-label">${l}</span><span class="dp-row-val">${v}</span></div>`).join('')}
+    </div>
+    <div class="dp-section">
+      <div class="dp-sec-title">Named Buyer</div>
+      ${[['Name', account.buyer||'TBD'],['Role', account.buyer_role||'—']].map(([l,v])=>`<div class="dp-row"><span class="dp-row-label">${l}</span><span class="dp-row-val">${v}</span></div>`).join('')}
+    </div>
+    <div class="dp-section">
+      <div class="dp-sec-title">Tech Stack</div>
+      <div style="font-size:12px;color:var(--m);line-height:1.7">${account.tech_stack||'No data'}</div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-sec-title">Activation Map</div>
+      <div class="activation-timeline">
+        ${account.activations.length ? account.activations.map(ac => {
+          const sc = STAGE_COLORS[ac.stage]||{color:'#888',bg:'rgba(128,128,128,.15)'};
+          const costFmt = ac.cost ? '€'+(ac.cost/1000).toFixed(0)+'K entry' : '';
+          const roiFmt  = ac.roi  ? '· Est. ROI €'+(ac.roi/1000).toFixed(0)+'K' : '';
+          return `<div class="actl-row">
+            <div class="actl-dot" style="background:${sc.color}"></div>
+            <div>
+              <div class="actl-svc">${ac.service_name}</div>
+              <div class="actl-meta" style="color:${sc.color}">${ac.stage.toUpperCase()}</div>
+              <div class="actl-meta">${ac.manager||''} ${costFmt} ${roiFmt}</div>
+              ${ac.notes ? `<div class="actl-meta" style="margin-top:4px;font-style:italic">${ac.notes}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('') : '<div style="color:var(--m2);font-size:12px">No activations mapped.</div>'}
+      </div>
+    </div>
+    ${account.predictions.length ? `<div class="dp-section">
+      <div class="dp-sec-title">AI Predictions</div>
+      ${account.predictions.map(p=>`<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:12px;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:4px">${p.service} — ${Math.round(p.confidence*100)}% confidence · ${p.weeks}w</div>
+        <div style="font-size:12px;color:var(--m);line-height:1.6">${p.trigger}</div>
+      </div>`).join('')}
+    </div>` : ''}
+    <button class="pred-gen-btn" style="margin-top:4px" onclick="generatePrediction(${account.id},'${account.name}')">
+      ◈ Generate New AI Prediction
+    </button>`;
+
+  document.getElementById('detail-overlay').classList.add('open');
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+// ══ PREDICTION GENERATION ════════════════════════════════════════════════════
+async function generatePrediction(accountId, accountName) {
+  showToast('Generating AI prediction for ' + accountName + '…');
+  const r = await fetch('/api/cc/predict', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:accountId})});
+  const d = await r.json();
+  if (!r.ok) { showToast('Error: ' + (d.error||'Failed')); return; }
+  showToast('Prediction generated ✓');
+  // Reload data
+  const country = currentUser.country || (countryData && countryData.country);
+  if (country) loadCountryData(country);
+}
+
+// ══ NAVIGATION ════════════════════════════════════════════════════════════════
+function switchView(view) {
+  activeView = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + view);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+}
+
+// ══ TOAST ════════════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('cc-toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>"""
+
+@app.route("/cc")
+def cc_index():
+    return render_template_string(CC_HTML)
 
 
 if __name__ == "__main__":
