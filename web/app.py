@@ -12,7 +12,8 @@ try:
     import bcrypt
     from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction
     CC_DB_OK = True
-except ImportError:
+except Exception as _cc_err:
+    print(f"[CC] Import error: {_cc_err}")
     CC_DB_OK = False
 
 try:
@@ -186,6 +187,9 @@ LOGIN_HTML = """<!DOCTYPE html>
 
 @app.before_request
 def require_login():
+    # CC routes have their own auth — exempt from GTM password gate
+    if request.path.startswith("/cc") or request.path.startswith("/api/cc"):
+        return
     if request.endpoint in ("login", "static"):
         return
     if not session.get("authenticated"):
