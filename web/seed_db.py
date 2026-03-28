@@ -1,5 +1,6 @@
 """Run once to seed the Control Center database. python seed_db.py"""
 import bcrypt
+from datetime import datetime
 from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction
 
 def hash_pw(pw): return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
