@@ -4817,6 +4817,269 @@ def cc_today():
     finally:
         db.close()
 
+# ── Fase 4: Intelligence ──────────────────────────────────────────────────────
+
+@app.route("/api/cc/intelligence", methods=["GET"])
+def cc_intelligence():
+    """Returns cold accounts + churn risks + at-a-glance stats. No AI calls — pure data."""
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        country = u.country if u.role != "global" else request.args.get("country")
+        now = datetime.datetime.utcnow()
+
+        # Cold prospects: no activity 14+ days, not closed
+        cold_cutoff = now - datetime.timedelta(days=14)
+        q = db.query(Account).filter(
+            Account.account_type == "prospect",
+            Account.deal_stage.notin_(["closed_won", "closed_lost"])
+        )
+        if country:
+            q = q.filter(Account.country == country)
+        cold_prospects = [a for a in q.all()
+                          if (not a.last_activity) or (a.last_activity < cold_cutoff)]
+
+        # Churn risk: existing clients — last activity > 30 days OR negative meeting outcome
+        churn_cutoff = now - datetime.timedelta(days=30)
+        q2 = db.query(Account).filter(Account.account_type == "existing")
+        if country:
+            q2 = q2.filter(Account.country == country)
+        existing = q2.all()
+        churn_risks = []
+        for a in existing:
+            risk_factors = []
+            if not a.last_activity:
+                risk_factors.append("No activity recorded")
+            elif a.last_activity < churn_cutoff:
+                days_cold = (now - a.last_activity).days
+                risk_factors.append(f"No activity for {days_cold} days")
+            neg_meetings = [m for m in a.meetings if m.outcome == "negative"]
+            if neg_meetings:
+                risk_factors.append(f"{len(neg_meetings)} negative meeting(s)")
+            open_actions = [ac for ac in a.actions if ac.status == "open" and ac.due_date and ac.due_date < now]
+            if open_actions:
+                risk_factors.append(f"{len(open_actions)} overdue action(s)")
+            if risk_factors:
+                churn_risks.append({"account": a, "risk_factors": risk_factors})
+
+        # Won accounts (deal_stage = closed_won) for win pattern analysis
+        q3 = db.query(Account).filter(Account.deal_stage == "closed_won")
+        if country:
+            q3 = q3.filter(Account.country == country)
+        won_accounts = q3.all()
+
+        def _acc_dict(a, risk_factors=None):
+            ind = db.query(Industry).get(a.industry_id) if a.industry_id else None
+            days_cold = None
+            if a.last_activity:
+                days_cold = (now - a.last_activity).days
+            return {
+                "id": a.id, "name": a.name, "country": a.country,
+                "industry": ind.name if ind else "—",
+                "pipeline_value": a.pipeline_value,
+                "deal_stage": a.deal_stage,
+                "named_buyer": a.named_buyer,
+                "buyer_role": a.buyer_role,
+                "revenue": a.revenue,
+                "tech_stack": a.tech_stack,
+                "icp_score": a.icp_score,
+                "last_activity": a.last_activity.isoformat() if a.last_activity else None,
+                "days_cold": days_cold,
+                "risk_factors": risk_factors or [],
+                "activations": [{"service_name": ac.service.name if ac.service else "?", "stage": ac.stage} for ac in a.activations],
+                "meeting_count": len(a.meetings),
+                "action_count": len([ac for ac in a.actions if ac.status == "open"]),
+            }
+
+        return jsonify({
+            "cold_prospects": [_acc_dict(a) for a in sorted(cold_prospects, key=lambda x: x.last_activity or datetime.datetime(2000,1,1))[:10]],
+            "churn_risks": [{"account": _acc_dict(r["account"]), "risk_factors": r["risk_factors"]} for r in churn_risks[:5]],
+            "won_accounts": [_acc_dict(a) for a in won_accounts[:5]],
+            "stats": {
+                "cold_count": len(cold_prospects),
+                "churn_count": len(churn_risks),
+                "won_count": len(won_accounts),
+            }
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/cc/intelligence/diagnose", methods=["POST"])
+def cc_intelligence_diagnose():
+    """AI diagnosis for one account — what is the single best action to take right now?"""
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        data = {}
+    account_id   = data.get("account_id") or request.args.get("account_id")
+    insight_type = data.get("insight_type") or request.args.get("insight_type", "cold_reactivation")
+    if not account_id:
+        return jsonify({"error": "account_id required"}), 400
+    db = SessionLocal()
+    try:
+        acc  = db.query(Account).get(account_id)
+        if not acc:
+            return jsonify({"error": "Not found"}), 404
+        ind  = db.query(Industry).get(acc.industry_id)
+        now  = datetime.datetime.utcnow()
+        days_cold = (now - acc.last_activity).days if acc.last_activity else None
+
+        # Gather context
+        meetings_summary = ""
+        recent_meetings = sorted(acc.meetings, key=lambda m: m.date, reverse=True)[:3]
+        if recent_meetings:
+            meetings_summary = "\n".join(
+                f"- {m.date.strftime('%Y-%m-%d')}: {m.outcome} — {(m.summary or '')[:150]}"
+                for m in recent_meetings
+            )
+
+        open_actions = [a for a in acc.actions if a.status == "open"]
+        actions_summary = ", ".join(a.title for a in open_actions[:3]) if open_actions else "None"
+
+        signals = db.query(Signal).filter(
+            (Signal.country == acc.country) | (Signal.country == None),
+            Signal.is_active == True
+        ).limit(3).all()
+        signal_txt = "\n".join(f"- [{s.severity}] {s.title}" for s in signals) or "None"
+
+        if insight_type == "churn_risk":
+            task = """This is an EXISTING CLIENT. Identify:
+1. CHURN RISK LEVEL: Low / Medium / High — and why
+2. THE SINGLE most important action to protect and grow this relationship
+3. EXPANSION OPPORTUNITY: What is the next logical service to propose?
+4. A suggested message opening (1–2 sentences) to use in the next outreach"""
+        else:
+            task = f"""This account has gone cold ({days_cold or '?'} days without activity).
+1. DIAGNOSIS: Why is this account likely cold? What has probably happened on their side?
+2. REACTIVATION PLAY: The single best action to restart this relationship right now
+3. HOOK: A specific, relevant insight or observation to open with (not generic)
+4. A suggested LinkedIn message opening (2–3 sentences) — concrete, no jargon"""
+
+        prompt = f"""You are a senior commercial director at JAKALA analyzing an account.
+
+ACCOUNT: {acc.name} ({acc.country.upper()})
+Industry: {ind.name if ind else '—'}
+Revenue: {acc.revenue or '—'}
+Named buyer: {acc.named_buyer or 'TBD'} ({acc.buyer_role or '—'})
+Tech stack: {acc.tech_stack or '—'}
+ICP score: {acc.icp_score}/10
+Pipeline value: €{acc.pipeline_value:,.0f}
+Deal stage: {acc.deal_stage or 'identified'}
+Last activity: {acc.last_activity.strftime('%Y-%m-%d') if acc.last_activity else 'Never'}
+Open actions: {actions_summary}
+
+Recent meetings:
+{meetings_summary or 'None logged'}
+
+Active market signals:
+{signal_txt}
+
+Current activations: {', '.join(a.service.name + ' (' + a.stage + ')' for a in acc.activations) if acc.activations else 'None'}
+
+TASK:
+{task}
+
+Be specific and direct. Reference actual facts about this company. Max 250 words total.
+Format: use short bold headers for each section. No bullet soup."""
+
+        resp = client.messages.create(
+            model=MODEL, max_tokens=600,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({
+            "ok": True,
+            "account_id": acc.id,
+            "account_name": acc.name,
+            "insight_type": insight_type,
+            "diagnosis": resp.content[0].text.strip(),
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/cc/intelligence/win-patterns", methods=["POST"])
+def cc_intelligence_win_patterns():
+    """AI analysis of what won deals and active clients have in common."""
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        country = u.country if u.role != "global" else request.args.get("country")
+        # Won deals + existing active clients
+        q = db.query(Account).filter(
+            (Account.deal_stage == "closed_won") | (Account.account_type == "existing")
+        )
+        if country:
+            q = q.filter(Account.country == country)
+        won = q.all()
+        # Also high-ICP prospects in advanced stages
+        q2 = db.query(Account).filter(
+            Account.account_type == "prospect",
+            Account.deal_stage.in_(["proposed", "negotiating"]),
+            Account.icp_score >= 7
+        )
+        if country:
+            q2 = q2.filter(Account.country == country)
+        advanced = q2.all()
+
+        if not won and not advanced:
+            return jsonify({"ok": True, "analysis": "Not enough data yet. As you log meetings and close deals, patterns will emerge here."})
+
+        def _acc_line(a):
+            ind = db.query(Industry).get(a.industry_id) if a.industry_id else None
+            svcs = ", ".join(ac.service.name for ac in a.activations) if a.activations else "none"
+            return f"- {a.name} ({(ind.name if ind else '—')}, {a.country.upper()}, ICP {a.icp_score}, revenue {a.revenue or '?'}, services: {svcs}, buyer: {a.buyer_role or '?'}, tech: {(a.tech_stack or '—')[:80]}"
+
+        won_lines   = "\n".join(_acc_line(a) for a in won[:8])
+        adv_lines   = "\n".join(_acc_line(a) for a in advanced[:5])
+
+        # High-ICP cold prospects for comparison
+        q3 = db.query(Account).filter(Account.icp_score >= 8, Account.account_type == "prospect")
+        if country:
+            q3 = q3.filter(Account.country == country)
+        cold_high = q3.order_by(Account.icp_score.desc()).limit(5).all()
+        cold_lines = "\n".join(_acc_line(a) for a in cold_high)
+
+        prompt = f"""You are a senior commercial director at JAKALA analyzing win patterns across the Nordic pipeline.
+
+ACTIVE CLIENTS / WON DEALS:
+{won_lines or 'None yet'}
+
+ADVANCED PROSPECTS (proposed/negotiating):
+{adv_lines or 'None yet'}
+
+HIGH-ICP COLD PROSPECTS (for comparison):
+{cold_lines or 'None yet'}
+
+Analyze and answer:
+1. WIN PATTERN: What do the won/active accounts have in common? (industry, tech stack, buyer role, revenue size, service entry point)
+2. IDEAL ENTRY WEDGE: Which JAKALA service has the highest conversion rate based on this data?
+3. NEXT BEST BET: Which 2–3 cold prospects most closely match the win pattern — and why?
+4. BLIND SPOT: What type of account or buyer are we systematically NOT winning? What should we test?
+
+Be specific. Reference actual account names. Max 300 words. Use bold section headers."""
+
+        resp = client.messages.create(
+            model=MODEL, max_tokens=700,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({"ok": True, "analysis": resp.content[0].text.strip()})
+    finally:
+        db.close()
+
 # ── Control Center HTML ────────────────────────────────────────────────────────
 
 CC_HTML = """<!DOCTYPE html>
@@ -5101,6 +5364,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 /* ── ADD BUTTON ── */
 .add-btn{padding:8px 16px;background:var(--blue);border:none;border-radius:8px;color:#fff;font:600 12px var(--font);cursor:pointer;transition:opacity .2s;white-space:nowrap}
 .add-btn:hover{opacity:.85}
+/* ── INTELLIGENCE VIEW ── */
+.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.intel-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.intel-card.full{grid-column:1/-1}
+.intel-card.risk{border-left:3px solid var(--red)}
+.intel-card.cold{border-left:3px solid var(--amber)}
+.intel-card.won{border-left:3px solid var(--green)}
+.intel-sec-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.intel-account-row{padding:12px 0;border-bottom:1px solid var(--border2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.intel-account-row:last-child{border-bottom:none}
+.intel-account-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.intel-account-meta{font-size:11px;color:var(--m)}
+.intel-risk-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.intel-risk-badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(246,87,74,.1);color:var(--red)}
+.intel-cold-days{font-size:12px;font-weight:700;color:var(--amber);white-space:nowrap}
+.diagnose-btn{padding:6px 12px;background:rgba(21,62,237,.12);border:1px solid rgba(21,62,237,.25);border-radius:7px;color:#6B8EF7;font:600 11px var(--font);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.diagnose-btn:hover{background:rgba(21,62,237,.22)}
+.diagnose-btn.loading{opacity:.5;pointer-events:none}
+.diagnosis-box{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:10px;font-size:12.5px;color:var(--t);line-height:1.7;white-space:pre-wrap}
+.diagnosis-box strong{color:var(--w)}
+.win-analysis-box{background:rgba(0,212,160,.04);border:1px solid rgba(0,212,160,.15);border-radius:10px;padding:18px;font-size:13px;color:var(--t);line-height:1.8;white-space:pre-wrap}
+.win-analysis-box strong{color:var(--green)}
+.intel-hero{background:linear-gradient(135deg,rgba(139,92,246,.1) 0%,rgba(21,62,237,.06) 100%);border:1px solid rgba(139,92,246,.2);border-radius:16px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
+.intel-stat{text-align:center;padding:0 20px;border-right:1px solid var(--border)}
+.intel-stat:last-child{border-right:none}
+.intel-stat-val{font-size:28px;font-weight:800;letter-spacing:-.04em}
+.intel-stat-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--m);margin-top:3px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
 </style>
 </head>
@@ -5179,6 +5469,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         </div>
         <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
           <span class="nav-icon">◈</span> Predictions
+        </div>
+        <div class="nav-item" data-view="intelligence" onclick="switchView('intelligence')">
+          <span class="nav-icon">◉</span> Intelligence
         </div>
       </div>
       <div class="sb-divider"></div>
@@ -5283,6 +5576,29 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
           <button class="add-btn" onclick="openMeetingModal()">+ Log meeting</button>
         </div>
         <div id="meetings-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+      </div>
+
+      <!-- ── INTELLIGENCE ── -->
+      <div class="view" id="view-intelligence">
+        <div class="sec-header">
+          <div class="sec-title">Intelligence</div>
+          <div style="display:flex;gap:10px">
+            <button class="add-btn" style="background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.3);color:#C4B5FD" onclick="loadWinPatterns()">◈ Analyse win patterns</button>
+          </div>
+        </div>
+        <div id="intel-hero" class="intel-hero" style="display:none">
+          <div class="intel-stat"><div class="intel-stat-val" id="intel-cold-count" style="color:var(--amber)">—</div><div class="intel-stat-label">Cold accounts</div></div>
+          <div class="intel-stat"><div class="intel-stat-val" id="intel-churn-count" style="color:var(--red)">—</div><div class="intel-stat-label">Churn risks</div></div>
+          <div class="intel-stat"><div class="intel-stat-val" id="intel-won-count" style="color:var(--green)">—</div><div class="intel-stat-label">Won / Active</div></div>
+        </div>
+        <div id="intel-win-box" style="display:none;margin-bottom:20px">
+          <div class="sec-header"><div class="sec-title" style="color:var(--green)">Win Pattern Analysis</div></div>
+          <div id="intel-win-loading" class="loading-pulse" style="display:none"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Analysing patterns…</span></div>
+          <div id="intel-win-content" class="win-analysis-box"></div>
+        </div>
+        <div class="intel-grid" id="intel-grid">
+          <div class="loading-pulse" style="grid-column:1/-1"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading intelligence…</span></div>
+        </div>
       </div>
 
       <!-- ── GLOBAL ── -->
@@ -6213,6 +6529,112 @@ async function saveCommit() {
   }
 }
 
+// ══ INTELLIGENCE VIEW ════════════════════════════════════════════════════════
+let intelData = null;
+
+async function loadIntelligence() {
+  const r = await fetch('/api/cc/intelligence');
+  if (!r.ok) return;
+  intelData = await r.json();
+  renderIntelligence();
+}
+
+function renderIntelligence() {
+  if (!intelData) return;
+  const d = intelData;
+
+  // Hero stats
+  const heroEl = document.getElementById('intel-hero');
+  heroEl.style.display = 'flex';
+  document.getElementById('intel-cold-count').textContent = d.stats.cold_count;
+  document.getElementById('intel-churn-count').textContent = d.stats.churn_count;
+  document.getElementById('intel-won-count').textContent = d.stats.won_count;
+
+  const grid = document.getElementById('intel-grid');
+  let html = '';
+
+  // Cold prospects card
+  html += '<div class="intel-card cold">';
+  html += '<div class="intel-sec-title"><span style="color:var(--amber)">⚠ Cold Accounts (' + d.cold_prospects.length + ')</span><span style="font-size:11px;color:var(--m)">No activity 14+ days</span></div>';
+  if (!d.cold_prospects.length) {
+    html += '<div style="color:var(--m);font-size:13px">No cold accounts.</div>';
+  } else {
+    d.cold_prospects.forEach(a => {
+      const pFmt = a.pipeline_value >= 1e6 ? '€'+(a.pipeline_value/1e6).toFixed(1)+'M' : '€'+(a.pipeline_value/1e3|0)+'K';
+      const daysLabel = a.days_cold != null ? a.days_cold + 'd cold' : 'Never contacted';
+      html += '<div class="intel-account-row" id="intel-row-' + a.id + '">';
+      html += '<div style="flex:1"><div class="intel-account-name">' + a.name + '</div>';
+      html += '<div class="intel-account-meta">' + (a.named_buyer || 'Buyer TBD') + ' · ' + (DEAL_STAGE_LABELS[a.deal_stage]||a.deal_stage) + ' · ' + pFmt + '</div>';
+      html += '<div id="diagnosis-' + a.id + '"></div></div>';
+      html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
+      html += '<span class="intel-cold-days">' + daysLabel + '</span>';
+      html += '<button class="diagnose-btn" id="diag-btn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',\'cold_reactivation\')">Diagnose →</button>';
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
+
+  // Churn risk card
+  html += '<div class="intel-card risk">';
+  html += '<div class="intel-sec-title"><span style="color:var(--red)">🔴 Churn Risk (' + d.churn_risks.length + ')</span><span style="font-size:11px;color:var(--m)">Existing clients</span></div>';
+  if (!d.churn_risks.length) {
+    html += '<div style="color:var(--m);font-size:13px">No churn risks detected.</div>';
+  } else {
+    d.churn_risks.forEach(r => {
+      const a = r.account;
+      const pFmt = a.pipeline_value >= 1e6 ? '€'+(a.pipeline_value/1e6).toFixed(1)+'M' : '€'+(a.pipeline_value/1e3|0)+'K';
+      html += '<div class="intel-account-row" id="intel-row-churn-' + a.id + '">';
+      html += '<div style="flex:1"><div class="intel-account-name">' + a.name + '</div>';
+      html += '<div class="intel-account-meta">' + (a.named_buyer || 'No buyer') + ' · ' + pFmt + '</div>';
+      html += '<div class="intel-risk-badges">' + r.risk_factors.map(f => '<span class="intel-risk-badge">' + f + '</span>').join('') + '</div>';
+      html += '<div id="diagnosis-churn-' + a.id + '"></div></div>';
+      html += '<button class="diagnose-btn" style="align-self:flex-start;margin-top:2px" id="diag-btn-churn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',\'churn_risk\',true)">Diagnose →</button>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  grid.innerHTML = html;
+}
+
+async function diagnoseAccount(accountId, insightType, isChurn) {
+  const btnId = 'diag-btn-' + (isChurn ? 'churn-' : '') + accountId;
+  const diagId = 'diagnosis-' + (isChurn ? 'churn-' : '') + accountId;
+  const btn = document.getElementById(btnId);
+  const diagEl = document.getElementById(diagId);
+  if (!btn || !diagEl) return;
+
+  btn.classList.add('loading'); btn.textContent = 'Analysing…';
+  diagEl.innerHTML = '<div class="loading-pulse" style="margin-top:8px"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Thinking…</span></div>';
+
+  const params = new URLSearchParams({account_id: accountId, insight_type: insightType});
+  const r = await fetch('/api/cc/intelligence/diagnose?' + params, {method:'POST'});
+  const d = await r.json();
+
+  btn.classList.remove('loading'); btn.style.display = 'none';
+  if (!r.ok) {
+    diagEl.innerHTML = '<div style="color:var(--red);font-size:12px">' + (d.error||'Failed') + '</div>';
+    return;
+  }
+  // Format markdown-ish bold
+  const formatted = d.diagnosis.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  diagEl.innerHTML = '<div class="diagnosis-box">' + formatted + '</div>';
+}
+
+async function loadWinPatterns() {
+  const box = document.getElementById('intel-win-box');
+  const loading = document.getElementById('intel-win-loading');
+  const content = document.getElementById('intel-win-content');
+  box.style.display = 'block';
+  loading.style.display = 'flex'; content.textContent = '';
+  const r = await fetch('/api/cc/intelligence/win-patterns', {method:'POST'});
+  const d = await r.json();
+  loading.style.display = 'none';
+  if (!r.ok) { content.textContent = d.error || 'Failed'; return; }
+  const formatted = d.analysis.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  content.innerHTML = formatted;
+}
+
 // ══ NAVIGATION ════════════════════════════════════════════════════════════════
 function switchView(view) {
   activeView = view;
@@ -6222,6 +6644,7 @@ function switchView(view) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
   if (view === 'actions') loadActions();
   if (view === 'meetings') renderMeetingsList('meetings-list', null);
+  if (view === 'intelligence') loadIntelligence();
 }
 
 // ══ TOAST ════════════════════════════════════════════════════════════════════
