@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, text
 from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 from datetime import datetime
 import os
@@ -175,6 +175,25 @@ class WeeklyCommit(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _migrate_db()
+
+def _migrate_db():
+    """Add new columns to existing tables if they don't exist."""
+    migrations = [
+        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage VARCHAR(30) DEFAULT 'identified'",
+        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage_updated TIMESTAMP",
+        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP",
+    ]
+    try:
+        with engine.connect() as conn:
+            for sql in migrations:
+                try:
+                    conn.execute(text(sql))
+                except Exception:
+                    pass  # column already exists or SQLite (no IF NOT EXISTS support)
+            conn.commit()
+    except Exception as e:
+        print(f"[CC] Migration warning: {e}")
 
 def get_db():
     db = SessionLocal()
