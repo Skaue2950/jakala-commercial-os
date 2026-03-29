@@ -23,6 +23,7 @@ class User(Base):
     country          = Column(String(5))                    # 'no','dk','se','uk','fr' | None
     initials         = Column(String(3))
     created_at       = Column(DateTime, default=datetime.utcnow)
+    weekly_commits   = relationship('WeeklyCommit', back_populates='user', cascade='all, delete-orphan')
 
 class Industry(Base):
     __tablename__ = 'cc_industries'
@@ -49,10 +50,17 @@ class Account(Base):
     revenue          = Column(String(50))
     tech_stack       = Column(Text)
     notes            = Column(Text)
+    # Fase 1: deal stage tracking
+    deal_stage       = Column(String(30), default='identified')
+    # 'identified' | 'qualified' | 'engaged' | 'proposed' | 'negotiating' | 'closed_won' | 'closed_lost'
+    deal_stage_updated = Column(DateTime)
+    last_activity    = Column(DateTime)
     created_at       = Column(DateTime, default=datetime.utcnow)
     industry_rel     = relationship('Industry', back_populates='accounts')
     activations      = relationship('Activation', back_populates='account', cascade='all, delete-orphan')
     predictions      = relationship('Prediction', back_populates='account', cascade='all, delete-orphan')
+    actions          = relationship('Action', back_populates='account', cascade='all, delete-orphan')
+    meetings         = relationship('Meeting', back_populates='account', cascade='all, delete-orphan')
 
 class Service(Base):
     __tablename__ = 'cc_services'
@@ -116,6 +124,54 @@ class Prediction(Base):
     generated_at            = Column(DateTime, default=datetime.utcnow)
     account                 = relationship('Account', back_populates='predictions')
     recommended_service     = relationship('Service')
+
+# ── Fase 1: Accountability ────────────────────────────────────────────────────
+
+class Action(Base):
+    __tablename__ = 'cc_actions'
+    id            = Column(Integer, primary_key=True)
+    account_id    = Column(Integer, ForeignKey('cc_accounts.id'))
+    owner         = Column(String(100))
+    title         = Column(String(300), nullable=False)
+    description   = Column(Text)
+    due_date      = Column(DateTime)
+    priority      = Column(String(20), default='medium')  # 'critical' | 'high' | 'medium' | 'low'
+    status        = Column(String(20), default='open')    # 'open' | 'done' | 'snoozed'
+    action_type   = Column(String(30), default='follow-up')
+    # 'call' | 'email' | 'linkedin' | 'meeting' | 'proposal' | 'follow-up'
+    created_at    = Column(DateTime, default=datetime.utcnow)
+    completed_at  = Column(DateTime)
+    account       = relationship('Account', back_populates='actions')
+
+# ── Fase 2: Activity ──────────────────────────────────────────────────────────
+
+class Meeting(Base):
+    __tablename__ = 'cc_meetings'
+    id            = Column(Integer, primary_key=True)
+    account_id    = Column(Integer, ForeignKey('cc_accounts.id'))
+    country       = Column(String(5))
+    owner         = Column(String(100))
+    date          = Column(DateTime, nullable=False)
+    participants  = Column(Text)    # comma-separated
+    summary       = Column(Text)
+    outcome       = Column(String(20), default='neutral')
+    # 'positive' | 'neutral' | 'negative' | 'no-show'
+    next_step     = Column(Text)
+    created_at    = Column(DateTime, default=datetime.utcnow)
+    account       = relationship('Account', back_populates='meetings')
+
+class WeeklyCommit(Base):
+    __tablename__ = 'cc_weekly_commits'
+    id                  = Column(Integer, primary_key=True)
+    user_id             = Column(Integer, ForeignKey('cc_users.id'))
+    country             = Column(String(5))
+    week_start          = Column(DateTime, nullable=False)   # Monday of the week
+    commit_text         = Column(Text)
+    target_value        = Column(Float)
+    accounts_committed  = Column(Text)   # JSON list of account_ids
+    status              = Column(String(20), default='active')  # 'active' | 'completed' | 'missed'
+    created_at          = Column(DateTime, default=datetime.utcnow)
+    user                = relationship('User', back_populates='weekly_commits')
 
 def init_db():
     Base.metadata.create_all(bind=engine)

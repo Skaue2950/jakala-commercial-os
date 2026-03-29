@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 try:
     import bcrypt
-    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction
+    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit
     CC_DB_OK = True
 except Exception as _cc_err:
     print(f"[CC] Import error: {_cc_err}")
@@ -4436,6 +4436,387 @@ Respond in JSON format:
     finally:
         db.close()
 
+# ── Fase 1–4: Actions / Meetings / Commits / Outreach ────────────────────────
+
+@app.route("/api/cc/actions", methods=["GET", "POST"])
+def cc_actions():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        if request.method == "GET":
+            country  = request.args.get("country") or (u.country if u.role != "global" else None)
+            status   = request.args.get("status", "open")
+            account_id = request.args.get("account_id")
+            q = db.query(Action).join(Account, Action.account_id == Account.id)
+            if account_id:
+                q = q.filter(Action.account_id == int(account_id))
+            elif country:
+                q = q.filter(Account.country == country)
+            if status != "all":
+                q = q.filter(Action.status == status)
+            q = q.order_by(Action.due_date.asc().nullslast(), Action.created_at.desc())
+            actions = q.all()
+            return jsonify([{
+                "id": a.id, "account_id": a.account_id,
+                "account_name": a.account.name if a.account else "",
+                "owner": a.owner, "title": a.title, "description": a.description,
+                "due_date": a.due_date.isoformat() if a.due_date else None,
+                "priority": a.priority, "status": a.status, "action_type": a.action_type,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+            } for a in actions])
+        else:
+            try:
+                data = request.get_json(force=True, silent=True) or {}
+            except Exception:
+                data = {}
+            account_id  = int(data.get("account_id") or request.args.get("account_id") or 0)
+            title       = data.get("title") or request.args.get("title", "")
+            description = data.get("description") or request.args.get("description", "")
+            due_str     = data.get("due_date") or request.args.get("due_date")
+            priority    = data.get("priority") or request.args.get("priority", "medium")
+            action_type = data.get("action_type") or request.args.get("action_type", "follow-up")
+            owner       = data.get("owner") or request.args.get("owner") or u.name
+            due_date    = datetime.datetime.fromisoformat(due_str) if due_str else None
+            if not title or not account_id:
+                return jsonify({"error": "title and account_id required"}), 400
+            action = Action(
+                account_id=account_id, owner=owner, title=title,
+                description=description, due_date=due_date,
+                priority=priority, action_type=action_type, status="open"
+            )
+            db.add(action)
+            # Update account last_activity
+            acc = db.query(Account).get(account_id)
+            if acc:
+                acc.last_activity = datetime.datetime.utcnow()
+            db.commit()
+            return jsonify({"ok": True, "id": action.id})
+    finally:
+        db.close()
+
+@app.route("/api/cc/actions/<int:action_id>", methods=["PATCH"])
+def cc_action_update(action_id):
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        try:
+            data = request.get_json(force=True, silent=True) or {}
+        except Exception:
+            data = {}
+        action = db.query(Action).get(action_id)
+        if not action:
+            return jsonify({"error": "Not found"}), 404
+        new_status = data.get("status") or request.args.get("status")
+        if new_status:
+            action.status = new_status
+            if new_status == "done":
+                action.completed_at = datetime.datetime.utcnow()
+        new_title = data.get("title") or request.args.get("title")
+        if new_title:
+            action.title = new_title
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+@app.route("/api/cc/accounts/<int:account_id>/stage", methods=["PATCH"])
+def cc_account_stage(account_id):
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        try:
+            data = request.get_json(force=True, silent=True) or {}
+        except Exception:
+            data = {}
+        stage = data.get("stage") or request.args.get("stage")
+        if not stage:
+            return jsonify({"error": "stage required"}), 400
+        acc = db.query(Account).get(account_id)
+        if not acc:
+            return jsonify({"error": "Not found"}), 404
+        acc.deal_stage = stage
+        acc.deal_stage_updated = datetime.datetime.utcnow()
+        acc.last_activity = datetime.datetime.utcnow()
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+@app.route("/api/cc/meetings", methods=["GET", "POST"])
+def cc_meetings():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        if request.method == "GET":
+            country    = request.args.get("country") or (u.country if u.role != "global" else None)
+            account_id = request.args.get("account_id")
+            q = db.query(Meeting)
+            if account_id:
+                q = q.filter(Meeting.account_id == int(account_id))
+            elif country:
+                q = q.filter(Meeting.country == country)
+            meetings = q.order_by(Meeting.date.desc()).limit(50).all()
+            return jsonify([{
+                "id": m.id, "account_id": m.account_id,
+                "account_name": m.account.name if m.account else "",
+                "owner": m.owner, "date": m.date.isoformat() if m.date else None,
+                "participants": m.participants, "summary": m.summary,
+                "outcome": m.outcome, "next_step": m.next_step,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            } for m in meetings])
+        else:
+            try:
+                data = request.get_json(force=True, silent=True) or {}
+            except Exception:
+                data = {}
+            account_id   = int(data.get("account_id") or request.args.get("account_id") or 0)
+            date_str     = data.get("date") or request.args.get("date", "")
+            participants = data.get("participants") or request.args.get("participants", "")
+            summary      = data.get("summary") or request.args.get("summary", "")
+            outcome      = data.get("outcome") or request.args.get("outcome", "neutral")
+            next_step    = data.get("next_step") or request.args.get("next_step", "")
+            owner        = data.get("owner") or request.args.get("owner") or u.name
+            if not account_id or not date_str:
+                return jsonify({"error": "account_id and date required"}), 400
+            meet_date = datetime.datetime.fromisoformat(date_str)
+            acc = db.query(Account).get(account_id)
+            meeting = Meeting(
+                account_id=account_id,
+                country=acc.country if acc else u.country,
+                owner=owner, date=meet_date, participants=participants,
+                summary=summary, outcome=outcome, next_step=next_step
+            )
+            db.add(meeting)
+            if acc:
+                acc.last_activity = datetime.datetime.utcnow()
+                if outcome == "positive" and acc.deal_stage in ("identified", "qualified"):
+                    acc.deal_stage = "engaged"
+                    acc.deal_stage_updated = datetime.datetime.utcnow()
+            db.commit()
+            return jsonify({"ok": True, "id": meeting.id})
+    finally:
+        db.close()
+
+@app.route("/api/cc/weekly-commit", methods=["GET", "POST"])
+def cc_weekly_commit():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        if request.method == "GET":
+            # Return current week's commit for this user
+            today = datetime.datetime.utcnow().date()
+            monday = today - datetime.timedelta(days=today.weekday())
+            week_start = datetime.datetime.combine(monday, datetime.time.min)
+            commit = db.query(WeeklyCommit).filter(
+                WeeklyCommit.user_id == u.id,
+                WeeklyCommit.week_start >= week_start
+            ).first()
+            if not commit:
+                return jsonify({"exists": False, "week_start": week_start.isoformat()})
+            return jsonify({
+                "exists": True, "id": commit.id,
+                "week_start": commit.week_start.isoformat(),
+                "commit_text": commit.commit_text,
+                "target_value": commit.target_value,
+                "accounts_committed": commit.accounts_committed,
+                "status": commit.status,
+            })
+        else:
+            try:
+                data = request.get_json(force=True, silent=True) or {}
+            except Exception:
+                data = {}
+            commit_text = data.get("commit_text") or request.args.get("commit_text", "")
+            target_value = float(data.get("target_value") or request.args.get("target_value") or 0)
+            accounts_committed = data.get("accounts_committed") or request.args.get("accounts_committed", "[]")
+            today = datetime.datetime.utcnow().date()
+            monday = today - datetime.timedelta(days=today.weekday())
+            week_start = datetime.datetime.combine(monday, datetime.time.min)
+            # Upsert
+            existing = db.query(WeeklyCommit).filter(
+                WeeklyCommit.user_id == u.id,
+                WeeklyCommit.week_start >= week_start
+            ).first()
+            if existing:
+                existing.commit_text = commit_text
+                existing.target_value = target_value
+                existing.accounts_committed = accounts_committed
+            else:
+                commit = WeeklyCommit(
+                    user_id=u.id, country=u.country,
+                    week_start=week_start, commit_text=commit_text,
+                    target_value=target_value, accounts_committed=accounts_committed
+                )
+                db.add(commit)
+            db.commit()
+            return jsonify({"ok": True})
+    finally:
+        db.close()
+
+@app.route("/api/cc/outreach", methods=["POST"])
+def cc_generate_outreach():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        data = {}
+    account_id = data.get("account_id") or request.args.get("account_id")
+    channel    = data.get("channel") or request.args.get("channel", "linkedin")
+    language   = data.get("language") or request.args.get("language", "en")
+    if not account_id:
+        return jsonify({"error": "account_id required"}), 400
+    db = SessionLocal()
+    try:
+        acc = db.query(Account).get(account_id)
+        if not acc:
+            return jsonify({"error": "Account not found"}), 404
+        ind  = db.query(Industry).get(acc.industry_id)
+        acts = acc.activations
+        preds = sorted(acc.predictions, key=lambda p: p.generated_at, reverse=True)[:1]
+        pred_context = ""
+        if preds:
+            p = preds[0]
+            svc = db.query(Service).get(p.recommended_service_id)
+            pred_context = f"Latest AI prediction: {p.trigger_summary} (recommended: {svc.short_name if svc else 'N/A'}, confidence {p.confidence:.0%})"
+
+        lang_map = {"en": "English", "no": "Norwegian (Bokmål)", "da": "Danish", "sv": "Swedish"}
+        lang_name = lang_map.get(language, "English")
+
+        prompt = f"""You are a senior commercial strategist at JAKALA writing a personalized {channel} outreach message.
+
+ACCOUNT:
+- Name: {acc.name}
+- Country: {acc.country.upper()}
+- Industry: {ind.name if ind else 'Unknown'}
+- Revenue: {acc.revenue or 'Unknown'}
+- Named buyer: {acc.named_buyer or 'TBD'} ({acc.buyer_role or 'Unknown role'})
+- Tech stack: {acc.tech_stack or 'Unknown'}
+- Pipeline value: €{acc.pipeline_value:,.0f}
+- Current activations: {', '.join(a.service.name + ' (' + a.stage + ')' for a in acts) if acts else 'None'}
+{pred_context}
+
+JAKALA GTM strategies: Data Revenue Unlock, AI Readiness Accelerator, Commerce Optimization, Experience Transformation.
+
+Write a personalized {channel} outreach message in {lang_name}:
+- Max 200 words for LinkedIn, 300 for email
+- No bullet points in the body
+- Lead with a relevant insight or observation about their business
+- One clear, soft question at the end
+- No jargon, no hard sell
+- Peer-to-peer tone — senior consultant to senior buyer
+- Sign off as Jacob (JAKALA Nordic)
+
+Return ONLY the message text, nothing else."""
+
+        resp = client.messages.create(
+            model=MODEL, max_tokens=600,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({"ok": True, "message": resp.content[0].text.strip(), "channel": channel, "language": language})
+    finally:
+        db.close()
+
+@app.route("/api/cc/today", methods=["GET"])
+def cc_today():
+    """Today's priorities: overdue + due-today actions, cold accounts, this week's commit."""
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "Not logged in"}), 401
+    if not CC_DB_OK:
+        return jsonify({"error": "DB unavailable"}), 503
+    db = SessionLocal()
+    try:
+        country = u.country if u.role != "global" else request.args.get("country")
+        now = datetime.datetime.utcnow()
+        today_end = now.replace(hour=23, minute=59, second=59)
+
+        # Overdue + due today actions
+        q = db.query(Action).join(Account, Action.account_id == Account.id).filter(
+            Action.status == "open",
+            Action.due_date <= today_end
+        )
+        if country:
+            q = q.filter(Account.country == country)
+        urgent_actions = q.order_by(Action.due_date.asc()).all()
+
+        # Cold accounts: no activity in 14+ days
+        cold_cutoff = now - datetime.timedelta(days=14)
+        q2 = db.query(Account).filter(
+            Account.account_type == "prospect",
+            Account.deal_stage.notin_(["closed_won", "closed_lost"])
+        )
+        if country:
+            q2 = q2.filter(Account.country == country)
+        cold_accounts = [a for a in q2.all() if (not a.last_activity) or (a.last_activity < cold_cutoff)][:5]
+
+        # This week's commit
+        monday = (now.date() - datetime.timedelta(days=now.weekday()))
+        week_start = datetime.datetime.combine(monday, datetime.time.min)
+        commit = db.query(WeeklyCommit).filter(
+            WeeklyCommit.user_id == u.id,
+            WeeklyCommit.week_start >= week_start
+        ).first()
+
+        # Recent meetings (last 7 days)
+        recent_cutoff = now - datetime.timedelta(days=7)
+        q3 = db.query(Meeting)
+        if country:
+            q3 = q3.filter(Meeting.country == country)
+        recent_meetings = q3.filter(Meeting.date >= recent_cutoff).order_by(Meeting.date.desc()).limit(5).all()
+
+        return jsonify({
+            "urgent_actions": [{
+                "id": a.id, "account_id": a.account_id,
+                "account_name": a.account.name if a.account else "",
+                "title": a.title, "priority": a.priority, "action_type": a.action_type,
+                "due_date": a.due_date.isoformat() if a.due_date else None,
+                "is_overdue": bool(a.due_date and a.due_date < now),
+            } for a in urgent_actions],
+            "cold_accounts": [{
+                "id": a.id, "name": a.name,
+                "last_activity": a.last_activity.isoformat() if a.last_activity else None,
+                "deal_stage": a.deal_stage, "pipeline_value": a.pipeline_value,
+            } for a in cold_accounts],
+            "weekly_commit": {
+                "exists": bool(commit),
+                "commit_text": commit.commit_text if commit else None,
+                "target_value": commit.target_value if commit else None,
+                "week_start": week_start.isoformat(),
+            },
+            "recent_meetings": [{
+                "id": m.id, "account_name": m.account.name if m.account else "",
+                "date": m.date.isoformat() if m.date else None,
+                "outcome": m.outcome, "next_step": m.next_step,
+            } for m in recent_meetings],
+        })
+    finally:
+        db.close()
+
 # ── Control Center HTML ────────────────────────────────────────────────────────
 
 CC_HTML = """<!DOCTYPE html>
@@ -4637,6 +5018,89 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 #cc-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;color:var(--w);opacity:0;transition:all .3s;pointer-events:none;z-index:200}
 #cc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ── SCROLLBAR ── */
+/* ── DEAL STAGE ── */
+.stage-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}
+.stage-pill:hover{opacity:.8}
+/* ── ACTION CARDS ── */
+.action-list{display:flex;flex-direction:column;gap:8px}
+.action-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:all .2s}
+.action-card:hover{border-color:rgba(255,255,255,.12)}
+.action-card.overdue{border-left:3px solid var(--red)}
+.action-card.high{border-left:3px solid var(--amber)}
+.action-check{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);background:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px}
+.action-check:hover{border-color:var(--green);background:rgba(0,212,160,.1)}
+.action-check.done{background:var(--green);border-color:var(--green)}
+.action-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.action-title.done{text-decoration:line-through;color:var(--m2)}
+.action-meta{font-size:11px;color:var(--m);display:flex;gap:10px;flex-wrap:wrap}
+.action-meta .overdue-label{color:var(--red);font-weight:700}
+.priority-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.priority-dot.critical{background:var(--red)}
+.priority-dot.high{background:var(--amber)}
+.priority-dot.medium{background:var(--blue)}
+.priority-dot.low{background:var(--m2)}
+.action-type-badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(255,255,255,.06);color:var(--m)}
+/* ── MEETING CARDS ── */
+.meeting-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px}
+.meeting-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.meeting-account{font-size:14px;font-weight:700}
+.meeting-date{font-size:11px;color:var(--m)}
+.meeting-outcome{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase}
+.meeting-outcome.positive{background:rgba(0,212,160,.15);color:var(--green)}
+.meeting-outcome.neutral{background:rgba(21,62,237,.12);color:#6B8EF7}
+.meeting-outcome.negative{background:rgba(246,87,74,.12);color:var(--red)}
+.meeting-outcome.no-show{background:rgba(128,128,128,.12);color:var(--m)}
+.meeting-summary{font-size:12.5px;color:var(--m);line-height:1.6;margin-bottom:8px}
+.meeting-next{background:rgba(21,62,237,.08);border:1px solid rgba(21,62,237,.2);border-radius:6px;padding:8px 12px;font-size:12px;color:rgba(107,142,247,.9)}
+/* ── TODAY VIEW ── */
+.today-hero{background:linear-gradient(135deg,rgba(21,62,237,.12) 0%,rgba(21,62,237,.04) 100%);border:1px solid rgba(21,62,237,.25);border-radius:16px;padding:24px 28px;margin-bottom:24px}
+.today-date{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.today-headline{font-size:22px;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+.today-sub{font-size:13px;color:var(--m)}
+.today-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px}
+.today-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.today-sec-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m2);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.cold-account-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border2);font-size:13px}
+.cold-account-row:last-child{border-bottom:none}
+.cold-days{font-size:11px;font-weight:600;color:var(--amber)}
+/* ── WEEKLY COMMIT WIDGET ── */
+.commit-widget{background:linear-gradient(135deg,rgba(0,212,160,.08) 0%,rgba(0,212,160,.03) 100%);border:1px solid rgba(0,212,160,.2);border-radius:12px;padding:20px;margin-bottom:24px}
+.commit-title{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.commit-text{font-size:13px;color:var(--m);line-height:1.6;margin:10px 0}
+.commit-cta{padding:8px 16px;background:rgba(0,212,160,.15);border:1px solid rgba(0,212,160,.3);border-radius:8px;color:var(--green);font:600 12px var(--font);cursor:pointer;transition:all .2s}
+.commit-cta:hover{background:rgba(0,212,160,.25)}
+/* ── DETAIL PANEL TABS ── */
+.dp-tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border2);background:#0D0D22}
+.dp-tab{padding:10px 14px;font-size:12px;font-weight:600;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px}
+.dp-tab:hover{color:var(--w)}
+.dp-tab.active{color:var(--w);border-bottom-color:var(--blue)}
+.dp-tab-content{display:none}.dp-tab-content.active{display:block}
+/* ── OUTREACH PANEL ── */
+.outreach-controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.outreach-select{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font:500 12px var(--font);color:var(--w);cursor:pointer}
+.outreach-select:focus{outline:none;border-color:rgba(21,62,237,.5)}
+.outreach-msg{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--t);line-height:1.7;white-space:pre-wrap;min-height:120px;margin-bottom:10px}
+.outreach-copy-btn{padding:8px 16px;background:var(--blue-dim);border:1px solid rgba(21,62,237,.3);border-radius:8px;color:#6B8EF7;font:600 12px var(--font);cursor:pointer;transition:all .2s}
+.outreach-copy-btn:hover{background:rgba(21,62,237,.25)}
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#0D0D22;border:1px solid var(--border);border-radius:16px;padding:28px;width:480px;max-width:94vw;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+.modal-field input,.modal-field select,.modal-field textarea{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w);outline:none;transition:border-color .2s}
+.modal-field textarea{resize:vertical;min-height:80px}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:rgba(21,62,237,.5)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.modal-btn{padding:9px 20px;border-radius:8px;font:600 13px var(--font);cursor:pointer;transition:all .2s}
+.modal-btn.primary{background:var(--blue);border:none;color:#fff}
+.modal-btn.primary:hover{opacity:.85}
+.modal-btn.secondary{background:none;border:1px solid var(--border);color:var(--m)}
+.modal-btn.secondary:hover{color:var(--w);border-color:rgba(255,255,255,.2)}
+/* ── ADD BUTTON ── */
+.add-btn{padding:8px 16px;background:var(--blue);border:none;border-radius:8px;color:#fff;font:600 12px var(--font);cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.add-btn:hover{opacity:.85}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
 </style>
 </head>
@@ -4687,7 +5151,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sb-section">
-        <div class="sb-label">Navigation</div>
+        <div class="sb-label">Today</div>
+        <div class="nav-item" data-view="today" onclick="switchView('today')">
+          <span class="nav-icon">⊛</span> Today's Priorities <span id="sb-action-count" style="margin-left:auto;background:var(--red);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span>
+        </div>
+        <div class="nav-item" data-view="actions" onclick="switchView('actions')">
+          <span class="nav-icon">☑</span> Actions
+        </div>
+        <div class="nav-item" data-view="meetings" onclick="switchView('meetings')">
+          <span class="nav-icon">◷</span> Meeting Log
+        </div>
+      </div>
+      <div class="sb-divider"></div>
+      <div class="sb-section">
+        <div class="sb-label">Pipeline</div>
         <div class="nav-item active" data-view="overview" onclick="switchView('overview')">
           <span class="nav-icon">◎</span> Overview
         </div>
@@ -4759,6 +5236,55 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         <div class="pred-grid" id="pred-grid"></div>
       </div>
 
+      <!-- ── TODAY ── -->
+      <div class="view" id="view-today">
+        <div class="today-hero">
+          <div class="today-date" id="today-date-label"></div>
+          <div class="today-headline" id="today-headline">Good morning</div>
+          <div class="today-sub" id="today-sub">Loading your priorities…</div>
+        </div>
+        <div id="commit-widget-area"></div>
+        <div class="today-grid" id="today-grid">
+          <div>
+            <div class="sec-header"><div class="sec-title">Urgent Actions</div><button class="add-btn" onclick="openActionModal()">+ Add action</button></div>
+            <div id="today-actions-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+          </div>
+          <div>
+            <div class="sec-header"><div class="sec-title">Cold Accounts (14+ days)</div></div>
+            <div id="today-cold-list"></div>
+            <div style="margin-top:20px">
+              <div class="sec-header"><div class="sec-title">Recent Meetings</div></div>
+              <div id="today-meetings-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACTIONS ── -->
+      <div class="view" id="view-actions">
+        <div class="sec-header">
+          <div class="sec-title">All Actions</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="action-status-filter" onchange="loadActions()" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font:500 12px var(--font);color:var(--w)">
+              <option value="open">Open</option>
+              <option value="all">All</option>
+              <option value="done">Done</option>
+            </select>
+            <button class="add-btn" onclick="openActionModal()">+ New action</button>
+          </div>
+        </div>
+        <div id="actions-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+      </div>
+
+      <!-- ── MEETINGS ── -->
+      <div class="view" id="view-meetings">
+        <div class="sec-header">
+          <div class="sec-title">Meeting Log</div>
+          <button class="add-btn" onclick="openMeetingModal()">+ Log meeting</button>
+        </div>
+        <div id="meetings-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+      </div>
+
       <!-- ── GLOBAL ── -->
       <div class="view" id="view-global">
         <div id="global-kpis" class="kpi-row"></div>
@@ -4789,7 +5315,159 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <div style="font-size:20px;font-weight:800;letter-spacing:-.03em" id="dp-name"></div>
     <div style="font-size:12px;color:var(--m);margin-top:4px" id="dp-meta"></div>
   </div>
-  <div class="dp-body" id="dp-body"></div>
+  <div class="dp-tabs" id="dp-tabs">
+    <div class="dp-tab active" data-tab="overview" onclick="switchDpTab('overview')">Overview</div>
+    <div class="dp-tab" data-tab="actions" onclick="switchDpTab('actions')">Actions</div>
+    <div class="dp-tab" data-tab="meetings" onclick="switchDpTab('meetings')">Meetings</div>
+    <div class="dp-tab" data-tab="outreach" onclick="switchDpTab('outreach')">Outreach</div>
+  </div>
+  <div class="dp-body">
+    <div class="dp-tab-content active" id="dp-tab-overview"></div>
+    <div class="dp-tab-content" id="dp-tab-actions">
+      <div style="padding:16px 0 10px;display:flex;justify-content:flex-end">
+        <button class="add-btn" onclick="openActionModal(currentDetailAccount && currentDetailAccount.id)">+ Add action</button>
+      </div>
+      <div id="dp-actions-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+    </div>
+    <div class="dp-tab-content" id="dp-tab-meetings">
+      <div style="padding:16px 0 10px;display:flex;justify-content:flex-end">
+        <button class="add-btn" onclick="openMeetingModal(currentDetailAccount && currentDetailAccount.id)">+ Log meeting</button>
+      </div>
+      <div id="dp-meetings-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
+    </div>
+    <div class="dp-tab-content" id="dp-tab-outreach">
+      <div style="padding-top:16px">
+        <div class="outreach-controls">
+          <select class="outreach-select" id="dp-outreach-channel">
+            <option value="linkedin">LinkedIn</option>
+            <option value="email">Email</option>
+          </select>
+          <select class="outreach-select" id="dp-outreach-lang">
+            <option value="en">English</option>
+            <option value="no">Norwegian</option>
+            <option value="da">Danish</option>
+            <option value="sv">Swedish</option>
+          </select>
+          <button class="add-btn" onclick="generateOutreach()">Generate ✦</button>
+        </div>
+        <div id="dp-outreach-loading" style="display:none" class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Generating…</span></div>
+        <div id="dp-outreach-msg" class="outreach-msg" style="display:none"></div>
+        <button id="dp-outreach-copy" class="outreach-copy-btn" style="display:none" onclick="copyOutreach()">Copy to clipboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action modal -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal">
+    <div class="modal-title">New Action</div>
+    <input type="hidden" id="action-account-id">
+    <div class="modal-field">
+      <label>Account</label>
+      <select id="action-account-select" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w)"></select>
+    </div>
+    <div class="modal-field">
+      <label>Action Title</label>
+      <input type="text" id="action-title" placeholder="e.g. Follow up with Morten Syversen">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="modal-field">
+        <label>Type</label>
+        <select id="action-type" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w)">
+          <option value="follow-up">Follow-up</option>
+          <option value="call">Call</option>
+          <option value="email">Email</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="meeting">Meeting</option>
+          <option value="proposal">Proposal</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Priority</label>
+        <select id="action-priority" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w)">
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Due Date</label>
+      <input type="date" id="action-due">
+    </div>
+    <div class="modal-field">
+      <label>Notes (optional)</label>
+      <textarea id="action-desc" placeholder="Context or details…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeActionModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="saveAction()">Save Action</button>
+    </div>
+  </div>
+</div>
+
+<!-- Meeting modal -->
+<div class="modal-overlay" id="meeting-modal">
+  <div class="modal">
+    <div class="modal-title">Log Meeting</div>
+    <input type="hidden" id="meeting-account-id">
+    <div class="modal-field">
+      <label>Account</label>
+      <select id="meeting-account-select" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w)"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="modal-field">
+        <label>Date</label>
+        <input type="date" id="meeting-date">
+      </div>
+      <div class="modal-field">
+        <label>Outcome</label>
+        <select id="meeting-outcome" style="width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:400 13px var(--font);color:var(--w)">
+          <option value="positive">Positive</option>
+          <option value="neutral">Neutral</option>
+          <option value="negative">Negative</option>
+          <option value="no-show">No-show</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Participants</label>
+      <input type="text" id="meeting-participants" placeholder="e.g. Morten Syversen, Jacob">
+    </div>
+    <div class="modal-field">
+      <label>Summary</label>
+      <textarea id="meeting-summary" placeholder="What was discussed? Key insights?"></textarea>
+    </div>
+    <div class="modal-field">
+      <label>Next Step</label>
+      <input type="text" id="meeting-next" placeholder="e.g. Send proposal by Friday">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeMeetingModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="saveMeeting()">Save Meeting</button>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly commit modal -->
+<div class="modal-overlay" id="commit-modal">
+  <div class="modal">
+    <div class="modal-title">Weekly Commit</div>
+    <div class="modal-field">
+      <label>What do you commit to closing this week?</label>
+      <textarea id="commit-text" placeholder="e.g. Book first meeting with Elkjøp. Send proposal to Vinmonopolet. Follow up Trumf after intro call." style="min-height:100px"></textarea>
+    </div>
+    <div class="modal-field">
+      <label>Target Value (€)</label>
+      <input type="number" id="commit-value" placeholder="50000">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeCommitModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="saveCommit()">Commit →</button>
+    </div>
+  </div>
 </div>
 
 <div id="cc-toast"></div>
@@ -4801,6 +5479,7 @@ let countryData = null;
 let globalData  = null;
 let activeIndustry = 'all';
 let activeView = 'overview';
+let currentDetailAccount = null;
 const STAGE_COLORS = {
   identified: {color:'#6B8EF7',bg:'rgba(21,62,237,.15)'},
   proposed:   {color:'#F59E0B',bg:'rgba(245,158,11,.15)'},
@@ -4808,6 +5487,9 @@ const STAGE_COLORS = {
   active:     {color:'#00D4A0',bg:'rgba(0,212,160,.15)'},
   completed:  {color:'#888',bg:'rgba(128,128,128,.15)'},
 };
+const DEAL_STAGES = ['identified','qualified','engaged','proposed','negotiating','closed_won'];
+const DEAL_STAGE_LABELS = {identified:'Identified',qualified:'Qualified',engaged:'Engaged',proposed:'Proposed',negotiating:'Negotiating',closed_won:'Won',closed_lost:'Lost'};
+const PRIORITY_COLORS = {critical:'var(--red)',high:'var(--amber)',medium:'var(--blue)',low:'var(--m2)'};
 
 // ══ AUTH ═══════════════════════════════════════════════════════════════════════
 async function doLogin() {
@@ -4863,8 +5545,9 @@ async function initApp(user) {
     // Country head view
     const meta = {'no':'🇳🇴 Norway','dk':'🇩🇰 Denmark','se':'🇸🇪 Sweden','uk':'🇬🇧 UK','fr':'🇫🇷 France'};
     document.getElementById('tb-country').textContent = meta[currentUser.country] || currentUser.country.toUpperCase();
-    switchView('overview');
+    switchView('today');
     loadCountryData(currentUser.country);
+    loadTodayData();
   }
 }
 
@@ -5149,14 +5832,34 @@ function buildCountrySwitcher() {
 // ══ DETAIL PANEL ══════════════════════════════════════════════════════════════
 function openDetail(account) {
   if (typeof account === 'string') account = JSON.parse(account);
+  currentDetailAccount = account;
+
   document.getElementById('dp-type-badge').textContent = account.account_type === 'existing' ? '✓ EXISTING CLIENT' : '◎ PROSPECT';
   document.getElementById('dp-name').textContent = account.name;
   document.getElementById('dp-meta').textContent = `${account.industry_icon} ${account.industry}  ·  ${countryData?.meta?.flag || ''} ${countryData?.meta?.name || ''}`;
 
+  // Reset to overview tab
+  switchDpTab('overview');
+
   const pFmt = account.pipeline >= 1000000 ? '€'+(account.pipeline/1000000).toFixed(1)+'M' : '€'+(account.pipeline/1000).toFixed(0)+'K';
   const winPct = Math.round((account.win_prob||0)*100);
+  const stage = account.deal_stage || 'identified';
+  const stageIdx = DEAL_STAGES.indexOf(stage);
 
-  document.getElementById('dp-body').innerHTML = `
+  const overviewEl = document.getElementById('dp-tab-overview');
+  overviewEl.innerHTML = `
+    <div class="dp-section" style="margin-top:0;padding-top:16px">
+      <div class="dp-sec-title" style="margin-bottom:8px">Deal Stage</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+        ${DEAL_STAGES.map((s,i) => {
+          const active = s === stage;
+          const past   = i < stageIdx;
+          const bg = active ? 'var(--blue)' : past ? 'rgba(21,62,237,.15)' : 'rgba(255,255,255,.04)';
+          const col = active ? '#fff' : past ? '#6B8EF7' : 'var(--m)';
+          return `<span class="stage-pill" style="background:${bg};color:${col};border:1px solid ${active?'var(--blue)':'var(--border)'}" onclick="updateStage(${account.id},'${s}')">${DEAL_STAGE_LABELS[s]}</span>`;
+        }).join('')}
+      </div>
+    </div>
     <div class="dp-section">
       <div class="dp-sec-title">Account Overview</div>
       ${[['Pipeline Value', pFmt],['Win Probability', winPct + '%'],['ICP Score', (account.icp||'—') + '/10'],['Deal Score', (account.deal||'—') + '/10'],['Revenue', account.revenue||'—']].map(([l,v])=>`<div class="dp-row"><span class="dp-row-label">${l}</span><span class="dp-row-val">${v}</span></div>`).join('')}
@@ -5203,6 +5906,15 @@ function openDetail(account) {
   document.getElementById('detail-panel').classList.add('open');
 }
 
+async function updateStage(accountId, stage) {
+  const params = new URLSearchParams({stage});
+  const r = await fetch('/api/cc/accounts/' + accountId + '/stage?' + params, {method:'PATCH'});
+  if (r.ok) {
+    showToast('Stage updated → ' + DEAL_STAGE_LABELS[stage]);
+    if (currentDetailAccount) { currentDetailAccount.deal_stage = stage; openDetail(currentDetailAccount); }
+  }
+}
+
 function closeDetail() {
   document.getElementById('detail-overlay').classList.remove('open');
   document.getElementById('detail-panel').classList.remove('open');
@@ -5220,6 +5932,287 @@ async function generatePrediction(accountId, accountName) {
   if (country) loadCountryData(country);
 }
 
+// ══ TODAY VIEW ════════════════════════════════════════════════════════════════
+async function loadTodayData() {
+  const r = await fetch('/api/cc/today');
+  if (!r.ok) return;
+  const d = await r.json();
+
+  // Date headline
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+  document.getElementById('today-date-label').textContent = days[now.getDay()] + ' · ' + months[now.getMonth()] + ' ' + now.getDate();
+
+  const urgentCount = d.urgent_actions.length;
+  const coldCount = d.cold_accounts.length;
+  document.getElementById('today-headline').textContent = urgentCount
+    ? urgentCount + ' action' + (urgentCount>1?'s':'') + ' need your attention'
+    : 'You\'re clear — no overdue actions';
+  document.getElementById('today-sub').textContent =
+    coldCount ? coldCount + ' accounts have gone cold · ' + d.recent_meetings.length + ' meetings this week'
+               : 'Pipeline is healthy · ' + d.recent_meetings.length + ' meetings this week';
+
+  // Sidebar badge
+  const badge = document.getElementById('sb-action-count');
+  if (urgentCount > 0) { badge.textContent = urgentCount; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+
+  // Weekly commit widget
+  const commitArea = document.getElementById('commit-widget-area');
+  if (d.weekly_commit.exists) {
+    const val = d.weekly_commit.target_value ? ' · Target: €' + Number(d.weekly_commit.target_value).toLocaleString() : '';
+    commitArea.innerHTML = '<div class="commit-widget"><div class="commit-title"><span style="color:var(--green)">✓</span> This week\'s commit' + val + '</div><div class="commit-text">' + (d.weekly_commit.commit_text || '—') + '</div><button class="commit-cta" onclick="openCommitModal()">Update →</button></div>';
+  } else {
+    commitArea.innerHTML = '<div class="commit-widget"><div class="commit-title">📌 Set your weekly commit</div><div class="commit-text" style="color:var(--m2)">What are you committing to close this week? Hold yourself accountable.</div><button class="commit-cta" onclick="openCommitModal()">Commit now →</button></div>';
+  }
+
+  // Urgent actions
+  const actList = document.getElementById('today-actions-list');
+  if (!d.urgent_actions.length) {
+    actList.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No overdue or due-today actions. 🎉</div>';
+  } else {
+    actList.innerHTML = d.urgent_actions.map(a => renderActionCard(a)).join('');
+  }
+
+  // Cold accounts
+  const coldList = document.getElementById('today-cold-list');
+  if (!d.cold_accounts.length) {
+    coldList.innerHTML = '<div style="color:var(--m);font-size:13px">No cold accounts.</div>';
+  } else {
+    coldList.innerHTML = d.cold_accounts.map(a => {
+      const days = a.last_activity ? Math.floor((Date.now() - new Date(a.last_activity).getTime()) / 86400000) : null;
+      const daysLabel = days ? days + 'd ago' : 'Never contacted';
+      const pFmt = a.pipeline_value >= 1e6 ? '€'+(a.pipeline_value/1e6).toFixed(1)+'M' : '€'+(a.pipeline_value/1e3).toFixed(0)+'K';
+      return '<div class="cold-account-row"><div><div style="font-weight:600">' + a.name + '</div><div style="font-size:11px;color:var(--m)">' + DEAL_STAGE_LABELS[a.deal_stage] + ' · ' + pFmt + '</div></div><span class="cold-days">' + daysLabel + '</span></div>';
+    }).join('');
+  }
+
+  // Recent meetings
+  const meetList = document.getElementById('today-meetings-list');
+  if (!d.recent_meetings.length) {
+    meetList.innerHTML = '<div style="color:var(--m);font-size:13px">No meetings this week.</div>';
+  } else {
+    meetList.innerHTML = d.recent_meetings.map(m => {
+      const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '?';
+      return '<div class="cold-account-row"><div><div style="font-weight:600">' + m.account_name + '</div><div style="font-size:11px;color:var(--m)">' + dateStr + '</div></div><span class="meeting-outcome ' + m.outcome + '">' + (m.outcome||'?') + '</span></div>';
+    }).join('');
+  }
+}
+
+function renderActionCard(a) {
+  const isOverdue = a.is_overdue || (a.due_date && new Date(a.due_date) < new Date());
+  const cardClass = isOverdue ? 'overdue' : (a.priority === 'high' || a.priority === 'critical') ? 'high' : '';
+  const dueStr = a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+  const dueLabelClass = isOverdue ? 'overdue-label' : '';
+  return '<div class="action-card ' + cardClass + '" id="action-card-' + a.id + '">' +
+    '<div class="priority-dot ' + (a.priority||'medium') + '"></div>' +
+    '<div onclick="markActionDone(' + a.id + ')" class="action-check" id="check-' + a.id + '" title="Mark done" style="cursor:pointer"></div>' +
+    '<div style="flex:1">' +
+      '<div class="action-title">' + a.title + '</div>' +
+      '<div class="action-meta">' +
+        (a.account_name ? '<span>' + a.account_name + '</span>' : '') +
+        '<span class="action-type-badge">' + (a.action_type||'follow-up') + '</span>' +
+        (dueStr ? '<span class="' + dueLabelClass + '">' + (isOverdue ? '⚠ Overdue · ' : '') + dueStr + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function markActionDone(actionId) {
+  const params = new URLSearchParams({status:'done'});
+  const r = await fetch('/api/cc/actions/' + actionId + '?' + params, {method:'PATCH'});
+  if (r.ok) {
+    const card = document.getElementById('action-card-' + actionId);
+    if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
+    showToast('Action marked as done ✓');
+    setTimeout(() => { loadTodayData(); loadActions(); }, 800);
+  }
+}
+
+// ══ ACTIONS VIEW ══════════════════════════════════════════════════════════════
+async function loadActions() {
+  const statusFilter = document.getElementById('action-status-filter');
+  const status = statusFilter ? statusFilter.value : 'open';
+  const r = await fetch('/api/cc/actions?status=' + status);
+  if (!r.ok) return;
+  const actions = await r.json();
+  const list = document.getElementById('actions-list');
+  if (!list) return;
+  if (!actions.length) { list.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No ' + status + ' actions.</div>'; return; }
+  list.innerHTML = actions.map(a => renderActionCard(a)).join('');
+}
+
+// ══ MEETINGS VIEW ═════════════════════════════════════════════════════════════
+async function loadMeetings(accountId) {
+  let url = '/api/cc/meetings';
+  if (accountId) url += '?account_id=' + accountId;
+  const r = await fetch(url);
+  if (!r.ok) return [];
+  return await r.json();
+}
+
+async function renderMeetingsList(listId, accountId) {
+  const el = document.getElementById(listId);
+  if (!el) return;
+  const meetings = await loadMeetings(accountId);
+  if (!meetings.length) { el.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No meetings logged yet.</div>'; return; }
+  el.innerHTML = meetings.map(m => {
+    const dateStr = m.date ? new Date(m.date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '?';
+    return '<div class="meeting-card">' +
+      '<div class="meeting-head"><div><div class="meeting-account">' + (accountId ? '' : m.account_name + ' · ') + m.owner + '</div><div class="meeting-date">' + dateStr + (m.participants ? ' · ' + m.participants : '') + '</div></div>' +
+      '<span class="meeting-outcome ' + (m.outcome||'neutral') + '">' + (m.outcome||'neutral') + '</span></div>' +
+      (m.summary ? '<div class="meeting-summary">' + m.summary + '</div>' : '') +
+      (m.next_step ? '<div class="meeting-next"><strong>Next step:</strong> ' + m.next_step + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+// ══ DETAIL PANEL TABS ═════════════════════════════════════════════════════════
+function switchDpTab(tab) {
+  document.querySelectorAll('.dp-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.dp-tab-content').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('dp-tab-' + tab);
+  if (el) el.classList.add('active');
+
+  if (tab === 'actions' && currentDetailAccount) {
+    const listEl = document.getElementById('dp-actions-list');
+    if (listEl) {
+      fetch('/api/cc/actions?account_id=' + currentDetailAccount.id).then(r=>r.json()).then(actions => {
+        if (!actions.length) { listEl.innerHTML = '<div style="color:var(--m);font-size:13px;padding:20px 0">No actions for this account yet.</div>'; return; }
+        listEl.innerHTML = actions.map(a => renderActionCard(a)).join('');
+      });
+    }
+  }
+  if (tab === 'meetings' && currentDetailAccount) {
+    renderMeetingsList('dp-meetings-list', currentDetailAccount.id);
+  }
+  if (tab === 'outreach') {
+    // Reset outreach panel
+    document.getElementById('dp-outreach-msg').style.display = 'none';
+    document.getElementById('dp-outreach-copy').style.display = 'none';
+  }
+}
+
+// ══ OUTREACH GENERATOR ════════════════════════════════════════════════════════
+async function generateOutreach() {
+  if (!currentDetailAccount) return;
+  const channel  = document.getElementById('dp-outreach-channel').value;
+  const language = document.getElementById('dp-outreach-lang').value;
+  const msgEl    = document.getElementById('dp-outreach-msg');
+  const copyBtn  = document.getElementById('dp-outreach-copy');
+  const loading  = document.getElementById('dp-outreach-loading');
+  loading.style.display = 'flex'; msgEl.style.display = 'none'; copyBtn.style.display = 'none';
+  const params = new URLSearchParams({account_id: currentDetailAccount.id, channel, language});
+  const r = await fetch('/api/cc/outreach?' + params, {method:'POST'});
+  const d = await r.json();
+  loading.style.display = 'none';
+  if (!r.ok) { showToast('Error: ' + (d.error||'Failed')); return; }
+  msgEl.textContent = d.message; msgEl.style.display = 'block';
+  copyBtn.style.display = 'block';
+}
+
+function copyOutreach() {
+  const msg = document.getElementById('dp-outreach-msg').textContent;
+  navigator.clipboard.writeText(msg).then(() => showToast('Copied to clipboard ✓'));
+}
+
+// ══ MODALS ════════════════════════════════════════════════════════════════════
+function openActionModal(accountId) {
+  const modal = document.getElementById('action-modal');
+  modal.classList.add('open');
+  // Populate account select
+  if (countryData) {
+    const sel = document.getElementById('action-account-select');
+    sel.innerHTML = countryData.accounts.map(a => '<option value="' + a.id + '"' + (a.id == accountId ? ' selected' : '') + '>' + a.name + '</option>').join('');
+  }
+  // Default due date = tomorrow
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById('action-due').value = tomorrow.toISOString().split('T')[0];
+}
+function closeActionModal() { document.getElementById('action-modal').classList.remove('open'); }
+
+async function saveAction() {
+  const accountId = document.getElementById('action-account-select').value;
+  const title     = document.getElementById('action-title').value.trim();
+  if (!title) { showToast('Please enter a title'); return; }
+  const due     = document.getElementById('action-due').value;
+  const type    = document.getElementById('action-type').value;
+  const priority= document.getElementById('action-priority').value;
+  const desc    = document.getElementById('action-desc').value;
+  const params  = new URLSearchParams({account_id:accountId, title, due_date:due, action_type:type, priority, description:desc});
+  const r = await fetch('/api/cc/actions?' + params, {method:'POST'});
+  if (r.ok) {
+    closeActionModal();
+    showToast('Action saved ✓');
+    document.getElementById('action-title').value = '';
+    document.getElementById('action-desc').value = '';
+    loadTodayData(); loadActions();
+    if (currentDetailAccount && currentDetailAccount.id == accountId) switchDpTab('actions');
+  } else {
+    const d = await r.json(); showToast('Error: ' + (d.error||'Failed'));
+  }
+}
+
+function openMeetingModal(accountId) {
+  const modal = document.getElementById('meeting-modal');
+  modal.classList.add('open');
+  if (countryData) {
+    const sel = document.getElementById('meeting-account-select');
+    sel.innerHTML = countryData.accounts.map(a => '<option value="' + a.id + '"' + (a.id == accountId ? ' selected' : '') + '>' + a.name + '</option>').join('');
+  }
+  document.getElementById('meeting-date').value = new Date().toISOString().split('T')[0];
+}
+function closeMeetingModal() { document.getElementById('meeting-modal').classList.remove('open'); }
+
+async function saveMeeting() {
+  const accountId    = document.getElementById('meeting-account-select').value;
+  const date         = document.getElementById('meeting-date').value;
+  const participants = document.getElementById('meeting-participants').value;
+  const summary      = document.getElementById('meeting-summary').value;
+  const outcome      = document.getElementById('meeting-outcome').value;
+  const nextStep     = document.getElementById('meeting-next').value;
+  if (!date) { showToast('Please enter a date'); return; }
+  const params = new URLSearchParams({account_id:accountId, date, participants, summary, outcome, next_step:nextStep});
+  const r = await fetch('/api/cc/meetings?' + params, {method:'POST'});
+  if (r.ok) {
+    closeMeetingModal();
+    showToast('Meeting logged ✓');
+    ['meeting-participants','meeting-summary','meeting-next'].forEach(id => document.getElementById(id).value = '');
+    loadTodayData();
+    if (activeView === 'meetings') renderMeetingsList('meetings-list', null);
+    if (currentDetailAccount && currentDetailAccount.id == accountId) switchDpTab('meetings');
+  } else {
+    const d = await r.json(); showToast('Error: ' + (d.error||'Failed'));
+  }
+}
+
+function openCommitModal() {
+  const modal = document.getElementById('commit-modal');
+  modal.classList.add('open');
+  // Pre-fill if exists
+  fetch('/api/cc/weekly-commit').then(r=>r.json()).then(d => {
+    if (d.exists) {
+      document.getElementById('commit-text').value = d.commit_text || '';
+      document.getElementById('commit-value').value = d.target_value || '';
+    }
+  });
+}
+function closeCommitModal() { document.getElementById('commit-modal').classList.remove('open'); }
+
+async function saveCommit() {
+  const text  = document.getElementById('commit-text').value.trim();
+  const value = document.getElementById('commit-value').value;
+  if (!text) { showToast('Please describe your commit'); return; }
+  const params = new URLSearchParams({commit_text:text, target_value:value||0});
+  const r = await fetch('/api/cc/weekly-commit?' + params, {method:'POST'});
+  if (r.ok) {
+    closeCommitModal();
+    showToast('Weekly commit saved ✓');
+    loadTodayData();
+  }
+}
+
 // ══ NAVIGATION ════════════════════════════════════════════════════════════════
 function switchView(view) {
   activeView = view;
@@ -5227,6 +6220,8 @@ function switchView(view) {
   const target = document.getElementById('view-' + view);
   if (target) target.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  if (view === 'actions') loadActions();
+  if (view === 'meetings') renderMeetingsList('meetings-list', null);
 }
 
 // ══ TOAST ════════════════════════════════════════════════════════════════════
