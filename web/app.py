@@ -6264,7 +6264,7 @@ async function loadTodayData() {
   const coldCount = d.cold_accounts.length;
   document.getElementById('today-headline').textContent = urgentCount
     ? urgentCount + ' action' + (urgentCount>1?'s':'') + ' need your attention'
-    : 'You\'re clear — no overdue actions';
+    : "You're clear — no overdue actions";
   document.getElementById('today-sub').textContent =
     coldCount ? coldCount + ' accounts have gone cold · ' + d.recent_meetings.length + ' meetings this week'
                : 'Pipeline is healthy · ' + d.recent_meetings.length + ' meetings this week';
@@ -6278,7 +6278,7 @@ async function loadTodayData() {
   const commitArea = document.getElementById('commit-widget-area');
   if (d.weekly_commit.exists) {
     const val = d.weekly_commit.target_value ? ' · Target: €' + Number(d.weekly_commit.target_value).toLocaleString() : '';
-    commitArea.innerHTML = '<div class="commit-widget"><div class="commit-title"><span style="color:var(--green)">✓</span> This week\'s commit' + val + '</div><div class="commit-text">' + (d.weekly_commit.commit_text || '—') + '</div><button class="commit-cta" onclick="openCommitModal()">Update →</button></div>';
+    commitArea.innerHTML = '<div class="commit-widget"><div class="commit-title"><span style="color:var(--green)">✓</span> This weeks commit' + val + '</div><div class="commit-text">' + (d.weekly_commit.commit_text || '—') + '</div><button class="commit-cta" onclick="openCommitModal()">Update →</button></div>';
   } else {
     commitArea.innerHTML = '<div class="commit-widget"><div class="commit-title">📌 Set your weekly commit</div><div class="commit-text" style="color:var(--m2)">What are you committing to close this week? Hold yourself accountable.</div><button class="commit-cta" onclick="openCommitModal()">Commit now →</button></div>';
   }
@@ -6568,7 +6568,7 @@ function renderIntelligence() {
       html += '<div id="diagnosis-' + a.id + '"></div></div>';
       html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">';
       html += '<span class="intel-cold-days">' + daysLabel + '</span>';
-      html += '<button class="diagnose-btn" id="diag-btn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',\'cold_reactivation\')">Diagnose →</button>';
+      html += '<button class="diagnose-btn" id="diag-btn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',&quot;cold_reactivation&quot;)">Diagnose →</button>';
       html += '</div></div>';
     });
   }
@@ -6588,7 +6588,7 @@ function renderIntelligence() {
       html += '<div class="intel-account-meta">' + (a.named_buyer || 'No buyer') + ' · ' + pFmt + '</div>';
       html += '<div class="intel-risk-badges">' + r.risk_factors.map(f => '<span class="intel-risk-badge">' + f + '</span>').join('') + '</div>';
       html += '<div id="diagnosis-churn-' + a.id + '"></div></div>';
-      html += '<button class="diagnose-btn" style="align-self:flex-start;margin-top:2px" id="diag-btn-churn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',\'churn_risk\',true)">Diagnose →</button>';
+      html += '<button class="diagnose-btn" style="align-self:flex-start;margin-top:2px" id="diag-btn-churn-' + a.id + '" onclick="diagnoseAccount(' + a.id + ',&quot;churn_risk&quot;,true)">Diagnose →</button>';
       html += '</div>';
     });
   }
