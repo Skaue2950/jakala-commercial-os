@@ -4354,8 +4354,11 @@ def cc_generate_prediction():
     u = cc_current_user()
     if not u:
         return jsonify({"error": "Not logged in"}), 401
-    data       = request.get_json()
-    account_id = data.get("account_id")
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        data = {}
+    account_id = data.get("account_id") or request.args.get("account_id")
     if not CC_DB_OK:
         return jsonify({"error": "DB unavailable"}), 503
     db = SessionLocal()
@@ -5014,7 +5017,7 @@ function renderSignals(listId, signals) {
         <span class="sig-badge ${s.severity}">${s.severity.toUpperCase()}</span>
         <div>
           <div class="sig-title">${s.title}</div>
-          <div style="font-size:11px;color:var(--m2);margin-top:3px">${s.signal_type.charAt(0).toUpperCase()+s.signal_type.slice(1)} · ${s.vertical}</div>
+          <div style="font-size:11px;color:var(--m2);margin-top:3px">${(s.type||s.signal_type||'').charAt(0).toUpperCase()+(s.type||s.signal_type||'').slice(1)} · ${s.vertical}</div>
         </div>
       </div>
       <div class="sig-desc">${s.description}</div>
@@ -5208,7 +5211,7 @@ function closeDetail() {
 // ══ PREDICTION GENERATION ════════════════════════════════════════════════════
 async function generatePrediction(accountId, accountName) {
   showToast('Generating AI prediction for ' + accountName + '…');
-  const r = await fetch('/api/cc/predict', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account_id:accountId})});
+  const r = await fetch(`/api/cc/predict?account_id=${accountId}`, {method:'POST'});
   const d = await r.json();
   if (!r.ok) { showToast('Error: ' + (d.error||'Failed')); return; }
   showToast('Prediction generated ✓');
