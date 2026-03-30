@@ -4328,6 +4328,9 @@ h1 span{color:#153EED}
 
 @app.route("/")
 def landing():
+    landing_path = Path(__file__).parent / "landing.html"
+    if landing_path.exists():
+        return landing_path.read_text(encoding="utf-8")
     return render_template_string(LANDING_HTML)
 
 
