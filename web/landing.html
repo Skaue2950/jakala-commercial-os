@@ -3,1059 +3,487 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>JAKALA Nordic — Commercial Operating System</title>
+<title>JAKALA Nordic — Commercial OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#153EED;
+  --blue-light:rgba(21,62,237,.08);
+  --blue-mid:rgba(21,62,237,.15);
+  --dark:#0A0A1E;
+  --body:#F4F6FC;
+  --white:#FFFFFF;
+  --text:#0F0F1A;
+  --muted:#6B7280;
+  --border:#E4E7F0;
+  --green:#00A67E;
+  --red:#E53E3E;
+  --amber:#D97706;
+  --font:'Inter',-apple-system,sans-serif;
+  --radius:14px;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--body);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
 
-/* ─── RESET & BASE ─────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:     #0A0A0C;
-  --fg:     #F0EDE6;
-  --amber:  #C8973A;
-  --amber2: rgba(200,151,58,.12);
-  --amber3: rgba(200,151,58,.06);
-  --muted:  rgba(240,237,230,.35);
-  --muted2: rgba(240,237,230,.15);
-  --border: rgba(240,237,230,.08);
-  --white-bg: #F0EDE6;
-  --dark-text: #0A0A0C;
-  --serif:  'Cormorant Garamond', Georgia, serif;
-  --mono:   'DM Mono', 'Courier New', monospace;
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  height:60px;display:flex;align-items:center;
+  padding:0 40px;gap:24px;
 }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--mono);
-  font-weight: 400;
-  overflow-x: hidden;
-  cursor: none;
+.nav-logo{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+.nav-sep{width:1px;height:16px;background:var(--border)}
+.nav-title{font-size:13px;color:var(--muted);font-weight:500}
+.nav-right{margin-left:auto;display:flex;gap:10px}
+.nav-btn{
+  padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:all .15s;letter-spacing:.01em;
 }
-a { color: inherit; text-decoration: none; }
-::selection { background: var(--amber); color: var(--bg); }
+.nav-btn.outline{border:1px solid var(--border);color:var(--text);background:var(--white)}
+.nav-btn.outline:hover{border-color:var(--blue);color:var(--blue)}
+.nav-btn.filled{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.nav-btn.filled:hover{opacity:.88}
 
-/* ─── CUSTOM CURSOR ────────────────────────────────────────────────────────── */
-#cursor {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9999;
-  top: 0; left: 0;
-  width: 20px; height: 20px;
-  transform: translate(-50%, -50%);
-  transition: opacity .2s;
+/* ── HERO ── */
+.hero{
+  padding:140px 40px 80px;
+  text-align:center;
+  max-width:780px;
+  margin:0 auto;
 }
-#cursor::before, #cursor::after {
-  content: '';
-  position: absolute;
-  background: var(--amber);
+.hero-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--blue-light);border:1px solid var(--blue-mid);
+  border-radius:20px;padding:5px 14px;
+  font-size:11px;font-weight:600;letter-spacing:.06em;
+  color:var(--blue);text-transform:uppercase;
+  margin-bottom:24px;
 }
-/* horizontal line */
-#cursor::before {
-  width: 20px; height: 1px;
-  top: 50%; left: 0;
-  transform: translateY(-50%);
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+h1{
+  font-size:clamp(38px,6vw,68px);
+  font-weight:800;
+  letter-spacing:-.03em;
+  line-height:1.05;
+  color:var(--text);
+  margin-bottom:18px;
 }
-/* vertical line */
-#cursor::after {
-  width: 1px; height: 20px;
-  left: 50%; top: 0;
-  transform: translateX(-50%);
+h1 span{color:var(--blue)}
+.hero-sub{
+  font-size:17px;color:var(--muted);font-weight:400;
+  line-height:1.65;max-width:520px;margin:0 auto 36px;
 }
-#cursor-dot {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9998;
-  width: 4px; height: 4px;
-  background: var(--amber);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: transform .08s;
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 24px;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;
+  text-decoration:none;transition:all .18s;
 }
+.btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);box-shadow:0 8px 24px rgba(21,62,237,.25)}
+.btn-secondary{background:var(--white);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--blue);color:var(--blue);transform:translateY(-1px)}
 
-/* ─── NOISE FILTER ─────────────────────────────────────────────────────────── */
-.noise-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: .032;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-}
-
-/* ─── HERO ─────────────────────────────────────────────────────────────────── */
-#hero {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 40px 0;
-  overflow: hidden;
-}
-
-/* Breathing amber radial */
-.hero-glow {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 45%, rgba(200,151,58,.09) 0%, transparent 65%),
-    radial-gradient(ellipse 40% 30% at 50% 45%, rgba(200,151,58,.06) 0%, transparent 50%);
-  animation: glow-breathe 8s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes glow-breathe {
-  0%, 100% { opacity: .7; transform: scale(1); }
-  50%       { opacity: 1;  transform: scale(1.08); }
+/* ── MOCKUP SECTION ── */
+.mockups{
+  max-width:1100px;margin:0 auto;
+  padding:0 40px 80px;
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;
 }
 
-/* Grid */
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(200,151,58,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200,151,58,.04) 1px, transparent 1px);
-  background-size: 56px 56px;
-  pointer-events: none;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
+/* Platform card wrapper */
+.platform-card{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:18px;
+  overflow:hidden;
+  transition:box-shadow .2s,transform .2s;
+  text-decoration:none;color:inherit;
+  display:block;
+}
+.platform-card:hover{
+  box-shadow:0 20px 48px rgba(21,62,237,.1);
+  transform:translateY(-3px);
+}
+.pc-header{
+  padding:20px 22px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.pc-icon{
+  width:36px;height:36px;border-radius:9px;
+  background:var(--blue-light);border:1px solid var(--blue-mid);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--blue);font-weight:700;flex-shrink:0;
+}
+.pc-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:2px}
+.pc-name{font-size:15px;font-weight:700;color:var(--text)}
+
+/* ── GTM MOCKUP ── */
+.gtm-mockup{padding:16px 20px;min-height:260px;background:#FAFBFF}
+.gtm-msg{
+  margin-bottom:12px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.gtm-msg-user{
+  align-self:flex-end;
+  background:var(--blue);color:#fff;
+  border-radius:14px 14px 3px 14px;
+  padding:9px 14px;font-size:12px;font-weight:500;max-width:80%;
+  line-height:1.5;
+}
+.gtm-msg-ai{
+  align-self:flex-start;
+  background:var(--white);border:1px solid var(--border);
+  border-radius:3px 14px 14px 14px;
+  padding:9px 14px;font-size:12px;color:var(--text);max-width:90%;
+  line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+.gtm-msg-ai strong{color:var(--blue);font-weight:600}
+.gtm-typing{
+  display:flex;align-items:center;gap:4px;padding:10px 14px;
+  background:var(--white);border:1px solid var(--border);
+  border-radius:3px 14px 14px 14px;align-self:flex-start;
+  width:60px;
+}
+.typing-dot{
+  width:5px;height:5px;border-radius:50%;background:var(--blue);opacity:.4;
+  animation:typing-bounce .9s ease-in-out infinite;
+}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes typing-bounce{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+
+/* ── CC MOCKUP ── */
+.cc-mockup{padding:0;background:#F5F7FC;min-height:260px;display:flex;flex-direction:column}
+.cc-topbar{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:var(--white);border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:600;
+}
+.cc-status{display:flex;align-items:center;gap:5px;color:var(--muted)}
+.cc-live{width:6px;height:6px;border-radius:50%;background:#00A67E}
+.cc-body{display:flex;flex:1;overflow:hidden}
+.cc-sidebar{
+  width:110px;flex-shrink:0;background:var(--white);
+  border-right:1px solid var(--border);padding:10px 8px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.cc-nav-item{
+  padding:6px 8px;border-radius:6px;font-size:10px;font-weight:500;
+  color:var(--muted);display:flex;align-items:center;gap:6px;
+}
+.cc-nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.cc-content{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px}
+.cc-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cc-kpi{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;
+}
+.cc-kpi-l{font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.cc-kpi-v{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.cc-kpi-v.blue{color:var(--blue)}
+.cc-kpi-v.green{color:var(--green)}
+.cc-accounts{display:flex;flex-direction:column;gap:4px}
+.cc-acc{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:7px;padding:7px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cc-acc-name{font-size:10px;font-weight:600;color:var(--text)}
+.cc-acc-stage{font-size:9px;color:var(--muted)}
+.cc-acc-val{font-size:10px;font-weight:700;color:var(--blue)}
+.cc-acc-bar{height:2px;background:var(--blue-mid);border-radius:1px;margin-top:3px;overflow:hidden}
+.cc-acc-bar-fill{height:100%;background:var(--blue);border-radius:1px}
+
+/* ── PLATFORM META ── */
+.pc-footer{
+  padding:16px 22px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.pc-cta{
+  font-size:12px;font-weight:700;color:var(--blue);
+  display:flex;align-items:center;gap:5px;transition:gap .15s;
+}
+.platform-card:hover .pc-cta{gap:9px}
+.pc-tags{display:flex;gap:6px;flex-wrap:wrap}
+.pc-tag{
+  padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;
+  background:var(--blue-light);color:var(--blue);
 }
 
-.hero-inner {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-  max-width: 900px;
+/* ── FEATURES STRIP ── */
+.features{
+  background:var(--white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:48px 40px;
 }
+.features-inner{max-width:1100px;margin:0 auto}
+.features-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:32px;
+  margin-top:32px;
+}
+.feature-item{display:flex;flex-direction:column;gap:8px}
+.feature-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--blue-light);border:1px solid var(--blue-mid);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:4px;
+}
+.feature-title{font-size:14px;font-weight:700;color:var(--text)}
+.feature-body{font-size:12.5px;color:var(--muted);line-height:1.65}
+.section-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
 
-.hero-eyebrow {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 28px;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fade-up .6s ease forwards .1s;
+/* ── QUOTE ── */
+.quote-section{
+  padding:80px 40px;text-align:center;
+  max-width:680px;margin:0 auto;
 }
+.quote-mark{font-size:64px;color:var(--blue);opacity:.15;line-height:.8;font-family:Georgia,serif;margin-bottom:8px}
+.quote-text{
+  font-size:clamp(20px,3vw,28px);font-weight:600;
+  line-height:1.45;letter-spacing:-.02em;color:var(--text);
+  margin-bottom:20px;
+}
+.quote-text em{color:var(--blue);font-style:normal}
+.quote-attr{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em}
 
-h1.hero-title {
-  font-family: var(--serif);
-  font-size: clamp(52px, 8vw, 108px);
-  font-weight: 300;
-  letter-spacing: -.02em;
-  line-height: 1.0;
-  color: var(--fg);
-  margin-bottom: 28px;
+/* ── FOOTER ── */
+footer{
+  background:var(--dark);color:rgba(255,255,255,.6);
+  padding:32px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
 }
-h1.hero-title .word {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(24px);
-}
-h1.hero-title em {
-  font-style: italic;
-  font-weight: 300;
-  color: var(--amber);
-}
+.footer-logo{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+.footer-links{display:flex;gap:24px}
+.footer-link{font-size:12px;color:rgba(255,255,255,.4);text-decoration:none;transition:color .15s}
+.footer-link:hover{color:#fff}
+.footer-copy{font-size:11px;color:rgba(255,255,255,.2)}
 
-.hero-sub {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: .12em;
-  color: var(--muted);
-  margin-bottom: 44px;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fade-up .6s ease forwards .85s;
-  text-transform: uppercase;
-}
+/* ── FADE IN ── */
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .7s ease,transform .7s ease}
+.fade-in.visible{opacity:1;transform:none}
 
-.hero-ctas {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fade-up .6s ease forwards 1.05s;
+/* ── MOBILE ── */
+@media(max-width:768px){
+  nav{padding:0 20px}
+  .hero{padding:120px 24px 60px}
+  .mockups{grid-template-columns:1fr;padding:0 20px 60px}
+  .features{padding:40px 24px}
+  .features-grid{grid-template-columns:1fr 1fr;gap:20px}
+  .quote-section{padding:60px 24px}
+  footer{padding:24px;flex-direction:column;align-items:flex-start;gap:16px}
+  .footer-links{flex-wrap:wrap}
 }
-.cta-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border: 1px solid var(--muted2);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--fg);
-  cursor: none;
-  transition: border-color .25s, box-shadow .25s, color .25s;
-  position: relative;
-  overflow: hidden;
+@media(max-width:480px){
+  .features-grid{grid-template-columns:1fr}
+  .hero-ctas{flex-direction:column}
+  .nav-title{display:none}
 }
-.cta-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  opacity: 0;
-  transition: opacity .25s;
-}
-.cta-btn:hover {
-  border-color: var(--amber);
-  color: var(--amber);
-  box-shadow: 0 0 28px rgba(200,151,58,.18), inset 0 0 28px rgba(200,151,58,.04);
-}
-.cta-btn .btn-icon { font-size: 15px; }
-
-/* ─── MARQUEE ──────────────────────────────────────────────────────────────── */
-.marquee-wrap {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  margin-top: 72px;
-  border-top: 1px solid var(--border);
-  padding: 16px 0;
-  overflow: hidden;
-  opacity: 0;
-  animation: fade-up .6s ease forwards 1.25s;
-}
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee-scroll 32s linear infinite;
-}
-.marquee-item {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 300;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-  padding: 0 32px;
-}
-.marquee-item .dot {
-  color: var(--amber);
-  margin: 0 12px;
-}
-@keyframes marquee-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ─── SHARED ANIMATIONS ────────────────────────────────────────────────────── */
-@keyframes fade-up {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* scroll-triggered */
-.reveal {
-  opacity: 0;
-  transform: translateY(36px);
-  transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
-}
-.reveal.visible { opacity: 1; transform: translateY(0); }
-.reveal-delay-1 { transition-delay: .1s; }
-.reveal-delay-2 { transition-delay: .2s; }
-.reveal-delay-3 { transition-delay: .32s; }
-.reveal-delay-4 { transition-delay: .44s; }
-
-/* ─── PROBLEM SECTION ──────────────────────────────────────────────────────── */
-#problem {
-  background: var(--white-bg);
-  color: var(--dark-text);
-  padding: 120px 60px;
-  position: relative;
-  z-index: 2;
-}
-.problem-inner { max-width: 1100px; margin: 0 auto; }
-
-.problem-stat {
-  font-family: var(--serif);
-  font-size: clamp(80px, 14vw, 180px);
-  font-weight: 300;
-  letter-spacing: -.04em;
-  line-height: 1;
-  color: var(--dark-text);
-  margin-bottom: 8px;
-  position: relative;
-  display: inline-block;
-}
-.problem-stat::after {
-  content: '';
-  position: absolute;
-  bottom: 12px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #C8973A;
-}
-
-.problem-headline {
-  font-family: var(--serif);
-  font-size: clamp(22px, 3.5vw, 40px);
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--dark-text);
-  max-width: 640px;
-  margin-bottom: 64px;
-}
-
-.problem-cols {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 48px;
-  border-top: 1px solid rgba(10,10,12,.1);
-  padding-top: 48px;
-}
-.problem-col-num {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .18em;
-  color: #C8973A;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
-.problem-col-title {
-  font-family: var(--serif);
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--dark-text);
-  margin-bottom: 10px;
-}
-.problem-col-body {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 300;
-  line-height: 1.8;
-  color: rgba(10,10,12,.55);
-}
-
-/* ─── TOOLS SECTION ────────────────────────────────────────────────────────── */
-#tools {
-  background: var(--bg);
-  padding: 120px 60px;
-}
-.tools-inner { max-width: 1100px; margin: 0 auto; }
-.tools-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 80px;
-}
-
-.tool-card {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
-  align-items: center;
-  padding: 72px 0;
-  border-top: 1px solid var(--border);
-}
-.tool-card:last-child { border-bottom: 1px solid var(--border); }
-
-.tool-number {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 20px;
-}
-.tool-icon {
-  font-size: 36px;
-  color: var(--amber);
-  margin-bottom: 20px;
-  display: block;
-}
-.tool-title {
-  font-family: var(--serif);
-  font-size: clamp(36px, 5vw, 60px);
-  font-weight: 300;
-  line-height: 1.1;
-  letter-spacing: -.02em;
-  margin-bottom: 20px;
-}
-.tool-body {
-  font-family: var(--mono);
-  font-size: 12.5px;
-  font-weight: 300;
-  line-height: 1.9;
-  color: var(--muted);
-  max-width: 400px;
-  margin-bottom: 32px;
-}
-.tool-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--amber);
-  border-bottom: 1px solid rgba(200,151,58,.3);
-  padding-bottom: 4px;
-  transition: border-color .2s, gap .2s;
-  cursor: none;
-}
-.tool-cta:hover { border-color: var(--amber); gap: 14px; }
-
-/* ─── TERMINAL MOCKUP ──────────────────────────────────────────────────────── */
-.terminal {
-  background: rgba(255,255,255,.03);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 24px;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  line-height: 1.8;
-  min-height: 280px;
-  position: relative;
-  overflow: hidden;
-}
-.terminal::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 36px;
-  background: rgba(255,255,255,.04);
-  border-bottom: 1px solid var(--border);
-}
-.terminal-dots {
-  position: absolute;
-  top: 12px; left: 14px;
-  display: flex; gap: 6px;
-}
-.terminal-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: rgba(255,255,255,.15);
-}
-.terminal-title {
-  position: absolute;
-  top: 10px; left: 50%; transform: translateX(-50%);
-  font-size: 10px; color: var(--muted); letter-spacing: .1em;
-}
-.terminal-body { padding-top: 44px; }
-
-.t-prompt { color: var(--amber); }
-.t-text { color: var(--muted); }
-.t-response { color: rgba(240,237,230,.7); }
-.t-cursor {
-  display: inline-block;
-  width: 7px; height: 13px;
-  background: var(--amber);
-  vertical-align: middle;
-  animation: blink .9s step-end infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-.t-line {
-  display: block;
-  opacity: 0;
-}
-.t-line.show { animation: t-appear .15s ease forwards; }
-@keyframes t-appear {
-  from { opacity: 0; transform: translateX(-4px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-/* ─── DASHBOARD MOCKUP ─────────────────────────────────────────────────────── */
-.dashboard {
-  background: rgba(255,255,255,.03);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 20px;
-  min-height: 280px;
-}
-.dash-topbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.dash-logo {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--amber);
-}
-.dash-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,212,160,.8); }
-.dash-status { font-size: 10px; color: var(--muted); }
-
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.kpi-tile {
-  background: rgba(255,255,255,.04);
-  border: 1px solid var(--border);
-  padding: 14px 12px;
-}
-.kpi-label {
-  font-size: 8px;
-  letter-spacing: .15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.kpi-value {
-  font-family: var(--serif);
-  font-size: 24px;
-  font-weight: 300;
-  letter-spacing: -.02em;
-  color: var(--fg);
-}
-.kpi-value.amber { color: var(--amber); }
-.kpi-value.green { color: #00D4A0; }
-
-.dash-accounts { display: flex; flex-direction: column; gap: 6px; }
-.dash-account-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid var(--border);
-}
-.dash-acc-name { font-size: 11px; color: var(--fg); }
-.dash-acc-stage {
-  font-size: 9px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.dash-acc-val { font-size: 11px; color: var(--amber); }
-
-/* Stage bar */
-.stage-bar {
-  margin-top: 14px;
-  display: flex;
-  gap: 3px;
-}
-.stage-seg {
-  flex: 1;
-  height: 3px;
-  background: rgba(255,255,255,.08);
-  position: relative;
-  overflow: hidden;
-}
-.stage-seg.filled { background: var(--amber); }
-.stage-seg.half::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 60%;
-  background: var(--amber);
-}
-
-/* ─── QUOTE SECTION ────────────────────────────────────────────────────────── */
-#quote {
-  background: var(--bg);
-  padding: 140px 60px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  border-top: 1px solid var(--border);
-}
-.quote-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(200,151,58,.06) 0%, transparent 70%);
-  pointer-events: none;
-}
-.quote-eyebrow {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 40px;
-  opacity: .8;
-}
-.quote-text {
-  font-family: var(--serif);
-  font-size: clamp(40px, 7vw, 88px);
-  font-weight: 300;
-  font-style: italic;
-  line-height: 1.1;
-  letter-spacing: -.03em;
-  color: var(--fg);
-  position: relative;
-  z-index: 1;
-  margin-bottom: 40px;
-}
-.quote-text .highlight {
-  position: relative;
-  color: var(--amber);
-}
-.quote-text .highlight::after {
-  content: '';
-  position: absolute;
-  bottom: 4px; left: 0; right: 0;
-  height: 1px;
-  background: var(--amber);
-  opacity: .5;
-}
-.quote-attr {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 300;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--muted);
-  position: relative;
-  z-index: 1;
-}
-
-/* ─── FOOTER ───────────────────────────────────────────────────────────────── */
-footer {
-  background: var(--bg);
-  border-top: 1px solid var(--amber);
-  padding: 28px 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.footer-logo {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--amber);
-}
-.footer-links {
-  display: flex;
-  gap: 32px;
-}
-.footer-link {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: none;
-  transition: color .2s;
-}
-.footer-link:hover { color: var(--fg); }
-
-/* ─── RESPONSIVE ───────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  #hero { padding: 100px 24px 0; }
-  #problem { padding: 80px 24px; }
-  #tools { padding: 80px 24px; }
-  #quote { padding: 100px 24px; }
-  footer { padding: 24px; }
-
-  .problem-cols { grid-template-columns: 1fr; gap: 32px; }
-
-  .tool-card {
-    grid-template-columns: 1fr;
-    gap: 48px;
-  }
-  .tool-card:nth-child(even) .tool-copy { order: 1; }
-  .tool-card:nth-child(even) .tool-mockup { order: 2; }
-
-  .kpi-row { grid-template-columns: 1fr 1fr; }
-
-  body { cursor: auto; }
-  #cursor, #cursor-dot { display: none; }
-}
-
-@media (max-width: 480px) {
-  .hero-ctas { flex-direction: column; align-items: stretch; }
-  .cta-btn { justify-content: center; }
-}
-
 </style>
 </head>
 <body>
 
-<div class="noise-overlay"></div>
-<div id="cursor"></div>
-<div id="cursor-dot"></div>
-
-<!-- ══ HERO ══════════════════════════════════════════════════════════════════ -->
-<section id="hero">
-  <div class="hero-glow"></div>
-  <div class="hero-grid"></div>
-
-  <div class="hero-inner">
-    <div class="hero-eyebrow">JAKALA Nordic · Commercial OS</div>
-
-    <h1 class="hero-title">
-      <span class="word">The</span>
-      <span class="word">Commercial</span><br>
-      <span class="word"><em>Operating</em></span>
-      <span class="word">System</span><br>
-      <span class="word">for</span>
-      <span class="word">Nordic</span>
-      <span class="word"><em>GTM</em></span>
-    </h1>
-
-    <p class="hero-sub">Two tools &nbsp;·&nbsp; One commercial engine</p>
-
-    <div class="hero-ctas">
-      <a href="/login" class="cta-btn">
-        <span class="btn-icon">◎</span> Open GTM Assistant
-      </a>
-      <a href="/cc" class="cta-btn">
-        <span class="btn-icon">◉</span> Open Control Center
-      </a>
-    </div>
+<!-- ── NAV ── -->
+<nav>
+  <span class="nav-logo">JAKALA</span>
+  <span class="nav-sep"></span>
+  <span class="nav-title">Nordic Commercial OS</span>
+  <div class="nav-right">
+    <a href="/login" class="nav-btn outline">GTM Assistant</a>
+    <a href="/cc" class="nav-btn filled">Control Center</a>
   </div>
+</nav>
 
-  <div class="marquee-wrap">
-    <div class="marquee-track" id="marquee-track">
-      <span class="marquee-item">Pipeline Intelligence<span class="dot">·</span></span>
-      <span class="marquee-item">Account Analysis<span class="dot">·</span></span>
-      <span class="marquee-item">Outreach Generation<span class="dot">·</span></span>
-      <span class="marquee-item">Strategic Clarity<span class="dot">·</span></span>
-      <span class="marquee-item">AI-Powered<span class="dot">·</span></span>
-      <span class="marquee-item">Nordic Precision<span class="dot">·</span></span>
-      <span class="marquee-item">Turn Liquid Gold Into Solid Bricks<span class="dot">·</span></span>
-      <span class="marquee-item">Pipeline Intelligence<span class="dot">·</span></span>
-      <span class="marquee-item">Account Analysis<span class="dot">·</span></span>
-      <span class="marquee-item">Outreach Generation<span class="dot">·</span></span>
-      <span class="marquee-item">Strategic Clarity<span class="dot">·</span></span>
-      <span class="marquee-item">AI-Powered<span class="dot">·</span></span>
-      <span class="marquee-item">Nordic Precision<span class="dot">·</span></span>
-      <span class="marquee-item">Turn Liquid Gold Into Solid Bricks<span class="dot">·</span></span>
-    </div>
+<!-- ── HERO ── -->
+<div class="hero fade-in">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Live · Norway · Denmark · Sweden
   </div>
-</section>
+  <h1>The commercial edge<br>for <span>Nordic GTM</span></h1>
+  <p class="hero-sub">
+    Two tools. One system. From account intelligence to closed deals —
+    built for the JAKALA Nordic team.
+  </p>
+  <div class="hero-ctas">
+    <a href="/cc" class="btn btn-primary">◉ Open Control Center</a>
+    <a href="/login" class="btn btn-secondary">◎ Open GTM Assistant</a>
+  </div>
+</div>
 
-<!-- ══ PROBLEM ════════════════════════════════════════════════════════════════ -->
-<section id="problem">
-  <div class="problem-inner">
-    <div class="problem-stat reveal">73%</div>
-    <p class="problem-headline reveal reveal-delay-1">
-      Most commercial intelligence lives<br>in people's heads. Not in systems.
-    </p>
-    <div class="problem-cols">
-      <div class="reveal reveal-delay-1">
-        <div class="problem-col-num">01 / Visibility</div>
-        <div class="problem-col-title">Pipeline reviews that rely on gut, not data</div>
-        <p class="problem-col-body">When your forecast lives in a spreadsheet and your account knowledge lives in someone's memory, you are one resignation away from losing it all.</p>
-      </div>
-      <div class="reveal reveal-delay-2">
-        <div class="problem-col-num">02 / Efficiency</div>
-        <div class="problem-col-title">Outreach that starts from scratch every time</div>
-        <p class="problem-col-body">Every LinkedIn message, every first email, every meeting prep — built from zero. The average seller wastes four hours a week on work that should take four minutes.</p>
-      </div>
-      <div class="reveal reveal-delay-3">
-        <div class="problem-col-num">03 / Continuity</div>
-        <div class="problem-col-title">Account knowledge that walks out the door</div>
-        <p class="problem-col-body">The context, the relationships, the commercial history — none of it is captured. When a seller leaves, the account goes cold. Every time.</p>
+<!-- ── PLATFORM CARDS ── -->
+<div class="mockups">
+
+  <!-- GTM ASSISTANT -->
+  <a href="/login" class="platform-card fade-in">
+    <div class="pc-header">
+      <div class="pc-icon">◎</div>
+      <div>
+        <div class="pc-label">AI Assistant</div>
+        <div class="pc-name">GTM Assistant</div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ══ TOOLS ══════════════════════════════════════════════════════════════════ -->
-<section id="tools">
-  <div class="tools-inner">
-
-    <div class="tools-label reveal">The solution</div>
-
-    <!-- TOOL 1 — GTM ASSISTANT -->
-    <div class="tool-card">
-      <div class="tool-copy reveal">
-        <div class="tool-number">Tool 01 / AI Assistant</div>
-        <span class="tool-icon">◎</span>
-        <h2 class="tool-title">Strategy.<br>Outreach.<br>Intelligence.</h2>
-        <p class="tool-body">Claude-powered analysis that thinks like your best account director. Briefings, battle cards, email drafts, pipeline reads — generated in seconds. Ask it anything about any account in your pipeline.</p>
-        <a href="/login" class="tool-cta">Open GTM Assistant →</a>
+    <div class="gtm-mockup">
+      <div class="gtm-msg">
+        <div class="gtm-msg-user">Pre-meeting brief: Elkjøp — Morten Syversen</div>
+        <div class="gtm-msg-ai">
+          <strong>Morten Syversen</strong>, Chief Brand &amp; Digital Officer. Previously EVP at Elkjøp since 2018.<br><br>
+          55 Adobe Commerce sites across Nordics. 65,000 SKUs per site. No unified PIM layer — product data quality is the core pain.<br><br>
+          <strong>GTM:</strong> Commerce Optimization. Entry via catalog quality diagnostic. Pipeline: <strong>€700K</strong>.
+        </div>
       </div>
-      <div class="tool-mockup reveal reveal-delay-2">
-        <div class="terminal">
-          <div class="terminal-dots">
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
+      <div class="gtm-msg">
+        <div class="gtm-msg-user">Write a LinkedIn outreach in Norwegian</div>
+        <div class="gtm-typing">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pc-footer">
+      <div class="pc-tags">
+        <span class="pc-tag">Strategy</span>
+        <span class="pc-tag">Outreach</span>
+        <span class="pc-tag">Pipeline</span>
+      </div>
+      <div class="pc-cta">Open →</div>
+    </div>
+  </a>
+
+  <!-- CONTROL CENTER -->
+  <a href="/cc" class="platform-card fade-in">
+    <div class="pc-header">
+      <div class="pc-icon">◉</div>
+      <div>
+        <div class="pc-label">Live Platform</div>
+        <div class="pc-name">Control Center</div>
+      </div>
+    </div>
+    <div class="cc-mockup">
+      <div class="cc-topbar">
+        <span style="font-weight:700;color:#153EED;letter-spacing:.1em;font-size:10px">JAKALA</span>
+        <span style="color:#E4E7F0;font-size:10px">Control Center</span>
+        <span style="flex:1"></span>
+        <span class="cc-status"><span class="cc-live"></span>Live · Norway</span>
+      </div>
+      <div class="cc-body">
+        <div class="cc-sidebar">
+          <div class="cc-nav-item" style="font-size:9px;color:#9CA3AF;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px 2px">TODAY</div>
+          <div class="cc-nav-item active">⊛ Priorities</div>
+          <div class="cc-nav-item">☑ Actions</div>
+          <div class="cc-nav-item" style="font-size:9px;color:#9CA3AF;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:10px 8px 2px">PIPELINE</div>
+          <div class="cc-nav-item">◎ Overview</div>
+          <div class="cc-nav-item">⊕ New Biz</div>
+          <div class="cc-nav-item">◉ Intel</div>
+        </div>
+        <div class="cc-content">
+          <div class="cc-kpi-row">
+            <div class="cc-kpi">
+              <div class="cc-kpi-l">Pipeline</div>
+              <div class="cc-kpi-v blue">€6.8M</div>
+            </div>
+            <div class="cc-kpi">
+              <div class="cc-kpi-l">Accounts</div>
+              <div class="cc-kpi-v">45</div>
+            </div>
+            <div class="cc-kpi">
+              <div class="cc-kpi-l">Buyers</div>
+              <div class="cc-kpi-v green">18</div>
+            </div>
           </div>
-          <div class="terminal-title">gtm-assistant</div>
-          <div class="terminal-body" id="terminal-body">
-            <span class="t-cursor"></span>
+          <div class="cc-accounts">
+            <div class="cc-acc">
+              <div><div class="cc-acc-name">Elkjøp</div><div class="cc-acc-stage">Engaged · ICP 8</div></div>
+              <div class="cc-acc-val">€700K</div>
+            </div>
+            <div class="cc-acc">
+              <div><div class="cc-acc-name">Vinmonopolet</div><div class="cc-acc-stage">Proposed · ICP 8</div></div>
+              <div class="cc-acc-val">€450K</div>
+            </div>
+            <div class="cc-acc">
+              <div><div class="cc-acc-name">Trumf</div><div class="cc-acc-stage">Identified · ICP 9</div></div>
+              <div class="cc-acc-val">€450K</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- TOOL 2 — CONTROL CENTER -->
-    <div class="tool-card">
-      <div class="tool-mockup reveal reveal-delay-1">
-        <div class="dashboard">
-          <div class="dash-topbar">
-            <span class="dash-logo">Control Center</span>
-            <span style="flex:1"></span>
-            <span class="dash-dot"></span>
-            <span class="dash-status">Live · NO</span>
-          </div>
-          <div class="kpi-row">
-            <div class="kpi-tile">
-              <div class="kpi-label">Pipeline</div>
-              <div class="kpi-value amber" data-target="6.8" data-suffix="M" data-prefix="€">€0M</div>
-            </div>
-            <div class="kpi-tile">
-              <div class="kpi-label">Accounts</div>
-              <div class="kpi-value" data-target="45" data-suffix="">0</div>
-            </div>
-            <div class="kpi-tile">
-              <div class="kpi-label">Named Buyers</div>
-              <div class="kpi-value green" data-target="18" data-suffix="">0</div>
-            </div>
-          </div>
-          <div class="dash-accounts">
-            <div class="dash-account-row">
-              <span class="dash-acc-name">Elkjøp</span>
-              <span class="dash-acc-stage">Engaged</span>
-              <span class="dash-acc-val">€700K</span>
-            </div>
-            <div class="dash-account-row">
-              <span class="dash-acc-name">Vinmonopolet</span>
-              <span class="dash-acc-stage">Proposed</span>
-              <span class="dash-acc-val">€450K</span>
-            </div>
-            <div class="dash-account-row">
-              <span class="dash-acc-name">Trumf</span>
-              <span class="dash-acc-stage">Identified</span>
-              <span class="dash-acc-val">€450K</span>
-            </div>
-          </div>
-          <div class="stage-bar">
-            <div class="stage-seg filled"></div>
-            <div class="stage-seg filled"></div>
-            <div class="stage-seg half"></div>
-            <div class="stage-seg"></div>
-            <div class="stage-seg"></div>
-            <div class="stage-seg"></div>
-          </div>
-        </div>
+    <div class="pc-footer">
+      <div class="pc-tags">
+        <span class="pc-tag">Actions</span>
+        <span class="pc-tag">Meetings</span>
+        <span class="pc-tag">Intelligence</span>
       </div>
-      <div class="tool-copy reveal reveal-delay-2">
-        <div class="tool-number">Tool 02 / Live Platform</div>
-        <span class="tool-icon">◉</span>
-        <h2 class="tool-title">Pipeline.<br>Actions.<br>Rhythm.</h2>
-        <p class="tool-body">The operational heartbeat of your commercial team. Live pipeline across Norway, Denmark, and Sweden. Meeting log. Overdue actions. Weekly commits. AI diagnosis of cold accounts — in one disciplined dashboard.</p>
-        <a href="/cc" class="tool-cta">Open Control Center →</a>
+      <div class="pc-cta">Open →</div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ── FEATURES ── -->
+<div class="features fade-in">
+  <div class="features-inner">
+    <div class="section-label">What's inside</div>
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-icon">◈</div>
+        <div class="feature-title">AI Predictions</div>
+        <div class="feature-body">Opportunity scores, churn risk, and win pattern analysis — generated on demand per account.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">☑</div>
+        <div class="feature-title">Action Tracking</div>
+        <div class="feature-body">Every overdue action surfaced every morning. Deal stage progression with one click.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">◷</div>
+        <div class="feature-title">Meeting Log</div>
+        <div class="feature-body">Every client interaction logged with outcome and next step. Full history per account.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">One-click Outreach</div>
+        <div class="feature-body">Personalised LinkedIn and email drafts in four languages. Generated in seconds, ready to send.</div>
       </div>
     </div>
-
   </div>
-</section>
+</div>
 
-<!-- ══ QUOTE ══════════════════════════════════════════════════════════════════ -->
-<section id="quote">
-  <div class="quote-glow"></div>
-  <div class="quote-eyebrow reveal">Nordic commercial philosophy</div>
-  <div class="quote-text reveal reveal-delay-1">
-    "Turn <span class="highlight">liquid gold</span><br>
-    into solid bricks."
+<!-- ── QUOTE ── -->
+<div class="quote-section fade-in">
+  <div class="quote-mark">"</div>
+  <div class="quote-text">
+    Turn <em>liquid gold</em><br>into solid bricks.
   </div>
-  <div class="quote-attr reveal reveal-delay-2">— Michael Drejer, JAKALA Nordic</div>
-</section>
+  <div class="quote-attr">— Michael Drejer, JAKALA Nordic</div>
+</div>
 
-<!-- ══ FOOTER ═════════════════════════════════════════════════════════════════ -->
+<!-- ── FOOTER ── -->
 <footer>
   <div class="footer-logo">JAKALA Nordic OS</div>
   <div class="footer-links">
     <a href="/login" class="footer-link">GTM Assistant</a>
     <a href="/cc" class="footer-link">Control Center</a>
   </div>
+  <div class="footer-copy">Internal platform · JAKALA Nordic</div>
 </footer>
 
 <script>
-
-// ── CUSTOM CURSOR ─────────────────────────────────────────────────────────────
-const cursor = document.getElementById('cursor');
-const cursorDot = document.getElementById('cursor-dot');
-let mx = -100, my = -100;
-let dx = -100, dy = -100;
-
-document.addEventListener('mousemove', e => {
-  mx = e.clientX; my = e.clientY;
-  cursorDot.style.left = mx + 'px';
-  cursorDot.style.top  = my + 'px';
-});
-
-function animateCursor() {
-  dx += (mx - dx) * 0.12;
-  dy += (my - dy) * 0.12;
-  cursor.style.left = dx + 'px';
-  cursor.style.top  = dy + 'px';
-  requestAnimationFrame(animateCursor);
-}
-animateCursor();
-
-document.addEventListener('mouseenter', () => { cursor.style.opacity = '1'; });
-document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; });
-
-// Scale cursor on interactive elements
-document.querySelectorAll('a, button').forEach(el => {
-  el.addEventListener('mouseenter', () => {
-    cursor.style.transform = 'translate(-50%,-50%) scale(1.8)';
-    cursor.style.opacity = '.5';
-  });
-  el.addEventListener('mouseleave', () => {
-    cursor.style.transform = 'translate(-50%,-50%) scale(1)';
-    cursor.style.opacity = '1';
-  });
-});
-
-// ── HERO HEADLINE STAGGER ──────────────────────────────────────────────────────
-const words = document.querySelectorAll('.hero-title .word');
-words.forEach((w, i) => {
-  w.style.animation = `fade-up .55s cubic-bezier(.16,1,.3,1) forwards ${.25 + i * .08}s`;
-});
-
-// ── SCROLL REVEAL ──────────────────────────────────────────────────────────────
+// Fade in on scroll
 const observer = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.12 });
-
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-// ── KPI COUNTER ────────────────────────────────────────────────────────────────
-const kpiObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const el = entry.target;
-      const target = parseFloat(el.dataset.target);
-      const suffix = el.dataset.suffix || '';
-      const prefix = el.dataset.prefix || '';
-      const isDecimal = target % 1 !== 0;
-      const duration = 1400;
-      const startTime = performance.now();
-
-      function tick(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 3);
-        const current = target * ease;
-        el.textContent = prefix + (isDecimal ? current.toFixed(1) : Math.round(current)) + suffix;
-        if (progress < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-      kpiObserver.unobserve(el);
-    }
-  });
-}, { threshold: 0.5 });
-
-document.querySelectorAll('[data-target]').forEach(el => kpiObserver.observe(el));
-
-// ── TERMINAL ANIMATION ─────────────────────────────────────────────────────────
-const sequences = [
-  [
-    { type: 'prompt', text: '> Pre-meeting brief: Elkjøp' },
-    { type: 'response', text: 'Morten Syversen, Chief Brand & Digital Officer.' },
-    { type: 'response', text: '55 Adobe Commerce sites. 65K SKUs. No unified PIM.' },
-    { type: 'response', text: 'Entry: Commerce Optimization — €700K pipeline.' },
-    { type: 'response', text: 'Open with catalog quality & revenue leakage.' },
-  ],
-  [
-    { type: 'prompt', text: '> Outreach for Vinmonopolet, LinkedIn, NO' },
-    { type: 'response', text: 'Hei Espen — ser du har startet som CDO.' },
-    { type: 'response', text: 'I XXL-perioden digitaliserte dere...' },
-    { type: 'response', text: 'Spørsmål: hva er første prioritet nå?' },
-    { type: 'response', text: 'Message copied. Ready to send.' },
-  ],
-  [
-    { type: 'prompt', text: '> Score Trumf — ICP and deal fit' },
-    { type: 'response', text: 'ICP: 9/10 · Deal: 9/10' },
-    { type: 'response', text: '13M members. Loyalty data untapped.' },
-    { type: 'response', text: 'GTM: Data Revenue Unlock.' },
-    { type: 'response', text: 'Contact: Rikke Etholm-Idsøe, new role.' },
-  ],
-];
-
-let seqIndex = 0;
-let running = false;
-
-const terminalBody = document.getElementById('terminal-body');
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function runSequence(seq) {
-  terminalBody.innerHTML = '<span class="t-cursor"></span>';
-  await sleep(400);
-
-  for (const line of seq) {
-    const isPrompt = line.type === 'prompt';
-    const span = document.createElement('span');
-    span.className = 't-line ' + (isPrompt ? 't-prompt' : 't-response');
-
-    // type out character by character for prompt
-    terminalBody.insertBefore(span, terminalBody.lastChild);
-    span.classList.add('show');
-
-    if (isPrompt) {
-      for (let i = 0; i <= line.text.length; i++) {
-        span.textContent = line.text.slice(0, i);
-        await sleep(28);
-      }
-      await sleep(200);
-    } else {
-      span.textContent = line.text;
-      await sleep(120);
-    }
-
-    const br = document.createElement('br');
-    terminalBody.insertBefore(br, terminalBody.lastChild);
-    await sleep(80);
-  }
-
-  await sleep(2200);
-}
-
-async function terminalLoop() {
-  while (true) {
-    await runSequence(sequences[seqIndex % sequences.length]);
-    seqIndex++;
-  }
-}
-
-// Start terminal when it scrolls into view
-const terminalEl = document.querySelector('.terminal');
-const termObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting && !running) {
-    running = true;
-    terminalLoop();
-  }
-}, { threshold: 0.3 });
-termObserver.observe(terminalEl);
-
-// ── MARQUEE SEAMLESS LOOP ──────────────────────────────────────────────────────
-// Already handled by CSS animation on .marquee-track
-
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.1});
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+// Hero triggers immediately
+document.querySelector('.hero').classList.add('visible');
 </script>
 </body>
 </html>
