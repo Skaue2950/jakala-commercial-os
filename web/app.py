@@ -2805,7 +2805,7 @@ let gridFilter = 'all';
 async function boot() {
   updateClock();
   setInterval(updateClock, 1000);
-  showTab('dashboard');
+  showTab('chat');
   try {
     const res = await fetch('/api/accounts');
     allAccounts = await res.json();
@@ -2816,7 +2816,6 @@ async function boot() {
     renderDashboard(allAccounts);
     setTimeout(animateDashboard, 400);
     loadLiveDashboard();
-    loadDailyPlan();
     renderSignalFeed();
   } catch(e) {
     console.error('Boot error:', e);
@@ -2910,11 +2909,13 @@ function updateClock() {
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  const tabEl = document.getElementById('tab-' + name);
+  if (tabEl) tabEl.classList.add('active');
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
-  if (name === 'radar')    setTimeout(renderRadar, 50);
-  if (name === 'partners') setTimeout(loadPartnerHistory, 50);
+  if (name === 'radar')     setTimeout(renderRadar, 50);
+  if (name === 'partners')  setTimeout(loadPartnerHistory, 50);
+  if (name === 'dashboard') setTimeout(loadDailyPlan, 100);
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
