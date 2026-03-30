@@ -2277,32 +2277,35 @@ body::after {
     <div class="logo-mark">J</div>
     <div class="logo-text">
       <div class="brand">JAKALA</div>
-      <div class="sub">GTM Operating System</div>
+      <div class="sub">GTM OS — Close deals · Build pipeline</div>
     </div>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
   </div>
 
-  <div class="sidebar-label">Navigate</div>
+  <div class="sidebar-label">Execute</div>
   <button class="nav-btn" onclick="showTab('dashboard')" id="nav-dashboard">
-    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span> Command Center
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span> Deal Board
   </button>
+  <div class="sidebar-label" style="margin-top:4px">Find &amp; Target</div>
+  <button class="nav-btn" onclick="showTab('radar')" id="nav-radar">
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg></span> Lead Radar
+  </button>
+  <button class="nav-btn" onclick="showTab('signals')" id="nav-signals">
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,9 4,4 7,11 10,5 13,8 15,6"/></svg></span> Buying Signals
+  </button>
+  <button class="nav-btn" onclick="showTab('accounts')" id="nav-accounts">
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="11" rx="1"/><path d="M6 15V9h4v6"/><path d="M2 7h12"/><path d="M5 1h6v3H5z"/></svg></span> Accounts
+  </button>
+
+  <div class="sidebar-label" style="margin-top:8px">Pitch &amp; Close</div>
   <button class="nav-btn active" onclick="showTab('chat')" id="nav-chat">
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 10a2 2 0 01-2 2H5l-3 2V4a2 2 0 012-2h8a2 2 0 012 2z"/></svg></span> GTM Assistant
   </button>
   <button class="nav-btn" onclick="showTab('notes')" id="nav-notes">
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg></span> Meeting Notes
   </button>
-  <button class="nav-btn" onclick="showTab('accounts')" id="nav-accounts">
-    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="11" rx="1"/><path d="M6 15V9h4v6"/><path d="M2 7h12"/><path d="M5 1h6v3H5z"/></svg></span> Accounts
-  </button>
-  <button class="nav-btn" onclick="showTab('radar')" id="nav-radar">
-    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg></span> Pipeline Radar
-  </button>
   <button class="nav-btn" onclick="showTab('simulator')" id="nav-simulator">
-    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="10" rx="1"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="5" y1="15" x2="11" y2="15"/></svg></span> Pitch Simulator
-  </button>
-  <button class="nav-btn" onclick="showTab('signals')" id="nav-signals">
-    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,9 4,4 7,11 10,5 13,8 15,6"/></svg></span> Signal Feed
+    <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="10" rx="1"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="5" y1="15" x2="11" y2="15"/></svg></span> Pitch Builder
   </button>
   <button class="nav-btn" onclick="showTab('partners')" id="nav-partners">
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 6.5l1-1a3 3 0 014.24 4.24l-2 2a3 3 0 01-4.24-4.24"/><path d="M6.5 9.5l-1 1a3 3 0 01-4.24-4.24l2-2a3 3 0 014.24 4.24"/></svg></span> Partnerships
@@ -2318,16 +2321,14 @@ body::after {
   <div id="skills-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
     <button class="skill-btn" onclick="insertSkill('contact')" style="background:#111;color:#fff;font-weight:700;">⚡ Who To Contact Today</button>
     <button class="skill-btn" onclick="insertSkill('blueprint')" style="background:linear-gradient(135deg,rgba(21,62,237,0.18),rgba(123,92,245,0.12));border-color:rgba(21,62,237,0.4);color:#6B8EF7;font-weight:700;">🏗 Deal Blueprint</button>
+    <button class="skill-btn" onclick="insertSkill('outreach')">✉ Outreach Generator</button>
+    <button class="skill-btn" onclick="insertSkill('brief')">📋 Pre-Meeting Brief</button>
+    <button class="skill-btn" onclick="insertSkill('revenue')">💰 Revenue Simulation</button>
+    <button class="skill-btn" onclick="insertSkill('pitch')">🎯 Pitch Partner</button>
+    <button class="skill-btn" onclick="insertSkill('signal')">⚡ Signal to Action</button>
     <button class="skill-btn" onclick="insertSkill('prospect')">🔍 Prospect Hunt</button>
-    <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
-    <button class="skill-btn" onclick="insertSkill('warroom')">War Room</button>
-    <button class="skill-btn" onclick="insertSkill('forecast')">Q2 Forecast</button>
-    <button class="skill-btn" onclick="insertSkill('outreach')">Outreach</button>
-    <button class="skill-btn" onclick="insertSkill('pitch')">Pitch Partner</button>
-    <button class="skill-btn" onclick="insertSkill('brief')">Pre-Meeting Brief</button>
-    <button class="skill-btn" onclick="insertSkill('revenue')">Revenue Simulation</button>
-    <button class="skill-btn" onclick="insertSkill('signal')">Signal to Action</button>
     <button class="skill-btn" onclick="insertSkill('strategic')">⭐ Strategic Framework</button>
+    <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
     <button class="skill-btn" onclick="insertSkill('websiteopt')">🔍 Website Optimizer</button>
   </div>
 
@@ -2384,26 +2385,20 @@ body::after {
         </span>
       </div>
 
-      <!-- Today's Priority hero card -->
-      <div id="today-priority-card" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(21,62,237,0.12),rgba(123,92,245,0.08));border:1px solid rgba(21,62,237,0.35);border-radius:12px;padding:18px 22px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:0;right:0;width:120px;height:100%;background:linear-gradient(90deg,transparent,rgba(21,62,237,0.06));pointer-events:none"></div>
-        <div style="font-size:9.5px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px">⚡ Dagens prioritet</div>
-        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <div id="tp-name" style="font-size:19px;font-weight:800;color:var(--white);margin-bottom:3px">—</div>
-            <div id="tp-meta" style="font-size:12px;color:var(--muted2);margin-bottom:8px">—</div>
-            <div id="tp-reason" style="font-size:11.5px;color:var(--muted);line-height:1.5">—</div>
+      <!-- ── DAILY ACTION PLAN ── -->
+      <div id="daily-plan-section" style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">⚡ Dagens handlingsplan</div>
+            <div style="font-size:13px;color:var(--muted);font-weight:400" id="daily-plan-date">Genererer plan…</div>
           </div>
-          <div style="display:flex;gap:12px;align-items:center;flex-shrink:0">
-            <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 16px">
-              <div id="tp-win" style="font-size:22px;font-weight:900;color:#00D4A0">—</div>
-              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Win %</div>
-            </div>
-            <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px 16px">
-              <div id="tp-weighted" style="font-size:22px;font-weight:900;color:var(--white)">—</div>
-              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Weighted</div>
-            </div>
-            <button onclick="insertSkill('contact');showTab('chat')" style="background:#153EED;color:#fff;border:none;border-radius:8px;padding:12px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Generér besked →</button>
+          <button onclick="loadDailyPlan(true)" id="daily-plan-refresh" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↻ Opdater</button>
+        </div>
+        <div id="daily-plan-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <!-- Loading state -->
+          <div style="grid-column:1/-1;background:rgba(21,62,237,0.04);border:1px dashed rgba(21,62,237,0.2);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:13px">
+            <div style="font-size:20px;margin-bottom:8px">⚡</div>
+            Genererer din handlingsplan for i dag…
           </div>
         </div>
       </div>
@@ -2810,7 +2805,7 @@ let gridFilter = 'all';
 async function boot() {
   updateClock();
   setInterval(updateClock, 1000);
-  showTab('chat');
+  showTab('dashboard');
   try {
     const res = await fetch('/api/accounts');
     allAccounts = await res.json();
@@ -2821,12 +2816,86 @@ async function boot() {
     renderDashboard(allAccounts);
     setTimeout(animateDashboard, 400);
     loadLiveDashboard();
+    loadDailyPlan();
     renderSignalFeed();
   } catch(e) {
     console.error('Boot error:', e);
   }
 }
 boot();
+
+// ── Daily Action Plan ─────────────────────────────────────────────────────────
+let _dailyPlanLoaded = false;
+
+async function loadDailyPlan(force) {
+  if (_dailyPlanLoaded && !force) return;
+  const cards = document.getElementById('daily-plan-cards');
+  const dateEl = document.getElementById('daily-plan-date');
+  if (!cards) return;
+
+  const urgencyColor  = { HOT: '#E53E3E', WARM: '#D97706', NOW: '#7B5CF5' };
+  const urgencyBg     = { HOT: 'rgba(229,62,62,.08)', WARM: 'rgba(217,119,6,.08)', NOW: 'rgba(123,92,245,.08)' };
+  const urgencyBorder = { HOT: 'rgba(229,62,62,.35)', WARM: 'rgba(217,119,6,.35)', NOW: 'rgba(123,92,245,.35)' };
+
+  cards.innerHTML = '<div style="grid-column:1/-1;background:rgba(21,62,237,0.04);border:1px dashed rgba(21,62,237,0.2);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:20px;margin-bottom:8px">⚡</div>Analyserer pipeline og signaler…</div>';
+
+  try {
+    const r = await fetch('/api/gtm/daily-plan');
+    const d = await r.json();
+    if (d.error || !d.plan || !d.plan.length) {
+      cards.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:13px">Ingen plan tilgængelig — tilføj kontoer til pipelinen.</div>';
+      return;
+    }
+
+    if (dateEl) dateEl.textContent = d.date || '';
+
+    cards.innerHTML = d.plan.map(function(item) {
+      const urg = item.urgency || 'WARM';
+      const col  = urgencyColor[urg]  || '#153EED';
+      const bg   = urgencyBg[urg]     || 'rgba(21,62,237,.06)';
+      const bdr  = urgencyBorder[urg] || 'rgba(21,62,237,.2)';
+      const slugGuess = (item.account || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+      const acc = allAccounts.find(function(a){ return a.name.toLowerCase() === (item.account||'').toLowerCase(); }) || allAccounts.find(function(a){ return a.slug === slugGuess; });
+      const whyEsc = (item.why_today||'').replace(/'/g,"&#39;");
+      const buyerEsc = (item.buyer||'').replace(/'/g,"&#39;");
+      const accName = (item.account||'').replace(/'/g,"&#39;");
+      const gtmEsc = (item.gtm_strategy||'').replace(/'/g,"&#39;");
+      return '<div style="background:'+bg+';border:1px solid '+bdr+';border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden">'
+        + '<div style="position:absolute;top:0;right:0;width:80px;height:100%;background:linear-gradient(90deg,transparent,'+bg+');pointer-events:none"></div>'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+        +   '<div>'
+        +     '<div style="font-size:16px;font-weight:800;color:var(--white);letter-spacing:-.02em;margin-bottom:2px">'+(item.account||'')+'</div>'
+        +     '<div style="font-size:11px;color:var(--muted)">'+(item.buyer||'—')+'</div>'
+        +   '</div>'
+        +   '<div style="flex-shrink:0;background:'+col+';color:#fff;border-radius:5px;padding:2px 8px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">'+urg+'</div>'
+        + '</div>'
+        + '<div style="background:rgba(0,0,0,.25);border-radius:7px;padding:10px 12px">'
+        +   '<div style="font-size:9px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Hvorfor i dag</div>'
+        +   '<div style="font-size:12px;color:var(--muted);line-height:1.5">'+(item.why_today||'—')+'</div>'
+        + '</div>'
+        + '<div style="background:rgba(0,0,0,.2);border-radius:7px;padding:10px 12px">'
+        +   '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Åbningslinje</div>'
+        +   '<div style="font-size:12px;color:var(--text-light,#CBD5E1);line-height:1.6;font-style:italic">&ldquo;'+(item.opening_line||'—')+'&rdquo;</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between">'
+        +   '<div style="font-size:11px;font-weight:700;color:'+col+'">'+(item.pipeline_value||'')+' · '+(item.gtm_strategy||'')+'</div>'
+        +   '<div style="display:flex;gap:6px">'
+        +     (acc ? '<button onclick="selectAccount(\''+acc.slug+'\',\''+acc.name.replace(/'/g,"\\'")+'\');showTab(\'chat\')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Åbn →</button>' : '')
+        +     '<button onclick="insertCustomSkill(\'Write a personalised LinkedIn outreach message for '+accName+'. Buyer: '+buyerEsc+'. GTM strategy: '+gtmEsc+'. Opening angle: '+whyEsc+'. Language: Norwegian.\');showTab(\'chat\')" style="background:#153EED;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Skriv besked →</button>'
+        +   '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+    _dailyPlanLoaded = true;
+  } catch(e) {
+    cards.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:13px">Kunne ikke generere plan: '+e.message+'</div>';
+  }
+}
+
+function insertCustomSkill(text) {
+  const inp = document.getElementById('chat-input');
+  if (inp) { inp.value = text; inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; }
+}
 
 // ── Clock ─────────────────────────────────────────────────────────────────────
 function updateClock() {
@@ -4102,6 +4171,67 @@ function regenOutreach() {
 </html>"""
 
 
+@app.route("/api/gtm/daily-plan", methods=["GET"])
+def gtm_daily_plan():
+    """Generate today's 3-account action plan using Claude."""
+    try:
+        # Read context files
+        signals   = read_file("intelligence/lead-log.md") or ""
+        top_opps  = read_file("intelligence/top-opportunities.md") or ""
+        pipeline  = read_file("intelligence/pipeline-dashboard.md") or ""
+        offerings = read_file("knowledge/offerings.md") or ""
+
+        from datetime import date
+        today_str = date.today().strftime("%A %d %B %Y")
+
+        prompt = f"""You are the JAKALA GTM OS. Today is {today_str}.
+
+Generate TODAY'S ACTION PLAN: exactly 3 accounts to contact today.
+
+Select based on urgency signals: new executive in role (first 90 days), vacant leadership position, deal gone silent (14+ days), tech stack change, upcoming decision window.
+
+Context:
+LEAD LOG:
+{signals[:2000]}
+
+TOP OPPORTUNITIES:
+{top_opps[:2000]}
+
+PIPELINE:
+{pipeline[:1000]}
+
+Return ONLY valid JSON, no markdown, no explanation:
+{{
+  "date": "{today_str}",
+  "plan": [
+    {{
+      "account": "Company Name",
+      "buyer": "Full Name — Title",
+      "urgency": "HOT|WARM|NOW",
+      "why_today": "One sentence: specific reason to contact TODAY (e.g. new in role 47 days, CDO vacant since Feb, 21 days silent)",
+      "opening_line": "First 2 sentences of the outreach message. Specific, relevant, not generic.",
+      "gtm_strategy": "Commerce Optimization|Data Revenue Unlock|AI Readiness Accelerator|Experience Transformation",
+      "pipeline_value": "€700K"
+    }},
+    ... (3 total)
+  ]
+}}"""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1200,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        import re as _re
+        raw = response.content[0].text.strip()
+        # Strip markdown fences if present
+        raw = _re.sub(r'^```(?:json)?\s*', '', raw)
+        raw = _re.sub(r'\s*```$', '', raw)
+        return jsonify(json.loads(raw))
+    except Exception as e:
+        return jsonify({"error": str(e), "plan": []}), 500
+
+
 @app.route("/app")
 def gtm_app():
     resp = app.make_response(render_template_string(HTML))
@@ -5037,6 +5167,98 @@ def cc_today():
     finally:
         db.close()
 
+@app.route("/api/cc/weekly-brief", methods=["GET", "POST"])
+def cc_weekly_brief():
+    """Auto-generate the weekly strategic brief for leadership."""
+    country = request.args.get("country", "no")
+    try:
+        # Load context
+        top_opps = read_file("intelligence/top-opportunities.md") or ""
+        pipeline  = read_file("intelligence/pipeline-dashboard.md") or ""
+        lead_log  = read_file("intelligence/lead-log.md") or ""
+
+        # Get open actions count from DB
+        open_actions = 0
+        if CC_DB_OK:
+            try:
+                db = SessionLocal()
+                open_actions = db.query(Action).filter(
+                    Action.status == "open",
+                    Action.country == country
+                ).count()
+                db.close()
+            except Exception:
+                pass
+
+        from datetime import date
+        today_str = date.today().strftime("%d %B %Y")
+        week_num  = date.today().isocalendar()[1]
+
+        country_name = {"no": "Norway", "dk": "Denmark", "se": "Sweden"}.get(country, country.upper())
+
+        prompt = f"""You are the strategic intelligence engine for JAKALA {country_name}. Today is {today_str}, Week {week_num}.
+
+Generate THIS WEEK'S STRATEGIC BRIEF for the CCO / country lead. This is NOT a market analysis. It is a decision-forcing document.
+
+Context:
+TOP OPPORTUNITIES:
+{top_opps[:2500]}
+
+PIPELINE DASHBOARD:
+{pipeline[:1500]}
+
+RECENT SIGNALS:
+{lead_log[:1500]}
+
+Output a JSON object with exactly this structure:
+{{
+  "week": "Week {week_num}",
+  "date": "{today_str}",
+  "status": "GREEN|AMBER|RED",
+  "status_reason": "One line explaining pipeline health",
+  "pipeline_total": "€X.XM",
+  "base_case": "€XXXK",
+  "risk": {{
+    "headline": "Short risk statement (e.g. €1.2M in deals gone silent)",
+    "accounts": ["Account A — 21 days", "Account B — 18 days"],
+    "implication": "One sentence: what happens if this continues"
+  }},
+  "top_opportunity": {{
+    "account": "Company Name",
+    "buyer": "Name — Title",
+    "window": "Specific window (e.g. first 90 days ends ~April 15)",
+    "why_now": "Why this week specifically",
+    "recommended_action": "Exact action to take (e.g. Assign account owner and book discovery call by Friday)"
+  }},
+  "the_decision": {{
+    "question": "The single most important decision to make this week — phrased as a question",
+    "deadline": "By when",
+    "options": ["Option A", "Option B"],
+    "recommendation": "Our recommended choice and why in one sentence"
+  }},
+  "three_numbers": [
+    {{"label": "Pipeline", "value": "€X.XM", "sub": "unweighted Nordic"}},
+    {{"label": "Base Case", "value": "€XXXK", "sub": "Q2 2026"}},
+    {{"label": "Open Actions", "value": "{open_actions}", "sub": "requiring follow-up"}}
+  ]
+}}
+
+Be specific. Use real account names. Be direct. No fluff."""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        import re as _re
+        raw = response.content[0].text.strip()
+        raw = _re.sub(r'^```(?:json)?\s*', '', raw)
+        raw = _re.sub(r'\s*```$', '', raw)
+        return jsonify(json.loads(raw))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── Fase 4: Intelligence ──────────────────────────────────────────────────────
 
 @app.route("/api/cc/intelligence", methods=["GET"])
@@ -5342,6 +5564,132 @@ Be direct, concrete, and commercially sharp. No fluff. Reference specific signal
         return jsonify({'error': str(e)}), 500
     finally:
         db.close()
+
+
+@app.route('/api/cc/foresight', methods=['POST'])
+def cc_foresight():
+    if not CC_DB_OK:
+        return jsonify({'error': 'DB unavailable'}), 503
+    db = SessionLocal()
+    try:
+        body = request.get_json(silent=True) or {}
+        country = request.args.get('country') or body.get('country', 'no')
+        signals = db.query(Signal).filter(Signal.is_active == True).order_by(Signal.date.desc()).limit(15).all()
+        accounts = db.query(Account).filter(Account.country == country).all()
+
+        top_accounts = sorted(accounts, key=lambda a: (a.icp_score or 0) + (a.deal_score or 0), reverse=True)[:20]
+        acc_lines = []
+        for a in top_accounts:
+            acc_lines.append(
+                f"- {a.name} | ICP:{a.icp_score} Deal:{a.deal_score} | Stage:{a.deal_stage} | "
+                f"Value:€{int(a.pipeline_value or 0):,} | Buyer:{a.named_buyer or 'TBD'} | "
+                f"Tech:{(a.tech_stack or 'Unknown')[:80]} | Notes:{(a.notes or '')[:60]}"
+            )
+        sig_lines = [f"- [{s.severity.upper()}|{s.signal_type}] {s.title}: {(s.description or '')[:120]}" for s in signals]
+
+        knowledge_files = ['knowledge/gtm-strategy.md', 'knowledge/offerings.md', 'knowledge/strategy-mapping.md']
+        knowledge = ''
+        for f in knowledge_files:
+            p = BASE_DIR / f
+            if p.exists():
+                knowledge += p.read_text(encoding='utf-8', errors='replace')[:800] + '\n'
+
+        prompt = f"""You are JAKALA Nordic's strategic intelligence engine. Generate a FORESIGHT REPORT with exactly three sections.
+
+CONTEXT — {country.upper()} MARKET:
+Accounts tracked: {len(accounts)} | Total pipeline: €{int(sum(a.pipeline_value or 0 for a in accounts)):,}
+
+TOP ACCOUNTS:
+{chr(10).join(acc_lines[:15])}
+
+ACTIVE MARKET SIGNALS:
+{chr(10).join(sig_lines[:12])}
+
+JAKALA OFFERINGS & GTM STRATEGY (summary):
+{knowledge[:600]}
+
+Generate the following three sections. Use this exact format — no deviations:
+
+---BUYING_WINDOWS---
+List 5 accounts with imminent buying windows. For each use this exact format:
+ACCOUNT: [company name]
+TRIGGER: [specific signal or pattern that drives this prediction — be concrete]
+WINDOW: [15-30 days / 30-60 days / 60-90 days]
+ENTRY: [recommended GTM strategy and specific entry offer]
+VALUE: [estimated deal value in €]
+CONFIDENCE: [High / Medium / Low]
+---
+
+---PARTNERSHIPS---
+Recommend 3 technology or agency partnerships for JAKALA Nordic. For each:
+PARTNER: [company/platform name]
+EVIDENCE: [why now — what market data supports this]
+PROPOSITION: [specific joint offer or activation]
+VALUE: [estimated annual revenue unlock in €]
+ACTION: [one concrete step to initiate this week]
+---
+
+---NEW_SERVICES---
+Identify 2 service/activation gaps the Nordic market needs but no agency offers yet. For each:
+SERVICE: [name the service offering]
+EVIDENCE: [what market signals / account patterns reveal this gap]
+CLIENTS: [name 3-5 specific accounts that would buy this]
+ENTRY_OFFER: [the first thing to sell — scope, price, duration]
+REVENUE: [12-month potential in €]
+BUILD_OR_PARTNER: [should JAKALA build this or partner?]
+---
+
+Be commercially sharp, specific, and grounded in the account and signal data. No generic advice. Reference named accounts and real signals where possible."""
+
+        resp = client.messages.create(model=MODEL, max_tokens=2000,
+            messages=[{'role': 'user', 'content': prompt}])
+        raw = resp.content[0].text
+
+        def parse_section(text, start_marker, end_marker):
+            try:
+                start = text.index(start_marker) + len(start_marker)
+                end = text.index(end_marker, start)
+                return text[start:end].strip()
+            except ValueError:
+                return text
+
+        buying = parse_section(raw, '---BUYING_WINDOWS---', '---')
+        partnerships = parse_section(raw, '---PARTNERSHIPS---', '---')
+        services = parse_section(raw, '---NEW_SERVICES---', '---')
+
+        def parse_blocks(text, keys):
+            blocks = []
+            current = {}
+            for line in text.split('\n'):
+                line = line.strip()
+                if not line:
+                    if current:
+                        blocks.append(current)
+                        current = {}
+                    continue
+                for k in keys:
+                    if line.startswith(k + ':'):
+                        current[k.lower()] = line[len(k)+1:].strip()
+                        break
+            if current:
+                blocks.append(current)
+            return blocks
+
+        buying_blocks = parse_blocks(buying, ['ACCOUNT','TRIGGER','WINDOW','ENTRY','VALUE','CONFIDENCE'])
+        partner_blocks = parse_blocks(partnerships, ['PARTNER','EVIDENCE','PROPOSITION','VALUE','ACTION'])
+        service_blocks = parse_blocks(services, ['SERVICE','EVIDENCE','CLIENTS','ENTRY_OFFER','REVENUE','BUILD_OR_PARTNER'])
+
+        return jsonify({
+            'buying_windows': buying_blocks,
+            'partnerships': partner_blocks,
+            'new_services': service_blocks,
+            'raw': raw
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
 
 CC_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -5653,6 +6001,92 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 .intel-stat-val{font-size:28px;font-weight:800;letter-spacing:-.04em}
 .intel-stat-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--m);margin-top:3px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px}
+/* ── FORESIGHT ── */
+.fsight-shell{display:flex;flex-direction:column;gap:0;min-height:calc(100vh - 54px)}
+.fsight-hero{background:linear-gradient(135deg,#0A0A1E 0%,#0D1A3A 100%);padding:32px 36px 28px;flex-shrink:0;position:relative;overflow:hidden}
+.fsight-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 80% 50%,rgba(21,62,237,.25) 0%,transparent 70%),radial-gradient(ellipse 40% 60% at 20% 80%,rgba(124,58,237,.15) 0%,transparent 60%);pointer-events:none}
+.fsight-hero-inner{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.fsight-eyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(21,62,237,.9);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.fsight-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:#153EED;animation:livePulse 2s infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.3}}
+.fsight-title{font-size:30px;font-weight:900;letter-spacing:-.04em;color:#fff;margin-bottom:6px;line-height:1}
+.fsight-title span{color:#153EED}
+.fsight-sub{font-size:13px;color:rgba(255,255,255,.55);line-height:1.5;max-width:480px}
+.fsight-run-btn{padding:12px 24px;background:linear-gradient(135deg,#153EED,#2952D8);border:none;border-radius:12px;color:#fff;font:800 13px var(--font);cursor:pointer;transition:all .25s;white-space:nowrap;letter-spacing:.02em;box-shadow:0 6px 24px rgba(21,62,237,.4);flex-shrink:0}
+.fsight-run-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(21,62,237,.5)}
+.fsight-run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.fsight-stats{display:flex;gap:28px;margin-top:24px;position:relative;z-index:1}
+.fsight-stat{text-align:left}
+.fsight-stat-val{font-size:22px;font-weight:800;letter-spacing:-.03em;color:#fff}
+.fsight-stat-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:2px}
+.fsight-last{font-size:11px;color:rgba(255,255,255,.3);margin-top:4px;position:relative;z-index:1}
+
+.fsight-body{flex:1;padding:28px 36px;display:flex;flex-direction:column;gap:28px;background:var(--bg)}
+.fsight-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;color:var(--m);text-align:center;gap:12px}
+.fsight-empty-icon{font-size:48px;opacity:.4}
+.fsight-empty-text{font-size:14px;font-weight:500}
+.fsight-empty-sub{font-size:12px;color:var(--m2)}
+
+.fsight-section{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.fsight-sec-header{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.fsight-sec-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.fsight-sec-icon.window{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.15)}
+.fsight-sec-icon.partner{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.15)}
+.fsight-sec-icon.service{background:rgba(0,166,126,.08);border:1px solid rgba(0,166,126,.15)}
+.fsight-sec-title{font-size:15px;font-weight:800;color:var(--w);letter-spacing:-.02em}
+.fsight-sec-sub{font-size:11px;color:var(--m);margin-top:2px}
+.fsight-sec-count{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+.fsight-sec-count.window{background:rgba(220,38,38,.08);color:var(--red)}
+.fsight-sec-count.partner{background:rgba(124,58,237,.08);color:var(--purple)}
+.fsight-sec-count.service{background:rgba(0,166,126,.08);color:var(--green)}
+
+.fsight-blocks{display:grid;gap:0}
+.fsight-block{padding:20px 24px;border-bottom:1px solid var(--border);display:grid;gap:0}
+.fsight-block:last-child{border-bottom:none}
+.fsight-block:hover{background:#FAFBFF}
+
+/* Buying window block */
+.fw-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+.fw-name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--w)}
+.fw-window{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.fw-window.hot{background:rgba(220,38,38,.1);color:var(--red);border:1px solid rgba(220,38,38,.2)}
+.fw-window.warm{background:rgba(217,119,6,.1);color:var(--amber);border:1px solid rgba(217,119,6,.2)}
+.fw-window.cool{background:rgba(21,62,237,.08);color:var(--blue);border:1px solid rgba(21,62,237,.18)}
+.fw-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fw-cell{background:var(--bg);border-radius:8px;padding:10px 12px}
+.fw-cell-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--m2);margin-bottom:4px}
+.fw-cell-val{font-size:12.5px;color:var(--t);line-height:1.45}
+.fw-cell.full{grid-column:1/-1}
+.fw-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.fw-value{font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--blue)}
+.fw-conf{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+.fw-conf.High{background:rgba(0,166,126,.1);color:var(--green);border:1px solid rgba(0,166,126,.2)}
+.fw-conf.Medium{background:rgba(217,119,6,.1);color:var(--amber);border:1px solid rgba(217,119,6,.2)}
+.fw-conf.Low{background:rgba(220,38,38,.08);color:var(--red);border:1px solid rgba(220,38,38,.15)}
+
+/* Partnership block */
+.fp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.fp-name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--w)}
+.fp-value{font-size:15px;font-weight:800;color:var(--purple)}
+.fp-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.fp-cell{background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.1);border-radius:8px;padding:10px 12px}
+.fp-cell-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(124,58,237,.6);margin-bottom:4px}
+.fp-cell-val{font-size:12px;color:var(--t);line-height:1.45}
+.fp-cell.full{grid-column:1/-1}
+.fp-action{background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.15);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--purple);font-weight:600;line-height:1.5}
+.fp-action-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--purple);opacity:.7;margin-bottom:4px}
+
+/* New service block */
+.fs-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px}
+.fs-name{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--w)}
+.fs-revenue{font-size:15px;font-weight:800;color:var(--green)}
+.fs-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.fs-cell{background:rgba(0,166,126,.04);border:1px solid rgba(0,166,126,.1);border-radius:8px;padding:10px 12px}
+.fs-cell-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(0,166,126,.6);margin-bottom:4px}
+.fs-cell-val{font-size:12px;color:var(--t);line-height:1.45}
+.fs-cell.full{grid-column:1/-1}
+.fs-bop{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(0,166,126,.08);border:1px solid rgba(0,166,126,.2);border-radius:20px;font-size:11px;font-weight:700;color:var(--green)}
+
 /* ── MARKET COMMAND ── */
 .cmd-hero{background:linear-gradient(135deg,rgba(21,62,237,.07) 0%,rgba(21,62,237,.02) 100%);border:1px solid rgba(21,62,237,.15);border-radius:18px;padding:28px 32px;margin-bottom:28px}
 .cmd-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
@@ -5739,41 +6173,44 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sb-section">
-        <div class="sb-label">Intelligence</div>
-        <div class="nav-item active" data-view="command" onclick="switchView('command')">
-          <span class="nav-icon">◉</span> Market Command
-        </div>
-        <div class="nav-item" data-view="trends" onclick="switchView('trends')">
-          <span class="nav-icon">📡</span> Signal Radar
-        </div>
-        <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
-          <span class="nav-icon">◈</span> Opportunity Map
+        <div class="sb-label">Foresight</div>
+        <div class="nav-item active" data-view="foresight" onclick="switchView('foresight')" style="background:linear-gradient(135deg,rgba(21,62,237,.1),rgba(124,58,237,.08));border:1px solid rgba(21,62,237,.18);color:var(--blue);font-weight:700;margin-bottom:4px">
+          <span class="nav-icon">✦</span> Market Foresight
         </div>
         <div class="nav-item" data-view="intelligence" onclick="switchView('intelligence')">
           <span class="nav-icon">🔮</span> Strategic AI
         </div>
+        <div class="nav-item" data-view="trends" onclick="switchView('trends')">
+          <span class="nav-icon">📡</span> Signal Radar
+        </div>
       </div>
       <div class="sb-divider"></div>
       <div class="sb-section">
-        <div class="sb-label">Pipeline</div>
+        <div class="sb-label">Strategic Pipeline</div>
+        <div class="nav-item" data-view="command" onclick="switchView('command')">
+          <span class="nav-icon">◉</span> Market Command
+        </div>
         <div class="nav-item" data-view="overview" onclick="switchView('overview')">
-          <span class="nav-icon">◎</span> Pipeline
+          <span class="nav-icon">◎</span> Pipeline Overview
+        </div>
+        <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
+          <span class="nav-icon">⚡</span> Deal Predictions
+        </div>
+        <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
+          <span class="nav-icon">◈</span> Opportunity Map
         </div>
         <div class="nav-item" data-view="existing" onclick="switchView('existing')">
           <span class="nav-icon">⊙</span> Existing Accounts
         </div>
-        <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
-          <span class="nav-icon">⚡</span> Predictions
-        </div>
       </div>
       <div class="sb-divider"></div>
       <div class="sb-section">
-        <div class="sb-label">Operations</div>
+        <div class="sb-label">Team Activity</div>
         <div class="nav-item" data-view="today" onclick="switchView('today')">
-          <span class="nav-icon">☑</span> Actions <span id="sb-action-count" style="margin-left:auto;background:var(--red);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span>
+          <span class="nav-icon">☑</span> Open Actions <span id="sb-action-count" style="margin-left:auto;background:var(--red);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span>
         </div>
         <div class="nav-item" data-view="meetings" onclick="switchView('meetings')">
-          <span class="nav-icon">◷</span> Meeting Log
+          <span class="nav-icon">◷</span> Recent Meetings
         </div>
       </div>
       <div class="sb-divider"></div>
@@ -5790,6 +6227,104 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 
     <!-- Content -->
     <main class="content" id="main-content">
+
+      <!-- ── FORESIGHT ── -->
+      <div class="view" id="view-foresight" style="padding:0">
+        <div class="fsight-shell">
+
+          <!-- Hero bar -->
+          <div class="fsight-hero">
+            <div class="fsight-hero-inner">
+              <div>
+                <div class="fsight-eyebrow"><span class="fsight-eyebrow-dot"></span>Predictive Market Intelligence</div>
+                <div class="fsight-title">JAKALA <span>Foresight</span></div>
+                <div class="fsight-sub">Buying windows · Partnership opportunities · New service gaps. Generated from live market signals and account intelligence.</div>
+                <div class="fsight-stats">
+                  <div class="fsight-stat"><div class="fsight-stat-val" id="fs-windows-count">—</div><div class="fsight-stat-label">Buying windows</div></div>
+                  <div class="fsight-stat"><div class="fsight-stat-val" id="fs-partner-count">—</div><div class="fsight-stat-label">Partnerships</div></div>
+                  <div class="fsight-stat"><div class="fsight-stat-val" id="fs-service-count">—</div><div class="fsight-stat-label">Service gaps</div></div>
+                </div>
+                <div class="fsight-last" id="fs-last-run">Not yet generated this session</div>
+              </div>
+              <button class="fsight-run-btn" id="fsight-run-btn" onclick="runForesight()">✦ Run Foresight</button>
+            </div>
+          </div>
+
+          <!-- ── WEEKLY STRATEGIC BRIEF ── -->
+          <div id="weekly-brief-section" style="margin:0 32px 28px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div>
+                <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px">◉ Denne uges strategiske billede</div>
+                <div style="font-size:12px;color:var(--m)" id="brief-meta">Genererer…</div>
+              </div>
+              <button onclick="loadWeeklyBrief(true)" style="background:none;border:1px solid var(--border);color:var(--m);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--m)'">↻ Opdater</button>
+            </div>
+
+            <!-- Loading -->
+            <div id="brief-loading" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;color:var(--m);font-size:13px">
+              <div class="loading-pulse" style="justify-content:center"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span style="margin-left:10px">Analyserer pipeline og markedssignaler…</span></div>
+            </div>
+
+            <!-- Content (hidden until loaded) -->
+            <div id="brief-content" style="display:none">
+              <!-- Status bar -->
+              <div id="brief-status-bar" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:12px;display:flex;align-items:center;gap:24px">
+                <div id="brief-status-badge" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">—</div>
+                <div style="flex:1">
+                  <div id="brief-status-reason" style="font-size:13px;color:var(--t);font-weight:500">—</div>
+                </div>
+                <div id="brief-numbers" style="display:flex;gap:20px"></div>
+              </div>
+
+              <!-- Three columns: Risk · Opportunity · Decision -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+
+                <!-- RISK -->
+                <div style="background:rgba(229,62,62,.05);border:1px solid rgba(229,62,62,.2);border-radius:var(--radius);padding:18px 20px">
+                  <div style="font-size:9.5px;font-weight:800;color:#E53E3E;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">⚠ Pipeline Risiko</div>
+                  <div id="brief-risk-headline" style="font-size:14px;font-weight:700;color:var(--t);margin-bottom:8px">—</div>
+                  <div id="brief-risk-accounts" style="font-size:12px;color:var(--m);line-height:1.7;margin-bottom:10px"></div>
+                  <div id="brief-risk-implication" style="font-size:12px;color:rgba(229,62,62,.8);font-style:italic;padding-top:8px;border-top:1px solid rgba(229,62,62,.15)">—</div>
+                </div>
+
+                <!-- OPPORTUNITY -->
+                <div style="background:rgba(0,166,126,.05);border:1px solid rgba(0,166,126,.2);border-radius:var(--radius);padding:18px 20px">
+                  <div style="font-size:9.5px;font-weight:800;color:#00A67E;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">✦ Top Mulighed</div>
+                  <div id="brief-opp-account" style="font-size:14px;font-weight:700;color:var(--t);margin-bottom:4px">—</div>
+                  <div id="brief-opp-buyer" style="font-size:11.5px;color:var(--m);margin-bottom:10px">—</div>
+                  <div id="brief-opp-window" style="font-size:12px;color:#00A67E;font-weight:600;margin-bottom:6px">—</div>
+                  <div id="brief-opp-why" style="font-size:12px;color:var(--m);line-height:1.6;margin-bottom:10px">—</div>
+                  <div id="brief-opp-action" style="font-size:12px;color:rgba(0,166,126,.9);font-weight:600;padding-top:8px;border-top:1px solid rgba(0,166,126,.15)">→ <span id="brief-opp-action-text">—</span></div>
+                </div>
+
+                <!-- THE DECISION -->
+                <div style="background:rgba(21,62,237,.06);border:1px solid rgba(21,62,237,.25);border-radius:var(--radius);padding:18px 20px">
+                  <div style="font-size:9.5px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">◉ Den ene beslutning</div>
+                  <div id="brief-dec-question" style="font-size:14px;font-weight:700;color:var(--t);line-height:1.4;margin-bottom:10px">—</div>
+                  <div id="brief-dec-options" style="font-size:12px;color:var(--m);line-height:1.8;margin-bottom:10px"></div>
+                  <div style="padding-top:8px;border-top:1px solid rgba(21,62,237,.15)">
+                    <div style="font-size:9px;font-weight:700;color:#153EED;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Anbefaling</div>
+                    <div id="brief-dec-rec" style="font-size:12px;color:var(--t);line-height:1.6">—</div>
+                    <div id="brief-dec-deadline" style="font-size:11px;color:var(--m);margin-top:6px;font-weight:600">—</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          <div style="margin:0 32px 16px;height:1px;background:var(--border)"></div>
+
+          <!-- Body -->
+          <div class="fsight-body" id="fsight-body">
+            <div class="fsight-empty" id="fsight-empty">
+              <div class="fsight-empty-icon">✦</div>
+              <div class="fsight-empty-text">No foresight generated yet</div>
+              <div class="fsight-empty-sub">Click "Run Foresight" to generate predictive market intelligence based on live signals and account data.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       <!-- ── MARKET COMMAND ── -->
       <div class="view" id="view-command">
@@ -6250,7 +6785,7 @@ async function initApp(user) {
     // Country head view
     const meta = {'no':'🇳🇴 Norway','dk':'🇩🇰 Denmark','se':'🇸🇪 Sweden','uk':'🇬🇧 UK','fr':'🇫🇷 France'};
     document.getElementById('tb-country').textContent = meta[currentUser.country] || currentUser.country.toUpperCase();
-    switchView('command');
+    switchView('foresight');
     loadCountryData(currentUser.country);
   }
 }
@@ -7030,12 +7565,245 @@ function switchView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById('view-' + view);
   if (target) target.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  // Sidebar active state — foresight item doesn't use data-view matching due to inline style
+  document.querySelectorAll('.nav-item[data-view]').forEach(n => {
+    n.classList.toggle('active', n.dataset.view === view);
+    if (n.dataset.view === 'foresight') {
+      // keep foresight item's gradient even when active
+      if (n.dataset.view === view) {
+        n.style.background = 'linear-gradient(135deg,rgba(21,62,237,.18),rgba(124,58,237,.14))';
+      } else {
+        n.style.background = 'linear-gradient(135deg,rgba(21,62,237,.1),rgba(124,58,237,.08))';
+      }
+    }
+  });
+  if (view === 'foresight') { /* user clicks Run Foresight manually */ }
   if (view === 'command') loadCommandView();
   if (view === 'actions') loadActions();
   if (view === 'today') loadTodayData();
   if (view === 'meetings') renderMeetingsList('meetings-list', null);
+  if (view === 'foresight') loadWeeklyBrief();
   if (view === 'intelligence') loadIntelligence();
+}
+
+// ══ WEEKLY STRATEGIC BRIEF ═══════════════════════════════════════════════════
+let _weeklyBriefLoaded = false;
+
+async function loadWeeklyBrief(force) {
+  if (_weeklyBriefLoaded && !force) return;
+  const loading = document.getElementById('brief-loading');
+  const content = document.getElementById('brief-content');
+  const meta    = document.getElementById('brief-meta');
+  if (!loading) return;
+
+  loading.style.display = 'block';
+  content.style.display = 'none';
+
+  const statusColors = {
+    GREEN: { bg: 'rgba(0,166,126,.15)', color: '#00A67E', border: 'rgba(0,166,126,.3)' },
+    AMBER: { bg: 'rgba(217,119,6,.15)', color: '#D97706', border: 'rgba(217,119,6,.3)' },
+    RED:   { bg: 'rgba(229,62,62,.15)', color: '#E53E3E', border: 'rgba(229,62,62,.3)' }
+  };
+
+  try {
+    const country = (currentUser && currentUser.country) ? currentUser.country : 'no';
+    const r = await fetch('/api/cc/weekly-brief?country=' + country, { method: 'POST' });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    const sc = statusColors[d.status] || statusColors.AMBER;
+    const badge = document.getElementById('brief-status-badge');
+    if (badge) {
+      badge.textContent = '● ' + d.status;
+      badge.style.background = sc.bg;
+      badge.style.color = sc.color;
+      badge.style.border = '1px solid ' + sc.border;
+    }
+
+    const sr = document.getElementById('brief-status-reason');
+    if (sr) sr.textContent = d.status_reason || '';
+    if (meta) meta.textContent = (d.week || '') + ' · ' + (d.date || '');
+
+    const nums = document.getElementById('brief-numbers');
+    if (nums && d.three_numbers) {
+      nums.innerHTML = d.three_numbers.map(function(n) {
+        return '<div style="text-align:right">'
+          + '<div style="font-size:18px;font-weight:800;color:var(--t);letter-spacing:-.02em">' + n.value + '</div>'
+          + '<div style="font-size:9.5px;color:var(--m);font-weight:600">' + n.label + '</div>'
+          + '<div style="font-size:9px;color:var(--m2)">' + (n.sub||'') + '</div>'
+          + '</div>';
+      }).join('<div style="width:1px;background:var(--border);margin:0 4px"></div>');
+    }
+
+    if (d.risk) {
+      const rh = document.getElementById('brief-risk-headline');
+      const ra = document.getElementById('brief-risk-accounts');
+      const ri = document.getElementById('brief-risk-implication');
+      if (rh) rh.textContent = d.risk.headline || '';
+      if (ra) ra.innerHTML = (d.risk.accounts || []).map(function(a){ return '<div>· ' + a + '</div>'; }).join('');
+      if (ri) ri.textContent = d.risk.implication || '';
+    }
+
+    if (d.top_opportunity) {
+      const oa = document.getElementById('brief-opp-account');
+      const ob = document.getElementById('brief-opp-buyer');
+      const ow = document.getElementById('brief-opp-window');
+      const oy = document.getElementById('brief-opp-why');
+      const oat = document.getElementById('brief-opp-action-text');
+      if (oa) oa.textContent = d.top_opportunity.account || '';
+      if (ob) ob.textContent = d.top_opportunity.buyer || '';
+      if (ow) ow.textContent = d.top_opportunity.window || '';
+      if (oy) oy.textContent = d.top_opportunity.why_now || '';
+      if (oat) oat.textContent = d.top_opportunity.recommended_action || '';
+    }
+
+    if (d.the_decision) {
+      const dq = document.getElementById('brief-dec-question');
+      const dopt = document.getElementById('brief-dec-options');
+      const dr = document.getElementById('brief-dec-rec');
+      const dd = document.getElementById('brief-dec-deadline');
+      if (dq) dq.textContent = d.the_decision.question || '';
+      if (dopt) dopt.innerHTML = (d.the_decision.options || []).map(function(o,i){ return '<div>' + String.fromCharCode(65+i) + '. ' + o + '</div>'; }).join('');
+      if (dr) dr.textContent = d.the_decision.recommendation || '';
+      if (dd) dd.textContent = d.the_decision.deadline ? 'Deadline: ' + d.the_decision.deadline : '';
+    }
+
+    loading.style.display = 'none';
+    content.style.display = 'block';
+    _weeklyBriefLoaded = true;
+  } catch(e) {
+    if (loading) loading.innerHTML = '<div style="color:var(--red);font-size:13px">Fejl: ' + e.message + '</div>';
+  }
+}
+
+// ══ FORESIGHT ════════════════════════════════════════════════════════════════
+async function runForesight() {
+  const btn = document.getElementById('fsight-run-btn');
+  const body = document.getElementById('fsight-body');
+  const empty = document.getElementById('fsight-empty');
+  btn.disabled = true;
+  btn.textContent = '✦ Generating…';
+  empty.style.display = 'none';
+  body.innerHTML = '<div class="loading-pulse" style="padding:60px 0;justify-content:center"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span style="margin-left:10px;font-size:14px">Scanning market intelligence — this takes ~15 seconds…</span></div>';
+
+  try {
+    const country = currentUser.country || 'no';
+    const r = await fetch('/api/cc/foresight?country=' + country, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({country})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    const windows = d.buying_windows || [];
+    const partners = d.partnerships || [];
+    const services = d.new_services || [];
+
+    document.getElementById('fs-windows-count').textContent = windows.length;
+    document.getElementById('fs-partner-count').textContent = partners.length;
+    document.getElementById('fs-service-count').textContent = services.length;
+    document.getElementById('fs-last-run').textContent = 'Generated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) + ' · ' + new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+
+    body.innerHTML = renderForesightSections(windows, partners, services);
+  } catch(e) {
+    body.innerHTML = '<div style="padding:40px;color:var(--red);font-size:14px">Error: ' + e.message + '</div>';
+  }
+  btn.disabled = false;
+  btn.textContent = '↺ Refresh Foresight';
+}
+
+function windowClass(w) {
+  if (!w) return 'cool';
+  if (w.includes('15') || w.includes('30')) return 'hot';
+  if (w.includes('60')) return 'warm';
+  return 'cool';
+}
+
+function renderForesightSections(windows, partners, services) {
+  const windowsHtml = windows.length ? windows.map(w => `
+    <div class="fsight-block">
+      <div class="fw-head">
+        <div class="fw-name">${w.account || 'Account'}</div>
+        <div class="fw-window ${windowClass(w.window)}">${w.window || '30-60 days'}</div>
+      </div>
+      <div class="fw-grid">
+        <div class="fw-cell full"><div class="fw-cell-label">Trigger</div><div class="fw-cell-val">${w.trigger || '—'}</div></div>
+        <div class="fw-cell full"><div class="fw-cell-label">Recommended entry</div><div class="fw-cell-val">${w.entry || '—'}</div></div>
+      </div>
+      <div class="fw-foot">
+        <div class="fw-value">${w.value || '—'}</div>
+        <div class="fw-conf ${w.confidence || 'Medium'}">${w.confidence || 'Medium'} confidence</div>
+      </div>
+    </div>`).join('') : '<div style="padding:20px 24px;color:var(--m);font-size:13px">No buying windows identified.</div>';
+
+  const partnersHtml = partners.length ? partners.map(p => `
+    <div class="fsight-block">
+      <div class="fp-head">
+        <div class="fp-name">${p.partner || 'Partner'}</div>
+        <div class="fp-value">${p.value || '—'}</div>
+      </div>
+      <div class="fp-body">
+        <div class="fp-cell full"><div class="fp-cell-label">Market evidence</div><div class="fp-cell-val">${p.evidence || '—'}</div></div>
+        <div class="fp-cell full"><div class="fp-cell-label">Joint proposition</div><div class="fp-cell-val">${p.proposition || '—'}</div></div>
+      </div>
+      <div class="fp-action"><div class="fp-action-label">Action this week</div>${p.action || '—'}</div>
+    </div>`).join('') : '<div style="padding:20px 24px;color:var(--m);font-size:13px">No partnership opportunities identified.</div>';
+
+  const servicesHtml = services.length ? services.map(s => `
+    <div class="fsight-block">
+      <div class="fs-head">
+        <div class="fs-name">${s.service || 'Service'}</div>
+        <div class="fs-revenue">${s.revenue || '—'}</div>
+      </div>
+      <div class="fs-body">
+        <div class="fs-cell full"><div class="fs-cell-label">Market evidence</div><div class="fs-cell-val">${s.evidence || '—'}</div></div>
+        <div class="fs-cell"><div class="fs-cell-label">Target clients</div><div class="fs-cell-val">${s.clients || '—'}</div></div>
+        <div class="fs-cell"><div class="fs-cell-label">Entry offer</div><div class="fs-cell-val">${s.entry_offer || '—'}</div></div>
+      </div>
+      <div style="margin-top:8px"><span class="fs-bop">⊕ ${s.build_or_partner || 'TBD'}</span></div>
+    </div>`).join('') : '<div style="padding:20px 24px;color:var(--m);font-size:13px">No service gaps identified.</div>';
+
+  return `
+    <div class="fsight-section">
+      <div class="fsight-sec-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="fsight-sec-icon window">🎯</div>
+          <div>
+            <div class="fsight-sec-title">Buying Windows</div>
+            <div class="fsight-sec-sub">Accounts predicted to enter a buying decision in the next 90 days</div>
+          </div>
+        </div>
+        <div class="fsight-sec-count window">${windows.length} accounts</div>
+      </div>
+      <div class="fsight-blocks">${windowsHtml}</div>
+    </div>
+
+    <div class="fsight-section">
+      <div class="fsight-sec-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="fsight-sec-icon partner">🤝</div>
+          <div>
+            <div class="fsight-sec-title">Partnership Opportunities</div>
+            <div class="fsight-sec-sub">Technology and agency alliances that unlock new revenue for JAKALA Nordic</div>
+          </div>
+        </div>
+        <div class="fsight-sec-count partner">${partners.length} partners</div>
+      </div>
+      <div class="fsight-blocks">${partnersHtml}</div>
+    </div>
+
+    <div class="fsight-section">
+      <div class="fsight-sec-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="fsight-sec-icon service">⚡</div>
+          <div>
+            <div class="fsight-sec-title">New Service Opportunities</div>
+            <div class="fsight-sec-sub">Service gaps the Nordic market needs — that no competitor offers yet</div>
+          </div>
+        </div>
+        <div class="fsight-sec-count service">${services.length} opportunities</div>
+      </div>
+      <div class="fsight-blocks">${servicesHtml}</div>
+    </div>`;
 }
 
 async function loadCommandView() {
