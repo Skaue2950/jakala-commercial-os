@@ -5302,6 +5302,47 @@ Be specific. Reference actual account names. Max 300 words. Use bold section hea
 
 # ── Control Center HTML ────────────────────────────────────────────────────────
 
+@app.route('/api/cc/strategic-brief', methods=['POST'])
+def cc_strategic_brief():
+    if not CC_DB_OK:
+        return jsonify({'error': 'DB unavailable'}), 503
+    db = SessionLocal()
+    try:
+        country = request.args.get('country') or request.json.get('country', 'no')
+        signals = db.query(Signal).filter(Signal.is_active == True).order_by(Signal.date.desc()).limit(10).all()
+        accounts = db.query(Account).filter(Account.country == country).all()
+        pipeline_value = sum(a.pipeline_value or 0 for a in accounts)
+        high_icp = [a for a in accounts if (a.icp_score or 0) >= 8]
+        engaged = [a for a in accounts if a.deal_stage in ('engaged','proposed','negotiating')]
+        signals_text = '\n'.join([f'- [{s.severity.upper()}] {s.title}: {s.description}' for s in signals[:8]])
+        top_accounts = sorted(high_icp, key=lambda a: (a.icp_score or 0) + (a.deal_score or 0), reverse=True)[:5]
+        accounts_text = '\n'.join([f'- {a.name} (ICP {a.icp_score}, stage: {a.deal_stage}, value: €{int(a.pipeline_value or 0):,})' for a in top_accounts])
+        prompt = f"""You are the Chief Commercial Officer of JAKALA Nordic. Generate a concise strategic market intelligence brief for this week.
+
+Market: {country.upper()} | Pipeline: €{int(pipeline_value):,} | High-ICP accounts: {len(high_icp)} | Active engagements: {len(engaged)}
+
+MARKET SIGNALS:
+{signals_text}
+
+TOP PRIORITY ACCOUNTS:
+{accounts_text}
+
+Write a 3-paragraph executive brief:
+1. MARKET PULSE: What is happening in the market right now that demands attention?
+2. STRATEGIC OPPORTUNITY: Where is the clearest path to new revenue in the next 90 days?
+3. RECOMMENDED ACTION: What should the commercial leadership team do THIS WEEK to stay ahead?
+
+Be direct, concrete, and commercially sharp. No fluff. Reference specific signals and accounts where relevant."""
+        resp = client.messages.create(
+            model=MODEL, max_tokens=600,
+            messages=[{'role':'user','content':prompt}]
+        )
+        return jsonify({'brief': resp.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
 CC_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5612,6 +5653,43 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 .intel-stat-val{font-size:28px;font-weight:800;letter-spacing:-.04em}
 .intel-stat-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--m);margin-top:3px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px}
+/* ── MARKET COMMAND ── */
+.cmd-hero{background:linear-gradient(135deg,rgba(21,62,237,.07) 0%,rgba(21,62,237,.02) 100%);border:1px solid rgba(21,62,237,.15);border-radius:18px;padding:28px 32px;margin-bottom:28px}
+.cmd-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.cmd-title{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--w);margin-bottom:4px}
+.cmd-sub{font-size:13px;color:var(--m);line-height:1.5}
+.cmd-brief-btn{padding:10px 20px;background:var(--blue);border:none;border-radius:10px;color:#fff;font:700 13px var(--font);cursor:pointer;transition:all .2s;white-space:nowrap;align-self:flex-start}
+.cmd-brief-btn:hover{opacity:.88;transform:translateY(-1px);box-shadow:0 6px 20px rgba(21,62,237,.25)}
+.cmd-brief-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.cmd-pulse-row{display:flex;align-items:center;gap:0;margin-top:24px;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.cmd-pulse-stat{flex:1;padding:16px 20px;text-align:center}
+.cmd-pulse-val{font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--w)}
+.cmd-pulse-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--m);margin-top:4px}
+.cmd-pulse-sep{width:1px;height:48px;background:var(--border);flex-shrink:0}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.cmd-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cmd-section-title{font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--w)}
+.cmd-section-link{font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;transition:opacity .15s}
+.cmd-section-link:hover{opacity:.7}
+.cmd-signal-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--border);transition:box-shadow .2s}
+.cmd-signal-card:hover{box-shadow:0 4px 16px rgba(21,62,237,.07)}
+.cmd-signal-card.critical{border-left-color:var(--red)}
+.cmd-signal-card.warning{border-left-color:var(--amber)}
+.cmd-signal-card.info{border-left-color:var(--blue)}
+.cmd-signal-sev{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.cmd-signal-sev.critical{color:var(--red)}
+.cmd-signal-sev.warning{color:var(--amber)}
+.cmd-signal-sev.info{color:var(--blue)}
+.cmd-signal-title{font-size:13px;font-weight:700;color:var(--w);margin-bottom:4px;line-height:1.3}
+.cmd-signal-desc{font-size:11.5px;color:var(--m);line-height:1.5}
+.cmd-target-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:all .2s;cursor:pointer}
+.cmd-target-card:hover{border-color:rgba(21,62,237,.3);box-shadow:0 4px 16px rgba(21,62,237,.07)}
+.cmd-target-name{font-size:13px;font-weight:700;color:var(--w);margin-bottom:3px}
+.cmd-target-meta{font-size:11px;color:var(--m)}
+.cmd-target-score{text-align:right;flex-shrink:0}
+.cmd-target-val{font-size:15px;font-weight:800;color:var(--blue)}
+.cmd-target-icp{font-size:10px;color:var(--m);margin-top:2px}
+.cmd-brief-card{background:#fff;border:1px solid rgba(21,62,237,.2);border-radius:14px;padding:24px;box-shadow:0 4px 20px rgba(21,62,237,.06)}
 </style>
 </head>
 <body>
@@ -5621,7 +5699,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
   <div class="login-card">
     <div class="login-logo">JAKALA</div>
     <div class="login-title">Control Center</div>
-    <div class="login-sub">Commercial intelligence platform</div>
+    <div class="login-sub">Strategic market command · Nordic</div>
     <div class="login-field">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="you@jakala.com" autocomplete="username">
@@ -5642,7 +5720,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
   <div class="topbar">
     <span class="topbar-logo">JAKALA</span>
     <span class="topbar-sep"></span>
-    <span class="topbar-title">Control Center</span>
+    <span class="topbar-title">Market Command</span>
     <span class="topbar-sep"></span>
     <span class="topbar-country" id="tb-country"></span>
     <div class="topbar-right">
@@ -5661,37 +5739,41 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sb-section">
-        <div class="sb-label">Today</div>
-        <div class="nav-item" data-view="today" onclick="switchView('today')">
-          <span class="nav-icon">⊛</span> Today's Priorities <span id="sb-action-count" style="margin-left:auto;background:var(--red);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span>
+        <div class="sb-label">Intelligence</div>
+        <div class="nav-item active" data-view="command" onclick="switchView('command')">
+          <span class="nav-icon">◉</span> Market Command
         </div>
-        <div class="nav-item" data-view="actions" onclick="switchView('actions')">
-          <span class="nav-icon">☑</span> Actions
+        <div class="nav-item" data-view="trends" onclick="switchView('trends')">
+          <span class="nav-icon">📡</span> Signal Radar
         </div>
-        <div class="nav-item" data-view="meetings" onclick="switchView('meetings')">
-          <span class="nav-icon">◷</span> Meeting Log
+        <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
+          <span class="nav-icon">◈</span> Opportunity Map
+        </div>
+        <div class="nav-item" data-view="intelligence" onclick="switchView('intelligence')">
+          <span class="nav-icon">🔮</span> Strategic AI
         </div>
       </div>
       <div class="sb-divider"></div>
       <div class="sb-section">
         <div class="sb-label">Pipeline</div>
-        <div class="nav-item active" data-view="overview" onclick="switchView('overview')">
-          <span class="nav-icon">◎</span> Overview
-        </div>
-        <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
-          <span class="nav-icon">⊕</span> New Business
+        <div class="nav-item" data-view="overview" onclick="switchView('overview')">
+          <span class="nav-icon">◎</span> Pipeline
         </div>
         <div class="nav-item" data-view="existing" onclick="switchView('existing')">
           <span class="nav-icon">⊙</span> Existing Accounts
         </div>
-        <div class="nav-item" data-view="trends" onclick="switchView('trends')">
-          <span class="nav-icon">⚡</span> Trend Intelligence
-        </div>
         <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
-          <span class="nav-icon">◈</span> Predictions
+          <span class="nav-icon">⚡</span> Predictions
         </div>
-        <div class="nav-item" data-view="intelligence" onclick="switchView('intelligence')">
-          <span class="nav-icon">◉</span> Intelligence
+      </div>
+      <div class="sb-divider"></div>
+      <div class="sb-section">
+        <div class="sb-label">Operations</div>
+        <div class="nav-item" data-view="today" onclick="switchView('today')">
+          <span class="nav-icon">☑</span> Actions <span id="sb-action-count" style="margin-left:auto;background:var(--red);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;display:none"></span>
+        </div>
+        <div class="nav-item" data-view="meetings" onclick="switchView('meetings')">
+          <span class="nav-icon">◷</span> Meeting Log
         </div>
       </div>
       <div class="sb-divider"></div>
@@ -5709,6 +5791,73 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <!-- Content -->
     <main class="content" id="main-content">
 
+      <!-- ── MARKET COMMAND ── -->
+      <div class="view" id="view-command">
+        <div class="cmd-hero">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px">
+            <div>
+              <div class="cmd-label" id="cmd-week-label">MARKET INTELLIGENCE</div>
+              <div class="cmd-title">Market Command</div>
+              <div class="cmd-sub" id="cmd-sub">Loading market pulse…</div>
+            </div>
+            <button class="cmd-brief-btn" id="cmd-brief-btn" onclick="generateStrategicBrief()">◈ Generate strategic brief</button>
+          </div>
+          <div class="cmd-pulse-row" id="cmd-pulse-row">
+            <div class="cmd-pulse-stat">
+              <div class="cmd-pulse-val" id="cmd-signals-count">—</div>
+              <div class="cmd-pulse-label">Critical signals</div>
+            </div>
+            <div class="cmd-pulse-sep"></div>
+            <div class="cmd-pulse-stat">
+              <div class="cmd-pulse-val" id="cmd-targets-count">—</div>
+              <div class="cmd-pulse-label">High-ICP targets</div>
+            </div>
+            <div class="cmd-pulse-sep"></div>
+            <div class="cmd-pulse-stat">
+              <div class="cmd-pulse-val" id="cmd-pipeline-val">—</div>
+              <div class="cmd-pulse-label">Total pipeline</div>
+            </div>
+            <div class="cmd-pulse-sep"></div>
+            <div class="cmd-pulse-stat">
+              <div class="cmd-pulse-val" id="cmd-engaged-count">—</div>
+              <div class="cmd-pulse-label">Active engagements</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategic Brief -->
+        <div id="cmd-brief-section" style="display:none;margin-bottom:24px">
+          <div class="cmd-brief-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="cmd-section-title" style="color:var(--blue)">◈ Strategic Brief — AI Generated</div>
+              <div id="cmd-brief-date" style="font-size:11px;color:var(--m)"></div>
+            </div>
+            <div id="cmd-brief-loading" class="loading-pulse" style="display:none"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Generating market intelligence…</span></div>
+            <div id="cmd-brief-text" style="font-size:13.5px;line-height:1.8;color:var(--t);white-space:pre-wrap"></div>
+          </div>
+        </div>
+
+        <div class="cmd-grid">
+          <!-- Critical Signals -->
+          <div>
+            <div class="cmd-section-header">
+              <div class="cmd-section-title">Critical Signals</div>
+              <span class="cmd-section-link" onclick="switchView('trends')">View all →</span>
+            </div>
+            <div id="cmd-signals-list"></div>
+          </div>
+
+          <!-- High-Value Targets -->
+          <div>
+            <div class="cmd-section-header">
+              <div class="cmd-section-title">High-Value Targets</div>
+              <span class="cmd-section-link" onclick="switchView('new-biz')">View all →</span>
+            </div>
+            <div id="cmd-targets-list"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── OVERVIEW ── -->
       <div class="view active" id="view-overview">
         <div id="overview-kpis" class="kpi-row"></div>
@@ -5719,9 +5868,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         <div class="account-grid" id="account-grid"></div>
       </div>
 
-      <!-- ── NEW BIZ ── -->
+      <!-- ── OPPORTUNITY MAP ── -->
       <div class="view" id="view-new-biz">
-        <div class="sec-header"><div class="sec-title">New Business Pipeline</div></div>
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">Opportunity Map</div>
+            <div style="font-size:12px;color:var(--m);margin-top:3px">Unengaged accounts ranked by ICP score and commercial timing</div>
+          </div>
+        </div>
         <div class="industry-filter" id="nb-industry-filter"></div>
         <div class="account-grid" id="nb-account-grid"></div>
       </div>
@@ -5736,15 +5890,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 
       <!-- ── TRENDS ── -->
       <div class="view" id="view-trends">
-        <div class="sec-header"><div class="sec-title">Trend Intelligence</div><span style="font-size:12px;color:var(--m)">Regulation · Politics · Market · Technology</span></div>
+        <div class="sec-header" style="margin-bottom:20px">
+          <div>
+            <div class="sec-title">Signal Radar</div>
+            <div style="font-size:12px;color:var(--m);margin-top:3px">Market intelligence feed — regulation, leadership transitions, tech shifts, and competitive moves</div>
+          </div>
+        </div>
         <div class="signal-list" id="signal-list"></div>
       </div>
 
       <!-- ── PREDICTIONS ── -->
       <div class="view" id="view-predictions">
         <div class="sec-header">
-          <div class="sec-title">AI Predictions</div>
-          <span style="font-size:12px;color:var(--m)">Based on vertical trends, market signals & account dynamics</span>
+          <div>
+            <div class="sec-title">Predictive Intelligence</div>
+            <div style="font-size:12px;color:var(--m);margin-top:3px">AI-scored risk and opportunity signals per account, based on market dynamics</div>
+          </div>
         </div>
         <div class="pred-grid" id="pred-grid"></div>
       </div>
@@ -5798,12 +5959,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         <div id="meetings-list"><div class="loading-pulse"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span>Loading…</span></div></div>
       </div>
 
-      <!-- ── INTELLIGENCE ── -->
+      <!-- ── STRATEGIC AI ── -->
       <div class="view" id="view-intelligence">
         <div class="sec-header">
-          <div class="sec-title">Intelligence</div>
+          <div>
+            <div class="sec-title">Strategic AI</div>
+            <div style="font-size:12px;color:var(--m);margin-top:3px">Win pattern analysis, churn risk detection, and account-level diagnosis</div>
+          </div>
           <div style="display:flex;gap:10px">
-            <button class="add-btn" style="background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.3);color:#C4B5FD" onclick="loadWinPatterns()">◈ Analyse win patterns</button>
+            <button class="add-btn" style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple)" onclick="loadWinPatterns()">◈ Analyse win patterns</button>
           </div>
         </div>
         <div id="intel-hero" class="intel-hero" style="display:none">
@@ -5824,7 +5988,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
       <!-- ── GLOBAL ── -->
       <div class="view" id="view-global">
         <div id="global-kpis" class="kpi-row"></div>
-        <div class="sec-header" style="margin-bottom:16px"><div class="sec-title">Markets Overview</div></div>
+        <div class="sec-header" style="margin-bottom:16px">
+          <div>
+            <div class="sec-title">Global Market Overview</div>
+            <div style="font-size:12px;color:var(--m);margin-top:3px">Pipeline health, service mix, and strategic signals across all Nordic markets</div>
+          </div>
+        </div>
         <div class="country-cards" id="country-cards"></div>
         <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-top:4px">
           <div>
@@ -6081,9 +6250,8 @@ async function initApp(user) {
     // Country head view
     const meta = {'no':'🇳🇴 Norway','dk':'🇩🇰 Denmark','se':'🇸🇪 Sweden','uk':'🇬🇧 UK','fr':'🇫🇷 France'};
     document.getElementById('tb-country').textContent = meta[currentUser.country] || currentUser.country.toUpperCase();
-    switchView('today');
+    switchView('command');
     loadCountryData(currentUser.country);
-    loadTodayData();
   }
 }
 
@@ -6101,6 +6269,7 @@ async function loadCountryData(country) {
   const r = await fetch('/api/cc/country-data?country=' + country);
   countryData = await r.json();
   renderCountryDashboard();
+  if (activeView === 'command') loadCommandView();
 }
 
 async function loadGlobalData() {
@@ -6862,9 +7031,94 @@ function switchView(view) {
   const target = document.getElementById('view-' + view);
   if (target) target.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  if (view === 'command') loadCommandView();
   if (view === 'actions') loadActions();
+  if (view === 'today') loadTodayData();
   if (view === 'meetings') renderMeetingsList('meetings-list', null);
   if (view === 'intelligence') loadIntelligence();
+}
+
+async function loadCommandView() {
+  if (!countryData) return;
+  const accounts = countryData.accounts || [];
+  const signals = countryData.signals || [];
+  const critical = signals.filter(s => s.severity === 'critical');
+  const highIcp = accounts.filter(a => (a.icp_score || 0) >= 8 && a.account_type !== 'existing');
+  const engaged = accounts.filter(a => ['engaged','proposed','negotiating'].includes(a.deal_stage));
+  const pipeline = accounts.reduce((s, a) => s + (a.pipeline_value || 0), 0);
+
+  // Pulse stats
+  document.getElementById('cmd-signals-count').textContent = critical.length || signals.length;
+  document.getElementById('cmd-targets-count').textContent = highIcp.length;
+  document.getElementById('cmd-pipeline-val').textContent = '€' + (pipeline >= 1000000 ? (pipeline/1000000).toFixed(1)+'M' : Math.round(pipeline/1000)+'K');
+  document.getElementById('cmd-engaged-count').textContent = engaged.length;
+
+  // Sub text
+  const now = new Date();
+  document.getElementById('cmd-week-label').textContent = 'MARKET INTELLIGENCE · W' + getWeekNumber(now) + ' ' + now.getFullYear();
+  document.getElementById('cmd-sub').textContent = `${critical.length} critical signals · ${highIcp.length} high-ICP targets unengaged · pipeline trending`;
+
+  // Critical signals (top 4)
+  const sigList = document.getElementById('cmd-signals-list');
+  const topSigs = [...signals].sort((a,b) => {
+    const sev = {critical:0,warning:1,info:2};
+    return (sev[a.severity]||2) - (sev[b.severity]||2);
+  }).slice(0, 4);
+  sigList.innerHTML = topSigs.length ? topSigs.map(s => `
+    <div class="cmd-signal-card ${s.severity}">
+      <div class="cmd-signal-sev ${s.severity}">${s.signal_type || s.severity}</div>
+      <div class="cmd-signal-title">${s.title}</div>
+      <div class="cmd-signal-desc">${(s.description||'').substring(0,120)}${(s.description||'').length>120?'…':''}</div>
+    </div>`).join('') : '<div style="color:var(--m);font-size:13px;padding:16px 0">No active signals. Add signals via the admin API.</div>';
+
+  // High-value targets (top 5 by ICP+deal score)
+  const tgtList = document.getElementById('cmd-targets-list');
+  const topTargets = [...highIcp].sort((a,b) => ((b.icp_score||0)+(b.deal_score||0)) - ((a.icp_score||0)+(a.deal_score||0))).slice(0,5);
+  tgtList.innerHTML = topTargets.length ? topTargets.map(a => `
+    <div class="cmd-target-card" onclick="openDetail(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+      <div>
+        <div class="cmd-target-name">${a.name}</div>
+        <div class="cmd-target-meta">${a.deal_stage||'identified'} · ${a.named_buyer || 'Buyer TBD'}</div>
+      </div>
+      <div class="cmd-target-score">
+        <div class="cmd-target-val">€${a.pipeline_value >= 1000000 ? (a.pipeline_value/1000000).toFixed(1)+'M' : Math.round((a.pipeline_value||0)/1000)+'K'}</div>
+        <div class="cmd-target-icp">ICP ${a.icp_score || '—'}</div>
+      </div>
+    </div>`).join('') : '<div style="color:var(--m);font-size:13px;padding:16px 0">No high-ICP unengaged accounts found.</div>';
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+}
+
+async function generateStrategicBrief() {
+  const btn = document.getElementById('cmd-brief-btn');
+  const section = document.getElementById('cmd-brief-section');
+  const loading = document.getElementById('cmd-brief-loading');
+  const textEl = document.getElementById('cmd-brief-text');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  section.style.display = 'block';
+  loading.style.display = 'flex';
+  textEl.textContent = '';
+  document.getElementById('cmd-brief-date').textContent = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+  try {
+    const country = currentUser.country || 'no';
+    const r = await fetch('/api/cc/strategic-brief?country=' + country, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({country})
+    });
+    const d = await r.json();
+    loading.style.display = 'none';
+    textEl.textContent = d.brief || d.error || 'Could not generate brief.';
+  } catch(e) {
+    loading.style.display = 'none';
+    textEl.textContent = 'Error generating brief.';
+  }
+  btn.disabled = false;
+  btn.textContent = '◈ Regenerate brief';
 }
 
 // ══ TOAST ════════════════════════════════════════════════════════════════════
