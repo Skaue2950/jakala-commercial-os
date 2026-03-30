@@ -187,8 +187,8 @@ LOGIN_HTML = """<!DOCTYPE html>
 
 @app.before_request
 def require_login():
-    # CC routes have their own auth — exempt from GTM password gate
-    if request.path.startswith("/cc") or request.path.startswith("/api/cc"):
+    # Landing page + CC routes are always accessible
+    if request.path == "/" or request.path.startswith("/cc") or request.path.startswith("/api/cc"):
         return
     if request.endpoint in ("login", "static"):
         return
@@ -202,7 +202,7 @@ def login():
     if request.method == "POST":
         if request.form.get("password") == APP_PASSWORD:
             session["authenticated"] = True
-            return redirect(url_for("index"))
+            return redirect(url_for("gtm_app"))
         error = True
     return render_template_string(LOGIN_HTML, error=error)
 
@@ -210,7 +210,7 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect(url_for("landing"))
 
 
 # ── API routes ───────────────────────────────────────────────────────────────
@@ -4104,12 +4104,231 @@ function regenOutreach() {
 </html>"""
 
 
-@app.route("/")
-def index():
+@app.route("/app")
+def gtm_app():
     resp = app.make_response(render_template_string(HTML))
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     return resp
+
+
+LANDING_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>JAKALA Nordic OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter',-apple-system,sans-serif;
+  background:#060612;
+  color:#fff;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:40px 24px;
+}
+/* Subtle grid background */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(21,62,237,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(21,62,237,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+}
+/* Blue radial glow top */
+body::after{
+  content:'';
+  position:fixed;top:-200px;left:50%;transform:translateX(-50%);
+  width:800px;height:500px;
+  background:radial-gradient(ellipse,rgba(21,62,237,.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.wrapper{
+  position:relative;z-index:1;
+  width:100%;max-width:680px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;
+}
+/* Logo */
+.logo{
+  font-size:11px;font-weight:800;letter-spacing:.22em;
+  color:rgba(21,62,237,.9);text-transform:uppercase;
+  margin-bottom:40px;
+}
+/* Headline */
+h1{
+  font-size:clamp(32px,5vw,52px);
+  font-weight:800;
+  letter-spacing:-.04em;
+  line-height:1.05;
+  text-align:center;
+  margin-bottom:14px;
+}
+h1 span{color:#153EED}
+.sub{
+  font-size:15px;color:rgba(255,255,255,.45);
+  text-align:center;margin-bottom:56px;
+  line-height:1.6;
+}
+/* Platform cards */
+.cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  width:100%;
+  margin-bottom:64px;
+}
+.card{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  padding:32px 28px;
+  cursor:pointer;
+  text-decoration:none;
+  color:inherit;
+  transition:all .25s cubic-bezier(.16,1,.3,1);
+  display:flex;flex-direction:column;gap:0;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;inset:0;
+  background:var(--card-glow,transparent);
+  opacity:0;
+  transition:opacity .25s;
+  border-radius:18px;
+}
+.card:hover{
+  border-color:var(--card-border,rgba(255,255,255,.18));
+  transform:translateY(-3px);
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.card:hover::before{opacity:1}
+.card-gtm{
+  --card-glow:linear-gradient(135deg,rgba(21,62,237,.08) 0%,transparent 60%);
+  --card-border:rgba(21,62,237,.4);
+}
+.card-cc{
+  --card-glow:linear-gradient(135deg,rgba(0,212,160,.06) 0%,transparent 60%);
+  --card-border:rgba(0,212,160,.3);
+}
+.card-icon{
+  font-size:28px;margin-bottom:18px;
+  width:52px;height:52px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+}
+.card-tag{
+  font-size:9.5px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--tag-color,rgba(255,255,255,.3));
+  margin-bottom:8px;
+}
+.card-gtm .card-tag{color:rgba(21,62,237,.9);--tag-color:rgba(21,62,237,.9)}
+.card-cc  .card-tag{color:rgba(0,212,160,.9);--tag-color:rgba(0,212,160,.9)}
+.card-title{
+  font-size:20px;font-weight:700;letter-spacing:-.02em;
+  margin-bottom:10px;
+}
+.card-desc{
+  font-size:13px;color:rgba(255,255,255,.45);
+  line-height:1.65;flex:1;
+}
+.card-arrow{
+  margin-top:24px;
+  font-size:13px;font-weight:600;
+  color:var(--arrow-color,rgba(255,255,255,.25));
+  display:flex;align-items:center;gap:6px;
+  transition:gap .2s,color .2s;
+}
+.card-gtm .card-arrow{color:rgba(21,62,237,.7)}
+.card-cc  .card-arrow{color:rgba(0,212,160,.7)}
+.card:hover .card-arrow{gap:10px}
+/* Quote */
+.quote-block{
+  text-align:center;
+  border-top:1px solid rgba(255,255,255,.06);
+  padding-top:40px;
+  width:100%;
+}
+.quote-text{
+  font-size:17px;
+  font-weight:500;
+  font-style:italic;
+  color:rgba(255,255,255,.55);
+  line-height:1.6;
+  letter-spacing:-.01em;
+  margin-bottom:14px;
+}
+.quote-text em{
+  color:rgba(255,255,255,.85);
+  font-style:normal;
+  font-weight:600;
+}
+.quote-attr{
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.2);
+}
+@media(max-width:520px){
+  .cards{grid-template-columns:1fr}
+  h1{font-size:28px}
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="logo">JAKALA Nordic</div>
+
+  <h1>Commercial<br><span>Operating System</span></h1>
+  <p class="sub">Two tools. One commercial engine.</p>
+
+  <div class="cards">
+
+    <a href="/login" class="card card-gtm">
+      <div class="card-icon">◎</div>
+      <div class="card-tag">AI Assistant</div>
+      <div class="card-title">GTM Assistant</div>
+      <div class="card-desc">Strategy, outreach, account analysis and pipeline intelligence — powered by Claude AI.</div>
+      <div class="card-arrow">Open GTM Assistant →</div>
+    </a>
+
+    <a href="/cc" class="card card-cc">
+      <div class="card-icon">◉</div>
+      <div class="card-tag">Live Platform</div>
+      <div class="card-title">Control Center</div>
+      <div class="card-desc">Live pipeline, actions, meetings, outreach generator and AI intelligence in one dashboard.</div>
+      <div class="card-arrow">Open Control Center →</div>
+    </a>
+
+  </div>
+
+  <div class="quote-block">
+    <div class="quote-text">"<em>Turn liquid gold into solid bricks</em>"</div>
+    <div class="quote-attr">— Michael Drejer</div>
+  </div>
+
+</div>
+</body>
+</html>"""
+
+
+@app.route("/")
+def landing():
+    return render_template_string(LANDING_HTML)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -5426,7 +5645,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
     <span class="topbar-sep"></span>
     <span class="topbar-country" id="tb-country"></span>
     <div class="topbar-right">
-      <a class="topbar-link" href="/" target="_blank">GTM Assistant ↗</a>
+      <a class="topbar-link" href="/app" target="_blank">GTM Assistant ↗</a>
       <div class="topbar-user">
         <div class="topbar-avatar" id="tb-avatar"></div>
         <span id="tb-name"></span>
