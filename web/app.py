@@ -2879,8 +2879,8 @@ async function loadDailyPlan(force) {
         + '<div style="display:flex;align-items:center;justify-content:space-between">'
         +   '<div style="font-size:11px;font-weight:700;color:'+col+'">'+(item.pipeline_value||'')+' · '+(item.gtm_strategy||'')+'</div>'
         +   '<div style="display:flex;gap:6px">'
-        +     (acc ? '<button onclick="selectAccount(\''+acc.slug+'\',\''+acc.name.replace(/'/g,"\\'")+'\');showTab(\'chat\')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Åbn →</button>' : '')
-        +     '<button onclick="insertCustomSkill(\'Write a personalised LinkedIn outreach message for '+accName+'. Buyer: '+buyerEsc+'. GTM strategy: '+gtmEsc+'. Opening angle: '+whyEsc+'. Language: Norwegian.\');showTab(\'chat\')" style="background:#153EED;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Skriv besked →</button>'
+        +     (acc ? '<button data-slug="'+acc.slug+'" data-name="'+acc.name+'" onclick="selectAccount(this.dataset.slug,this.dataset.name);showTab(\\'chat\\')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Åbn →</button>' : '')
+        +     '<button onclick="insertCustomSkill(\\'Write a personalised LinkedIn outreach message for '+accName+'. Buyer: '+buyerEsc+'. GTM strategy: '+gtmEsc+'. Opening angle: '+whyEsc+'. Language: Norwegian.\\');showTab(\\'chat\\')" style="background:#153EED;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Skriv besked →</button>'
         +   '</div>'
         + '</div>'
         + '</div>';
