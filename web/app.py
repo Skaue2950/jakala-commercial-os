@@ -781,6 +781,70 @@ def api_accounts():
     return jsonify(result)
 
 
+@app.route("/api/accounts", methods=["POST"])
+def create_account():
+    if not session.get("logged_in") and not session.get("cc_user_id"):
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.json or {}
+    db = SessionLocal()
+    try:
+        # Resolve industry
+        industry_slug = data.get("industry", "retail")
+        ind = db.query(Industry).filter(Industry.slug == industry_slug).first()
+
+        # Generate slug from name
+        import re
+        slug = re.sub(r'[^a-z0-9]+', '-', data.get("name", "").lower()).strip('-')[:80]
+        # Ensure unique slug
+        existing = db.query(Account).filter(Account.slug == slug).first()
+        if existing:
+            slug = slug + "-2"
+
+        acc = Account(
+            name=data.get("name", "").strip(),
+            slug=slug,
+            country=data.get("country", "no"),
+            industry_id=ind.id if ind else None,
+            account_type=data.get("account_type", "prospect"),
+            icp_score=float(data.get("icp_score", 7)),
+            deal_score=float(data.get("deal_score", 7)),
+            pipeline_value=float(data.get("pipeline_value", 100000)),
+            win_probability=float(data.get("win_probability", 0.25)),
+            named_buyer=data.get("named_buyer", "").strip() or None,
+            buyer_role=data.get("buyer_role", "").strip() or None,
+            revenue=data.get("revenue", "").strip() or None,
+            tech_stack=data.get("tech_stack", "").strip() or None,
+            notes=data.get("notes", "").strip() or None,
+            deal_stage="identified",
+        )
+        db.add(acc)
+        db.flush()
+
+        # Notification
+        notif = Notification(
+            country=acc.country,
+            account_id=acc.id,
+            title=f"Account created: {acc.name}",
+            body=f"Manually added. ICP {acc.icp_score} · {acc.buyer_role or 'buyer TBD'}",
+            type="lead",
+            priority="high" if acc.icp_score >= 8 else "medium",
+            link=f"/app?tab=accounts&account={slug}"
+        )
+        db.add(notif)
+        db.commit()
+
+        # Trigger enrichment in background
+        import threading
+        threading.Thread(target=job_enrich_accounts, daemon=True).start()
+
+        return jsonify({"ok": True, "slug": slug, "id": acc.id})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+
 @app.route("/api/account/<slug>")
 def api_account(slug):
     if CC_DB_OK:
@@ -3523,7 +3587,12 @@ body::after {
   <!-- ── ACCOUNTS ── -->
   <div class="tab-pane" id="tab-accounts">
     <div id="accounts-pane">
-      <h2><i data-lucide="building" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i> Accounts</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <h2 style="margin:0;"><i data-lucide="building" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i> Accounts</h2>
+        <button onclick="openNewAccountModal()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> New Account
+        </button>
+      </div>
       <p class="desc">All ICP-scored accounts in the Nordic GTM OS. Click any account to load it in the assistant.</p>
       <div class="filter-row">
         <button class="filter-btn active" onclick="filterGrid(this,'all')">All</button>
@@ -5185,7 +5254,187 @@ async function markAllRead() {
 // Poll for new notifications every 60 seconds
 setInterval(loadNotifications, 60000);
 document.addEventListener('DOMContentLoaded', function() { setTimeout(loadNotifications, 1000); });
+
+// ── New Account Modal ──────────────────────────────────────────────
+function openNewAccountModal() {
+  document.getElementById('new-account-overlay').style.display = 'flex';
+  document.getElementById('new-account-form').reset();
+  document.getElementById('new-account-btn-text').textContent = 'Create Account';
+  document.getElementById('new-account-submit').disabled = false;
+  lucide.createIcons();
+}
+
+function closeNewAccountModal() {
+  document.getElementById('new-account-overlay').style.display = 'none';
+}
+
+async function submitNewAccount(e) {
+  e.preventDefault();
+  const btn = document.getElementById('new-account-submit');
+  const btnText = document.getElementById('new-account-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Creating\u2026';
+
+  const form = e.target;
+  const data = {
+    name:            form.name.value.trim(),
+    country:         form.country.value,
+    industry:        form.industry.value,
+    account_type:    form.account_type.value,
+    named_buyer:     form.named_buyer.value.trim(),
+    buyer_role:      form.buyer_role.value.trim(),
+    revenue:         form.revenue.value.trim(),
+    pipeline_value:  parseFloat(form.pipeline_value.value) || 100000,
+    icp_score:       parseFloat(form.icp_score.value) || 7,
+    deal_score:      parseFloat(form.deal_score.value) || 7,
+    win_probability: parseFloat(form.win_probability.value) || 0.25,
+    tech_stack:      form.tech_stack.value.trim(),
+    notes:           form.notes.value.trim()
+  };
+
+  try {
+    const r = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      closeNewAccountModal();
+      if (typeof loadAccounts === 'function') loadAccounts();
+      loadNotifications();
+      btnText.textContent = 'Created!';
+    } else {
+      btnText.textContent = 'Error \u2014 try again';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    btnText.textContent = 'Error \u2014 try again';
+    btn.disabled = false;
+  }
+}
 </script>
+
+<!-- \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 NEW ACCOUNT MODAL \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
+<div id="new-account-overlay" onclick="if(event.target===this)closeNewAccountModal()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.4);backdrop-filter:blur(6px);z-index:9200;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(21,62,237,0.12);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);">New Account</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Add a prospect or existing client</div>
+      </div>
+      <button onclick="closeNewAccountModal()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+        <i data-lucide="x" style="width:18px;height:18px;"></i>
+      </button>
+    </div>
+    <form id="new-account-form" onsubmit="submitNewAccount(event)" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Row 1: Name + Country -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Company Name *</label>
+          <input name="name" required placeholder="e.g. Elkj\u00f8p Nordic" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Country *</label>
+          <select name="country" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;">
+            <option value="no">Norway</option>
+            <option value="dk">Denmark</option>
+            <option value="se">Sweden</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: Industry + Type -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Industry</label>
+          <select name="industry" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;">
+            <option value="retail">Retail &amp; E-commerce</option>
+            <option value="fashion">Fashion &amp; Apparel</option>
+            <option value="home-diy">Home &amp; DIY</option>
+            <option value="food">Food &amp; Grocery</option>
+            <option value="finance">Finance &amp; Banking</option>
+            <option value="sports">Sports &amp; Outdoor</option>
+            <option value="tech-saas">Technology &amp; SaaS</option>
+            <option value="education">Education</option>
+            <option value="energy">Energy &amp; Utilities</option>
+            <option value="health">Healthcare &amp; Pharma</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Type</label>
+          <select name="account_type" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;">
+            <option value="prospect">Prospect</option>
+            <option value="existing">Existing Client</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 3: Named Buyer + Role -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Named Buyer</label>
+          <input name="named_buyer" placeholder="e.g. Morten Syversen" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Buyer Role</label>
+          <input name="buyer_role" placeholder="e.g. Chief Digital Officer" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+      </div>
+
+      <!-- Row 4: Revenue + Pipeline Value -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Company Revenue</label>
+          <input name="revenue" placeholder="e.g. \u20ac500M" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Pipeline Value (\u20ac)</label>
+          <input name="pipeline_value" type="number" placeholder="150000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+      </div>
+
+      <!-- Row 5: ICP Score + Deal Score + Win % -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">ICP Score (1\u201310)</label>
+          <input name="icp_score" type="number" min="1" max="10" placeholder="7" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Deal Score (1\u201310)</label>
+          <input name="deal_score" type="number" min="1" max="10" placeholder="7" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Win Probability</label>
+          <input name="win_probability" type="number" min="0.05" max="1" step="0.05" placeholder="0.25" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+        </div>
+      </div>
+
+      <!-- Tech Stack -->
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Tech Stack</label>
+        <input name="tech_stack" placeholder="e.g. SAP Commerce \u00b7 Akeneo PIM \u00b7 Azure" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'">
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Notes / Signal</label>
+        <textarea name="notes" rows="3" placeholder="Why is this account interesting right now?" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--bg);outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--blue)\'" onblur="this.style.borderColor=\'var(--border)\'"></textarea>
+      </div>
+
+      <!-- Submit -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;">
+        <button type="button" onclick="closeNewAccountModal()" style="padding:9px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;">Cancel</button>
+        <button type="submit" id="new-account-submit" style="display:flex;align-items:center;gap:6px;padding:9px 20px;background:var(--blue);border:none;border-radius:8px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i>
+          <span id="new-account-btn-text">Create Account</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>lucide.createIcons();</script>
 </body>
 </html>"""
