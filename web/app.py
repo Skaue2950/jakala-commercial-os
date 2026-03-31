@@ -2841,20 +2841,40 @@ body::after {
 .radar-title { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
 .radar-sub { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 22px; }
 .radar-layout { display: flex; gap: 22px; align-items: flex-start; }
-.radar-svg-container {
-  flex: 1; max-width: 540px;
-  background: #07101E;
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 18px; overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+
+/* Radar canvas — matches platform light theme */
+.radar-canvas {
+  position: relative;
+  flex: 1; max-width: 500px;
   aspect-ratio: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
 }
-#radar-svg { width: 100%; height: 100%; display: block; }
-@keyframes radarSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-#radar-sweep {
-  animation: radarSweep 5s linear infinite;
-  transform-origin: 250px 250px;
-  transform-box: fill-box;
+
+/* Sweep: conic-gradient div — rotates perfectly on divs, no SVG quirks */
+.radar-sweep-layer {
+  position: absolute;
+  width: 88%; height: 88%;
+  top: 6%; left: 6%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(21,62,237,0.13) 0deg,
+    rgba(21,62,237,0.06) 35deg,
+    transparent 65deg
+  );
+  animation: radarSpin 5s linear infinite;
+  transform-origin: center center;
+  pointer-events: none;
+}
+@keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* SVG overlay */
+#radar-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; display: block;
 }
 .radar-sidebar { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
 .radar-panel {
@@ -3619,66 +3639,44 @@ body::after {
       <div class="radar-title">Pipeline Radar</div>
       <div class="radar-sub">Each blip = one account &nbsp;·&nbsp; Distance from centre = deal score &nbsp;·&nbsp; Quadrant = GTM strategy &nbsp;·&nbsp; Colour = urgency &nbsp;·&nbsp; Click any blip to open account</div>
       <div class="radar-layout">
-        <div class="radar-svg-container">
+        <div class="radar-canvas">
+          <!-- Sweep: pure CSS conic-gradient, guaranteed centered -->
+          <div class="radar-sweep-layer"></div>
+          <!-- SVG overlay: rings, labels, blips, tooltip -->
           <svg id="radar-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="sweepGrad" cx="50%" cy="50%" r="50%">
-                <stop offset="0%"   stop-color="#153EED" stop-opacity="0.5"/>
-                <stop offset="100%" stop-color="#153EED" stop-opacity="0"/>
-              </radialGradient>
-              <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-                <stop offset="0%"   stop-color="#0F1E3A" stop-opacity="1"/>
-                <stop offset="100%" stop-color="#07101E" stop-opacity="1"/>
-              </radialGradient>
-            </defs>
-
-            <!-- Background circle -->
-            <circle cx="250" cy="250" r="220" fill="url(#bgGrad)"/>
-
-            <!-- Quadrant fills (subtle) -->
-            <path d="M250,250 L250,30 A220,220 0 0,1 470,250 Z" fill="rgba(107,159,255,0.03)"/>
-            <path d="M250,250 L470,250 A220,220 0 0,1 250,470 Z" fill="rgba(167,139,250,0.03)"/>
-            <path d="M250,250 L250,470 A220,220 0 0,1 30,250 Z"  fill="rgba(251,191,36,0.03)"/>
-            <path d="M250,250 L30,250 A220,220 0 0,1 250,30 Z"   fill="rgba(0,212,160,0.03)"/>
-
             <!-- Axis lines -->
-            <line x1="250" y1="30"  x2="250" y2="470" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-            <line x1="30"  y1="250" x2="470" y2="250" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <line x1="250" y1="28"  x2="250" y2="472" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
+            <line x1="28"  y1="250" x2="472" y2="250" stroke="rgba(0,0,0,0.07)" stroke-width="1"/>
 
-            <!-- Rings -->
-            <circle cx="250" cy="250" r="73"  fill="none" stroke="rgba(21,62,237,0.3)"  stroke-width="1" stroke-dasharray="3,4"/>
-            <circle cx="250" cy="250" r="146" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-            <circle cx="250" cy="250" r="220" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+            <!-- Rings: inner (HOT), mid (WARM), outer (COLD) -->
+            <circle cx="250" cy="250" r="75"  fill="rgba(21,62,237,0.04)" stroke="rgba(21,62,237,0.25)" stroke-width="1" stroke-dasharray="4,5"/>
+            <circle cx="250" cy="250" r="148" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
+            <circle cx="250" cy="250" r="220" fill="none" stroke="rgba(0,0,0,0.09)" stroke-width="1"/>
 
-            <!-- Ring labels (on right axis) -->
-            <text x="256" y="180" fill="rgba(0,212,160,0.55)"   font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">HOT</text>
-            <text x="256" y="107" fill="rgba(107,159,255,0.45)" font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">WARM</text>
-            <text x="256" y="38"  fill="rgba(255,255,255,0.25)" font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">COLD</text>
+            <!-- Ring labels -->
+            <text x="256" y="178" fill="#059669" font-size="7" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1.2">HOT</text>
+            <text x="256" y="105" fill="#4B6EF7" font-size="7" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1.2">WARM</text>
+            <text x="256" y="35"  fill="#94A3B8" font-size="7" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1.2">COLD</text>
 
-            <!-- Quadrant corner labels -->
-            <text x="265" y="52"  fill="rgba(107,159,255,0.65)" font-size="9" font-family="Inter,sans-serif" font-weight="700">Data Revenue</text>
-            <text x="70"  y="52"  fill="rgba(0,212,160,0.65)"   font-size="9" font-family="Inter,sans-serif" font-weight="700">AI Readiness</text>
-            <text x="258" y="462" fill="rgba(167,139,250,0.65)" font-size="9" font-family="Inter,sans-serif" font-weight="700">Commerce</text>
-            <text x="80"  y="462" fill="rgba(251,191,36,0.65)"  font-size="9" font-family="Inter,sans-serif" font-weight="700">Experience</text>
+            <!-- Quadrant labels -->
+            <text x="263" y="47" fill="#4B6EF7" font-size="9" font-family="Inter,sans-serif" font-weight="700" opacity="0.75">Data Revenue</text>
+            <text x="84"  y="47" fill="#059669" font-size="9" font-family="Inter,sans-serif" font-weight="700" opacity="0.75">AI Readiness</text>
+            <text x="263" y="465" fill="#7C3AED" font-size="9" font-family="Inter,sans-serif" font-weight="700" opacity="0.75">Commerce</text>
+            <text x="96"  y="465" fill="#D97706" font-size="9" font-family="Inter,sans-serif" font-weight="700" opacity="0.75">Experience</text>
 
-            <!-- Center dot -->
-            <circle cx="250" cy="250" r="3" fill="rgba(21,62,237,0.6)"/>
+            <!-- Center crosshair -->
+            <circle cx="250" cy="250" r="5" fill="none" stroke="rgba(21,62,237,0.35)" stroke-width="1.5"/>
+            <circle cx="250" cy="250" r="2" fill="rgba(21,62,237,0.7)"/>
 
-            <!-- Rotating sweep — rotates around center 250,250 -->
-            <g id="radar-sweep" style="transform-origin:250px 250px;transform-box:fill-box">
-              <path d="M250,250 L250,30 A220,220 0 0,1 405,95 Z" fill="url(#sweepGrad)" opacity="0.7"/>
-              <line x1="250" y1="250" x2="250" y2="30" stroke="rgba(21,62,237,0.6)" stroke-width="1.5"/>
-            </g>
-
-            <!-- Blips (JS) -->
+            <!-- Blips (populated by JS) -->
             <g id="radar-blips"></g>
 
-            <!-- Tooltip (JS) -->
+            <!-- Tooltip (populated by JS) -->
             <g id="radar-tt" display="none">
-              <rect id="tt-bg" rx="6" fill="rgba(7,16,30,0.97)" stroke="rgba(21,62,237,0.6)" stroke-width="1.5"/>
+              <rect id="tt-bg" rx="6" fill="rgba(15,23,42,0.93)" stroke="rgba(21,62,237,0.5)" stroke-width="1.5"/>
               <text id="tt-name" fill="white"   font-size="11" font-family="Inter,sans-serif" font-weight="700"/>
-              <text id="tt-deal" fill="#6B9FFF" font-size="9.5" font-family="Inter,sans-serif"/>
-              <text id="tt-val"  fill="#00D4A0" font-size="9.5" font-family="Inter,sans-serif" font-weight="700"/>
+              <text id="tt-deal" fill="#93C5FD" font-size="9.5" font-family="Inter,sans-serif"/>
+              <text id="tt-val"  fill="#34D399" font-size="9.5" font-family="Inter,sans-serif" font-weight="700"/>
             </g>
           </svg>
         </div>
@@ -4734,7 +4732,7 @@ function radarPos(slug, deal) {
             ds >= 7 ? 82 + (hash % 58) :
             ds >= 5 ? 148 + (hash % 56) :
                       198 + (hash % 36);
-  return { x: 300 + r * Math.cos(rad), y: 300 + r * Math.sin(rad) };
+  return { x: 250 + r * Math.cos(rad), y: 250 + r * Math.sin(rad) };
 }
 
 function renderRadar() {
@@ -4749,7 +4747,7 @@ function renderRadar() {
   if (hotList) {
     hotList.innerHTML = scored.slice(0, 9).map(a => {
       const ds = parseInt(a.deal);
-      const col = ds >= 8 ? '#00D4A0' : ds >= 6 ? '#4B6EF7' : '#F5A623';
+      const col = ds >= 8 ? '#059669' : ds >= 6 ? '#4B6EF7' : '#D97706';
       return '<div class="rhi" data-slug="' + a.slug + '" data-name="' + a.name + '" onclick="selectAccount(this.dataset.slug,this.dataset.name)">' +
         '<div class="rhi-dot" style="background:' + col + ';box-shadow:0 0 6px ' + col + '"></div>' +
         '<div class="rhi-name">' + a.name + '</div>' +
@@ -4762,7 +4760,7 @@ function renderRadar() {
   for (const a of scored) {
     const ds = parseInt(a.deal) || 0;
     const pos = radarPos(a.slug, ds);
-    const col = ds >= 8 ? '#00D4A0' : ds >= 6 ? '#4B6EF7' : ds >= 5 ? '#F5A623' : '#F6574A';
+    const col = ds >= 8 ? '#059669' : ds >= 6 ? '#4B6EF7' : ds >= 5 ? '#D97706' : '#DC2626';
     const r   = Math.max(5, Math.min(13, 4 + ds * 1.0));
     const val = RADAR_VALS[a.slug] || '';
     html += '<g class="r-blip" style="cursor:pointer" data-slug="' + a.slug + '" data-name="' + a.name + '" data-ds="' + ds + '" data-val="' + val + '"' +
