@@ -25,6 +25,10 @@ try:
 except ImportError:
     PPTX_OK = False
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import atexit
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -33,6 +37,104 @@ APP_PASSWORD = os.getenv("APP_PASSWORD", "JakalaQ12026")
 BASE_DIR = Path(__file__).parent.parent  # jakala-commercial-os root
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-6"
+
+# ── Scheduled Jobs ──────────────────────────────────────────────────────────
+
+def job_daily_action_plans():
+    """Runs daily at 07:00 — pre-generates action plans for all countries."""
+    import requests, os
+    base = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://localhost:5050")
+    if not base.startswith("http"):
+        base = "https://" + base
+    for country in ["no", "dk", "se"]:
+        try:
+            requests.get(f"{base}/api/gtm/daily-plan?country={country}", timeout=60)
+            print(f"[SCHEDULER] Daily plan generated for {country}")
+        except Exception as e:
+            print(f"[SCHEDULER] Daily plan failed for {country}: {e}")
+
+def job_flag_stale_accounts():
+    """Runs daily at 07:05 — flags accounts with no activity in 14+ days as signals."""
+    from datetime import datetime, timedelta
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=14)
+        stale = db.query(Account).filter(
+            Account.last_activity < cutoff,
+            Account.deal_stage.notin_(["closed_won", "closed_lost"])
+        ).all()
+        for acc in stale:
+            existing = db.query(Signal).filter(
+                Signal.title.like(f"%{acc.name}%"),
+                Signal.signal_type == "stale",
+                Signal.is_active == True
+            ).first()
+            if not existing:
+                sig = Signal(
+                    country=acc.country,
+                    vertical="Pipeline",
+                    signal_type="stale",
+                    severity="warning",
+                    title=f"{acc.name} — no activity in 14+ days",
+                    description=f"Last activity: {acc.last_activity.strftime('%Y-%m-%d') if acc.last_activity else 'unknown'}. Deal stage: {acc.deal_stage}.",
+                    action_recommended=f"Re-engage {acc.named_buyer or 'key contact'} at {acc.name}. Review next actions and book follow-up.",
+                    is_active=True
+                )
+                db.add(sig)
+        db.commit()
+        print(f"[SCHEDULER] Flagged {len(stale)} stale accounts")
+    except Exception as e:
+        print(f"[SCHEDULER] Stale account job failed: {e}")
+    finally:
+        db.close()
+
+def job_weekly_briefs():
+    """Runs every Monday at 06:55 — pre-generates weekly briefs for all countries."""
+    import requests, os
+    base = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://localhost:5050")
+    if not base.startswith("http"):
+        base = "https://" + base
+    for country in ["no", "dk", "se"]:
+        try:
+            requests.post(f"{base}/api/cc/weekly-brief",
+                         json={"country": country},
+                         headers={"X-Scheduler": "true"},
+                         timeout=120)
+            print(f"[SCHEDULER] Weekly brief generated for {country}")
+        except Exception as e:
+            print(f"[SCHEDULER] Weekly brief failed for {country}: {e}")
+
+def job_deactivate_stale_signals():
+    """Runs every Sunday at 23:00 — deactivates signals older than 30 days."""
+    from datetime import datetime, timedelta
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        old = db.query(Signal).filter(
+            Signal.date < cutoff,
+            Signal.is_active == True,
+            Signal.signal_type == "stale"
+        ).all()
+        for sig in old:
+            sig.is_active = False
+        db.commit()
+        print(f"[SCHEDULER] Deactivated {len(old)} old stale signals")
+    except Exception as e:
+        print(f"[SCHEDULER] Signal cleanup failed: {e}")
+    finally:
+        db.close()
+
+# Start scheduler (only in main process, not in reloader child)
+import os as _os_sched
+if not _os_sched.environ.get("WERKZEUG_RUN_MAIN"):
+    _scheduler = BackgroundScheduler(timezone="Europe/Oslo")
+    _scheduler.add_job(job_daily_action_plans,   CronTrigger(hour=7, minute=0),  id="daily_plans",    replace_existing=True)
+    _scheduler.add_job(job_flag_stale_accounts,  CronTrigger(hour=7, minute=5),  id="stale_accounts", replace_existing=True)
+    _scheduler.add_job(job_weekly_briefs,        CronTrigger(day_of_week="mon", hour=6, minute=55), id="weekly_briefs", replace_existing=True)
+    _scheduler.add_job(job_deactivate_stale_signals, CronTrigger(day_of_week="sun", hour=23, minute=0), id="signal_cleanup", replace_existing=True)
+    _scheduler.start()
+    atexit.register(lambda: _scheduler.shutdown())
+    print("[SCHEDULER] Started — daily plans 07:00, weekly briefs Mon 06:55, stale check 07:05")
 
 # ── File helpers ─────────────────────────────────────────────────────────────
 
@@ -219,6 +321,21 @@ def logout():
 
 
 # ── API routes ───────────────────────────────────────────────────────────────
+
+@app.route("/api/scheduler/status")
+def scheduler_status():
+    """Returns scheduler job status — useful for debugging."""
+    try:
+        jobs = []
+        for job in _scheduler.get_jobs():
+            jobs.append({
+                "id": job.id,
+                "next_run": str(job.next_run_time) if job.next_run_time else None
+            })
+        return jsonify({"running": True, "jobs": jobs})
+    except Exception as e:
+        return jsonify({"running": False, "error": str(e)})
+
 
 @app.route("/api/accounts")
 def api_accounts():
