@@ -2141,45 +2141,46 @@ body::after {
 
 /* ── Command Palette ─────────────────────────────────────────────── */
 #cmd-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px); z-index: 9000; align-items: flex-start; justify-content: center;
+  display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.4);
+  backdrop-filter: blur(6px); z-index: 9000; align-items: flex-start; justify-content: center;
   padding-top: 12vh;
 }
 #cmd-overlay.open { display: flex; }
 #cmd-box {
-  width: 100%; max-width: 580px; background: #0e0e1a; border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  width: 100%; max-width: 580px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; box-shadow: 0 8px 40px rgba(21,62,237,0.12), 0 2px 8px rgba(0,0,0,0.08);
 }
 #cmd-input-wrap {
   display: flex; align-items: center; gap: 10px; padding: 14px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--border);
 }
 #cmd-input-wrap svg { flex-shrink: 0; color: var(--muted); }
 #cmd-input {
   flex: 1; background: none; border: none; outline: none; font-size: 16px;
-  color: var(--white); font-family: inherit; caret-color: #153EED;
+  color: var(--text); font-family: inherit; caret-color: var(--blue);
 }
 #cmd-input::placeholder { color: var(--muted); }
-#cmd-kb { font-size: 10px; color: var(--muted); background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; flex-shrink:0; }
+#cmd-kb { font-size: 10px; color: var(--muted); background: var(--bg3); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; flex-shrink:0; }
 #cmd-results { max-height: 380px; overflow-y: auto; padding: 6px; }
 .cmd-section { font-size: 9px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; padding: 8px 10px 4px; }
 .cmd-item {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px;
   border-radius: 8px; cursor: pointer; transition: background 0.1s;
 }
-.cmd-item:hover, .cmd-item.selected { background: rgba(21,62,237,0.15); }
-.cmd-item.selected { background: rgba(21,62,237,0.2); }
-.cmd-icon { font-size: 15px; width: 22px; text-align: center; flex-shrink: 0; }
-.cmd-label { flex: 1; font-size: 13.5px; color: var(--text); }
+.cmd-item:hover, .cmd-item.selected { background: var(--blue-dim); }
+.cmd-item.selected { background: var(--blue-dim2); }
+.cmd-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; flex-shrink: 0; color: var(--blue); }
+.cmd-icon i { width: 14px; height: 14px; }
+.cmd-label { flex: 1; font-size: 13.5px; color: var(--text); font-weight: 500; }
 .cmd-sub { font-size: 10.5px; color: var(--muted); }
 .cmd-arrow { font-size: 11px; color: var(--muted2); }
 #cmd-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--muted); }
 #cmd-footer {
   display: flex; gap: 16px; padding: 8px 16px;
-  border-top: 1px solid rgba(255,255,255,0.06); font-size: 10px; color: var(--muted2);
+  border-top: 1px solid var(--border); background: var(--bg3); font-size: 10px; color: var(--muted2);
 }
 .cmd-hint { display: flex; align-items: center; gap: 5px; }
-.cmd-hint kbd { background: rgba(255,255,255,0.07); border-radius: 3px; padding: 1px 5px; font-family: inherit; }
+.cmd-hint kbd { background: var(--bg2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: inherit; color: var(--text); }
 
 /* ── Outreach Modal ──────────────────────────────────────────────── */
 #outreach-overlay {
