@@ -56,6 +56,8 @@ class Account(Base):
     deal_stage_updated = Column(DateTime)
     last_activity    = Column(DateTime)
     created_at       = Column(DateTime, default=datetime.utcnow)
+    strategy_text    = Column(Text)
+    stakeholders_text = Column(Text)
     industry_rel     = relationship('Industry', back_populates='accounts')
     activations      = relationship('Activation', back_populates='account', cascade='all, delete-orphan')
     predictions      = relationship('Prediction', back_populates='account', cascade='all, delete-orphan')
@@ -160,6 +162,18 @@ class Meeting(Base):
     created_at    = Column(DateTime, default=datetime.utcnow)
     account       = relationship('Account', back_populates='meetings')
 
+class PartnerValidation(Base):
+    __tablename__ = 'cc_partner_validations'
+    id           = Column(Integer, primary_key=True)
+    company_name = Column(String(200))
+    market       = Column(String(100))
+    context      = Column(Text)
+    verdict      = Column(String(50))
+    score        = Column(Integer)
+    findings     = Column(Text)   # JSON
+    created_at   = Column(DateTime, default=datetime.utcnow)
+
+
 class WeeklyCommit(Base):
     __tablename__ = 'cc_weekly_commits'
     id                  = Column(Integer, primary_key=True)
@@ -183,6 +197,8 @@ def _migrate_db():
         "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage VARCHAR(30) DEFAULT 'identified'",
         "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage_updated TIMESTAMP",
         "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP",
+        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS strategy_text TEXT",
+        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS stakeholders_text TEXT",
     ]
     try:
         with engine.connect() as conn:

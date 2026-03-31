@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 try:
     import bcrypt
-    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit
+    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit, PartnerValidation
     CC_DB_OK = True
 except Exception as _cc_err:
     print(f"[CC] Import error: {_cc_err}")
@@ -222,6 +222,34 @@ def logout():
 
 @app.route("/api/accounts")
 def api_accounts():
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            accounts = db.query(Account).all()
+            ind_map = {i.id: i for i in db.query(Industry).all()}
+            result = []
+            for a in accounts:
+                acts = [{"service_id": ac.service_id, "stage": ac.stage} for ac in a.activations]
+                ind = ind_map.get(a.industry_id)
+                result.append({
+                    "slug":           a.slug or "",
+                    "name":           a.name,
+                    "country":        a.country,
+                    "icp":            str(int(a.icp_score)) if a.icp_score is not None else "—",
+                    "deal":           str(int(a.deal_score)) if a.deal_score is not None else "—",
+                    "icp_score":      a.icp_score,
+                    "deal_score":     a.deal_score,
+                    "pipeline_value": a.pipeline_value,
+                    "named_buyer":    a.named_buyer or "",
+                    "buyer_role":     a.buyer_role or "",
+                    "industry":       ind.name if ind else "Other",
+                    "activations":    acts,
+                })
+            db.close()
+            return jsonify(result)
+        except Exception as e:
+            print(f"[GTM] /api/accounts DB error: {e}")
+    # Fallback: file-based
     accounts = get_accounts()
     result = []
     for slug in accounts:
@@ -251,6 +279,68 @@ def api_accounts():
 
 @app.route("/api/account/<slug>")
 def api_account(slug):
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            a = db.query(Account).filter(Account.slug == slug).first()
+            if a:
+                # Build overview text from DB fields
+                overview = (
+                    f"# {a.name}\n\n"
+                    f"Revenue: {a.revenue or '—'}\n"
+                    f"Tech Stack: {a.tech_stack or '—'}\n"
+                    f"ICP Score: {a.icp_score}/10\n"
+                    f"Deal Score: {a.deal_score}/10\n"
+                    f"Named Buyer: {a.named_buyer or 'TBD'}\n"
+                    f"Buyer Role: {a.buyer_role or '—'}\n"
+                    f"Notes: {a.notes or ''}"
+                )
+                strategy = a.strategy_text or ""
+                stakeholders = a.stakeholders_text or f"Named Buyer: {a.named_buyer or 'TBD'}\nRole: {a.buyer_role or '—'}"
+                # Format open/pending actions
+                open_actions = [ac for ac in a.actions if ac.status in ("open", "pending")]
+                if open_actions:
+                    na_lines = [f"# {a.name} — Next Actions\n"]
+                    for ac in sorted(open_actions, key=lambda x: (x.priority or "medium")):
+                        due = ac.due_date.strftime("%Y-%m-%d") if ac.due_date else "—"
+                        na_lines.append(f"- [{ac.priority or 'medium'}] {ac.title} (due: {due})")
+                    next_actions = "\n".join(na_lines)
+                else:
+                    next_actions = ""
+                # Format meetings
+                if a.meetings:
+                    mtg_lines = [f"# {a.name} — Meetings\n"]
+                    for m in sorted(a.meetings, key=lambda x: x.date, reverse=True):
+                        mtg_lines.append(f"## {m.date.strftime('%Y-%m-%d')} — {m.summary or ''}")
+                        if m.participants:
+                            mtg_lines.append(f"Participants: {m.participants}")
+                        if m.outcome:
+                            mtg_lines.append(f"Outcome: {m.outcome}")
+                        if m.next_step:
+                            mtg_lines.append(f"Next step: {m.next_step}")
+                        mtg_lines.append("")
+                    meetings = "\n".join(mtg_lines)
+                else:
+                    meetings = ""
+                # Build combined content string (same format as load_account_files)
+                parts = []
+                if overview:
+                    parts.append(f"--- overview.md ---\n{overview}")
+                if strategy:
+                    parts.append(f"--- strategy.md ---\n{strategy}")
+                if stakeholders:
+                    parts.append(f"--- stakeholders.md ---\n{stakeholders}")
+                if next_actions:
+                    parts.append(f"--- next-actions.md ---\n{next_actions}")
+                if meetings:
+                    parts.append(f"--- meetings.md ---\n{meetings}")
+                content = "\n\n".join(parts)
+                db.close()
+                return jsonify({"slug": slug, "content": content})
+            db.close()
+        except Exception as e:
+            print(f"[GTM] /api/account/{slug} DB error: {e}")
+    # Fallback: file-based
     content = load_account_files(slug)
     if not content:
         return jsonify({"error": "Account not found"}), 404
@@ -262,6 +352,55 @@ def api_get_file(slug, filename):
     allowed = ["overview.md", "strategy.md", "stakeholders.md", "next-actions.md", "meetings.md"]
     if filename not in allowed:
         return jsonify({"error": "File not allowed"}), 403
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            a = db.query(Account).filter(Account.slug == slug).first()
+            if a:
+                if filename == "overview.md":
+                    content = (
+                        f"# {a.name}\n\n"
+                        f"Revenue: {a.revenue or '—'}\n"
+                        f"Tech Stack: {a.tech_stack or '—'}\n"
+                        f"ICP Score: {a.icp_score}/10\n"
+                        f"Deal Score: {a.deal_score}/10\n"
+                        f"Named Buyer: {a.named_buyer or 'TBD'}\n"
+                        f"Buyer Role: {a.buyer_role or '—'}\n"
+                        f"Notes: {a.notes or ''}"
+                    )
+                elif filename == "strategy.md":
+                    content = a.strategy_text or ""
+                elif filename == "stakeholders.md":
+                    content = a.stakeholders_text or f"Named Buyer: {a.named_buyer or 'TBD'}\nRole: {a.buyer_role or '—'}"
+                elif filename == "next-actions.md":
+                    open_actions = [ac for ac in a.actions if ac.status in ("open", "pending")]
+                    lines = [f"# {a.name} — Next Actions\n"]
+                    for ac in sorted(open_actions, key=lambda x: (x.priority or "medium")):
+                        due = ac.due_date.strftime("%Y-%m-%d") if ac.due_date else "—"
+                        lines.append(f"- [{ac.priority or 'medium'}] {ac.title} (due: {due})")
+                    content = "\n".join(lines)
+                elif filename == "meetings.md":
+                    lines = [f"# {a.name} — Meetings\n"]
+                    for m in sorted(a.meetings, key=lambda x: x.date, reverse=True):
+                        lines.append(f"## {m.date.strftime('%Y-%m-%d')} — {m.summary or ''}")
+                        if m.participants:
+                            lines.append(f"Participants: {m.participants}")
+                        if m.outcome:
+                            lines.append(f"Outcome: {m.outcome}")
+                        if m.next_step:
+                            lines.append(f"Next step: {m.next_step}")
+                        lines.append("")
+                    content = "\n".join(lines)
+                else:
+                    content = None
+                db.close()
+                if content is None:
+                    return jsonify({"error": "File not found"}), 404
+                return jsonify({"content": content})
+            db.close()
+        except Exception as e:
+            print(f"[GTM] api_get_file {slug}/{filename} DB error: {e}")
+    # Fallback: file-based
     content = read_file(f"Accounts/{slug}/{filename}")
     if content is None:
         return jsonify({"error": "File not found"}), 404
@@ -275,6 +414,50 @@ def api_save_file(slug, filename):
         return jsonify({"error": "File not allowed"}), 403
     data = request.get_json()
     content = data.get("content", "")
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            a = db.query(Account).filter(Account.slug == slug).first()
+            if a:
+                if filename == "overview.md":
+                    a.notes = content
+                elif filename == "strategy.md":
+                    a.strategy_text = content
+                elif filename == "stakeholders.md":
+                    a.stakeholders_text = content
+                elif filename == "next-actions.md":
+                    # Replace all open actions with a simple bulk note
+                    db.query(Action).filter(
+                        Action.account_id == a.id,
+                        Action.status == "open"
+                    ).delete(synchronize_session=False)
+                    if content.strip():
+                        new_action = Action(
+                            account_id=a.id,
+                            title="Next actions (imported)",
+                            description=content,
+                            status="open",
+                            priority="medium",
+                            action_type="follow-up",
+                        )
+                        db.add(new_action)
+                elif filename == "meetings.md":
+                    # Append-only: create a new meeting record from the content
+                    new_meeting = Meeting(
+                        account_id=a.id,
+                        country=a.country,
+                        date=datetime.datetime.utcnow(),
+                        summary=content[:500],
+                        outcome="neutral",
+                    )
+                    db.add(new_meeting)
+                db.commit()
+                db.close()
+                return jsonify({"ok": True})
+            db.close()
+        except Exception as e:
+            print(f"[GTM] api_save_file {slug}/{filename} DB error: {e}")
+    # Fallback: file-based
     write_file(f"Accounts/{slug}/{filename}", content)
     return jsonify({"ok": True})
 
@@ -394,12 +577,58 @@ def api_save_notes():
     slug = data.get("account")
     meeting_entry = data.get("meeting_entry", "")
     next_actions = data.get("next_actions_updated", "")
+    key_insight = data.get("key_insight", "")
 
     if not slug:
         return jsonify({"error": "account required"}), 400
 
     today = datetime.date.today().isoformat()
 
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            a = db.query(Account).filter(Account.slug == slug).first()
+            if a:
+                # Insert new meeting record
+                if meeting_entry:
+                    summary_text = meeting_entry[:500] if meeting_entry else key_insight
+                    new_meeting = Meeting(
+                        account_id=a.id,
+                        country=a.country,
+                        date=datetime.datetime.utcnow(),
+                        summary=summary_text,
+                        outcome="neutral",
+                        next_step=key_insight or None,
+                    )
+                    db.add(new_meeting)
+                    a.last_activity = datetime.datetime.utcnow()
+                # Replace open actions with new set
+                if next_actions:
+                    db.query(Action).filter(
+                        Action.account_id == a.id,
+                        Action.status == "open"
+                    ).delete(synchronize_session=False)
+                    for line in next_actions.splitlines():
+                        line = line.strip()
+                        if line and (line.startswith("-") or line.startswith("*") or re.match(r"^\d+\.", line)):
+                            title = re.sub(r"^[-*\d.]+\s*", "", line).strip()
+                            if title:
+                                new_action = Action(
+                                    account_id=a.id,
+                                    title=title[:300],
+                                    status="open",
+                                    priority="medium",
+                                    action_type="follow-up",
+                                )
+                                db.add(new_action)
+                db.commit()
+                db.close()
+                return jsonify({"ok": True})
+            db.close()
+        except Exception as e:
+            print(f"[GTM] api_save_notes DB error: {e}")
+
+    # Fallback: file-based
     existing_meetings = read_file(f"Accounts/{slug}/meetings.md") or f"# {slug.replace('-', ' ').title()} — Meetings\n\nLast updated: {today}\n\n---\n"
     existing_meetings = re.sub(r"Last updated: \d{4}-\d{2}-\d{2}", f"Last updated: {today}", existing_meetings)
     existing_meetings = existing_meetings + f"\n\n---\n\n{meeting_entry}"
@@ -760,12 +989,30 @@ Rules:
     except json.JSONDecodeError:
         return jsonify({"error": "AI parse failed", "raw": raw}), 500
 
-    # Save to intelligence/partnerships/
-    save_partner_result(partner, market, result, today)
+    # Save result — DB preferred, fallback to file
+    save_partner_result(partner, market, context, result, today)
     return jsonify(result)
 
 
-def save_partner_result(partner, market, data, today):
+def save_partner_result(partner, market, context, data, today):
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            pv = PartnerValidation(
+                company_name=partner,
+                market=market,
+                context=context or "",
+                verdict=data.get("verdict", ""),
+                score=data.get("overall_score"),
+                findings=json.dumps(data),
+            )
+            db.add(pv)
+            db.commit()
+            db.close()
+            return
+        except Exception as e:
+            print(f"[GTM] save_partner_result DB error: {e}")
+    # Fallback: write to file
     p = BASE_DIR / "intelligence" / "partnerships"
     p.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-z0-9]+", "-", partner.lower()).strip("-")
@@ -792,13 +1039,33 @@ def save_partner_result(partner, market, data, today):
         "",
         f"## First Step\n{data.get('first_step','—')}",
         "",
-        f"## Risks\n" + "\n".join(f"- {r}" for r in data.get("risks", [])),
+        "## Risks\n" + "\n".join(f"- {r}" for r in data.get("risks", [])),
     ]
     fname.write_text("\n".join(lines), encoding="utf-8")
 
 
 @app.route("/api/partner-history")
 def api_partner_history():
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            rows = db.query(PartnerValidation).order_by(PartnerValidation.created_at.desc()).limit(20).all()
+            db.close()
+            if rows:
+                return jsonify([
+                    {
+                        "file":    f"{re.sub(r'[^a-z0-9]+', '-', r.company_name.lower()).strip('-')}-{r.created_at.strftime('%Y-%m-%d') if r.created_at else 'unknown'}",
+                        "name":    r.company_name,
+                        "verdict": r.verdict or "—",
+                        "score":   str(r.score) if r.score is not None else "—",
+                        "market":  r.market or "—",
+                    }
+                    for r in rows
+                ])
+            db.close()
+        except Exception as e:
+            print(f"[GTM] /api/partner-history DB error: {e}")
+    # Fallback: file-based
     p = BASE_DIR / "intelligence" / "partnerships"
     if not p.exists():
         return jsonify([])
@@ -832,19 +1099,47 @@ def api_monthly_partnerships():
 
 # ── Signals API ──────────────────────────────────────────────────────────────
 
+HARDCODED_SIGNALS = [
+    {"company":"Sport Outlet","text":"CTO + CDO both vacant March 2026. Entry via CEO Tor-André Skeie. Vacancy = budget already approved.","tag":"URGENT","tagColor":"red","icon":'<span style="width:8px;height:8px;background:#DC2626;border-radius:50%;display:inline-block;"></span>',"slug":"sport-outlet","type":"leadership","urgency":"critical"},
+    {"company":"Trumf (NorgesGruppen)","text":"Rikke Etholm-Idsøe — new Commercial Director in newly created role. 90-day honeymoon window open now.","tag":"90-DAY WINDOW","tagColor":"red","icon":'<i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"trumf","type":"leadership","urgency":"critical"},
+    {"company":"Vinmonopolet","text":"Espen Terland new CDO (ex-XXL 15 years). Agenda not set — honeymoon phase. Ideal discovery entry.","tag":"NEW EXEC","tagColor":"amber","icon":'<i data-lucide="plus-circle" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"vinmonopolet","type":"leadership","urgency":"warning"},
+    {"company":"Skeidar","text":"\"Best furniture portal in the Nordics\" declared publicly by CEO. CIO Sujit Nath confirmed buyer.","tag":"NAMED BUYER","tagColor":"amber","icon":'<i data-lucide="building-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"skeidar","type":"market","urgency":"warning"},
+    {"company":"BI Handelshøyskolen","text":"Rector Karen Spens leaving August 2026. Institution in transition — new leadership will reset priorities.","tag":"TRANSITION","tagColor":"amber","icon":'<i data-lucide="graduation-cap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"bi-handelshoyskolen","type":"leadership","urgency":"warning"},
+    {"company":"GANT Norway","text":"New CEO Fredrik Malm + IMPACT Commerce new ecom partner (Feb 2026). Integration phase = JAKALA entry.","tag":"NEW CEO","tagColor":"amber","icon":'<i data-lucide="user" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"gant-norway","type":"leadership","urgency":"warning"},
+    {"company":"H&M Sweden","text":"ICP 9/10 · Deal 9/10 · €900K unweighted. No named buyer confirmed yet. Largest untouched opportunity.","tag":"TOP PRIORITY","tagColor":"blue","icon":'<i data-lucide="gem" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"hm","type":"market","urgency":"info"},
+    {"company":"Matas","text":"ICP 9/10 · Deal 9/10 · €700K. AI Readiness entry. Loyalty data + personalisation play — Matas More programme.","tag":"HIGH VALUE","tagColor":"blue","icon":'<i data-lucide="lightbulb" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"matas","type":"market","urgency":"info"},
+]
+
+
 @app.route("/api/signals")
 def api_signals():
-    hot = [
-        {"company":"Sport Outlet","text":"CTO + CDO both vacant March 2026. Entry via CEO Tor-André Skeie. Vacancy = budget already approved.","tag":"URGENT","tagColor":"red","icon":'<span style="width:8px;height:8px;background:#DC2626;border-radius:50%;display:inline-block;"></span>',"slug":"sport-outlet"},
-        {"company":"Trumf (NorgesGruppen)","text":"Rikke Etholm-Idsøe — new Commercial Director in newly created role. 90-day honeymoon window open now.","tag":"90-DAY WINDOW","tagColor":"red","icon":'<i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"trumf"},
-        {"company":"Vinmonopolet","text":"Espen Terland new CDO (ex-XXL 15 years). Agenda not set — honeymoon phase. Ideal discovery entry.","tag":"NEW EXEC","tagColor":"amber","icon":'<i data-lucide="plus-circle" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"vinmonopolet"},
-        {"company":"Skeidar","text":"\"Best furniture portal in the Nordics\" declared publicly by CEO. CIO Sujit Nath confirmed buyer.","tag":"NAMED BUYER","tagColor":"amber","icon":'<i data-lucide="building-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"skeidar"},
-        {"company":"BI Handelshøyskolen","text":"Rector Karen Spens leaving August 2026. Institution in transition — new leadership will reset priorities.","tag":"TRANSITION","tagColor":"amber","icon":'<i data-lucide="graduation-cap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"bi-handelshoyskolen"},
-        {"company":"GANT Norway","text":"New CEO Fredrik Malm + IMPACT Commerce new ecom partner (Feb 2026). Integration phase = JAKALA entry.","tag":"NEW CEO","tagColor":"amber","icon":'<i data-lucide="user" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"gant-norway"},
-        {"company":"H&M Sweden","text":"ICP 9/10 · Deal 9/10 · €900K unweighted. No named buyer confirmed yet. Largest untouched opportunity.","tag":"TOP PRIORITY","tagColor":"blue","icon":'<i data-lucide="gem" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"hm"},
-        {"company":"Matas","text":"ICP 9/10 · Deal 9/10 · €700K. AI Readiness entry. Loyalty data + personalisation play — Matas More programme.","tag":"HIGH VALUE","tagColor":"blue","icon":'<i data-lucide="lightbulb" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"matas"},
-    ]
-    # Append signals from intelligence folder
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            db_signals = db.query(Signal).filter(Signal.is_active == True).order_by(Signal.severity, Signal.date.desc()).limit(20).all()
+            db.close()
+            if db_signals:
+                severity_tag = {"critical": "URGENT", "warning": "ACTION", "info": "RADAR"}
+                severity_color = {"critical": "red", "warning": "amber", "info": "blue"}
+                result = []
+                for s in db_signals:
+                    result.append({
+                        "company":  s.title,
+                        "context":  s.description or "",
+                        "text":     s.description or "",
+                        "tag":      severity_tag.get(s.severity, "RADAR"),
+                        "tagColor": severity_color.get(s.severity, "blue"),
+                        "icon":     '<i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',
+                        "slug":     "",
+                        "type":     s.signal_type or "market",
+                        "urgency":  s.severity or "info",
+                        "tags":     [s.signal_type or "market", s.vertical or "general"],
+                    })
+                return jsonify({"signals": result})
+        except Exception as e:
+            print(f"[GTM] /api/signals DB error: {e}")
+    # Fallback: hardcoded + daily-leads files
+    hot = HARDCODED_SIGNALS[:]
     extra = []
     intel = BASE_DIR / "intelligence" / "daily-leads"
     if intel.exists():
@@ -852,7 +1147,7 @@ def api_signals():
             if f.suffix == ".md":
                 for line in f.read_text(encoding="utf-8").splitlines():
                     if line.startswith("## ") and len(line) > 4:
-                        extra.append({"company": line[3:].strip(), "text": f"From daily radar {f.stem}", "tag":"RADAR","tagColor":"blue","icon":'<i data-lucide="radio" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":""})
+                        extra.append({"company": line[3:].strip(), "text": f"From daily radar {f.stem}", "tag":"RADAR","tagColor":"blue","icon":'<i data-lucide="radio" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"","type":"market","urgency":"info"})
     return jsonify({"signals": hot + extra[:4]})
 
 
@@ -860,9 +1155,133 @@ def api_signals():
 
 @app.route("/api/dashboard-live")
 def api_dashboard_live():
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            accounts = db.query(Account).all()
+
+            total_pipeline = sum(a.pipeline_value or 0 for a in accounts)
+            named_buyers   = sum(1 for a in accounts if a.named_buyer and a.named_buyer not in ("TBD", ""))
+            active_accounts = len(accounts)
+            forecast_val   = sum((a.pipeline_value or 0) * (a.win_probability or 0) / 100.0 for a in accounts)
+
+            # Format pipeline total
+            if total_pipeline >= 1_000_000:
+                pipeline_str = f"€{total_pipeline/1_000_000:.1f}M"
+            else:
+                pipeline_str = f"€{int(total_pipeline/1000)}K"
+
+            if forecast_val >= 1_000_000:
+                forecast_str = f"€{forecast_val/1_000_000:.1f}M"
+            else:
+                forecast_str = f"€{int(forecast_val/1000)}K"
+
+            # Top 5 deals by pipeline_value
+            top_accts = sorted([a for a in accounts if a.pipeline_value], key=lambda x: x.pipeline_value, reverse=True)[:6]
+            top_deals = []
+            for i, a in enumerate(top_accts, 1):
+                win_pct = f"{int(a.win_probability or 0)}%"
+                weighted_val = (a.pipeline_value or 0) * (a.win_probability or 0) / 100.0
+                if weighted_val >= 1_000_000:
+                    weighted_str = f"€{weighted_val/1_000_000:.1f}M"
+                else:
+                    weighted_str = f"€{int(weighted_val/1000)}K"
+                entry_val = a.pipeline_value or 0
+                if entry_val >= 1_000_000:
+                    entry_str = f"€{entry_val/1_000_000:.1f}M"
+                else:
+                    entry_str = f"€{int(entry_val/1000)}K"
+                top_deals.append({
+                    "rank":      str(i),
+                    "name":      a.name,
+                    "country":   a.country,
+                    "offering":  a.tech_stack[:30] if a.tech_stack else "—",
+                    "icp":       str(int(a.icp_score)) if a.icp_score else "—",
+                    "win_pct":   win_pct,
+                    "entry_val": entry_str,
+                    "weighted":  weighted_str,
+                    "buyer":     a.named_buyer or "TBD",
+                    "status":    a.deal_stage or "identified",
+                    "slug":      a.slug or "",
+                    "days_stale": None,
+                })
+
+            # Country split
+            country_totals = {}
+            country_counts = {}
+            for a in accounts:
+                c = a.country or "Unknown"
+                country_totals[c] = country_totals.get(c, 0) + (a.pipeline_value or 0)
+                country_counts[c] = country_counts.get(c, 0) + 1
+            country_name_map = {"NO": "Norway", "SE": "Sweden", "DK": "Denmark"}
+            country_split = []
+            for code, total in sorted(country_totals.items(), key=lambda x: -x[1]):
+                if total >= 1_000_000:
+                    pip_str = f"€{total/1_000_000:.1f}M"
+                else:
+                    pip_str = f"€{int(total/1000)}K"
+                country_split.append({
+                    "country":  country_name_map.get(code, code),
+                    "pipeline": pip_str,
+                    "accounts": country_counts.get(code, 0),
+                })
+
+            # Top priority account with named buyer
+            priority = None
+            for d in top_deals:
+                if d["buyer"] and d["buyer"] != "TBD" and "TBD" not in d["buyer"]:
+                    buyer_name = re.split(r'\(', d["buyer"])[0].strip()
+                    priority = {
+                        "name":     buyer_name,
+                        "company":  d["name"],
+                        "country":  d["country"],
+                        "win_pct":  d["win_pct"],
+                        "weighted": d["weighted"],
+                        "offering": d["offering"],
+                        "status":   d["status"],
+                        "slug":     d["slug"],
+                    }
+                    break
+
+            # Top 3 active signals
+            db_sigs = db.query(Signal).filter(Signal.is_active == True).order_by(
+                Signal.severity, Signal.date.desc()
+            ).limit(3).all()
+            live_signals = [
+                {"company": s.title, "text": (s.description or "")[:180], "date": s.date.strftime("%Y-%m-%d") if s.date else ""}
+                for s in db_sigs
+            ]
+
+            # Status determination
+            if forecast_val < 200_000:
+                status = "RED"
+            elif forecast_val < 500_000:
+                status = "AMBER"
+            else:
+                status = "GREEN"
+
+            db.close()
+            return jsonify({
+                "pipeline_total":    pipeline_str,
+                "pipeline_weighted": forecast_str,
+                "named_buyers":      named_buyers,
+                "forecast_base":     forecast_str,
+                "discovery_count":   sum(1 for a in accounts if (a.deal_stage or "identified") == "identified"),
+                "account_count":     active_accounts,
+                "status":            status,
+                "last_updated":      datetime.datetime.utcnow().strftime("%Y-%m-%d"),
+                "top_deals":         top_deals,
+                "live_signals":      live_signals,
+                "priority":          priority,
+                "country_split":     country_split,
+                "timestamp":         datetime.datetime.utcnow().isoformat() + "Z",
+            })
+        except Exception as e:
+            print(f"[GTM] /api/dashboard-live DB error: {e}")
+
+    # Fallback: file-based parsing
     dash = read_file("intelligence/pipeline-dashboard.md") or ""
 
-    # --- KPI parsing ---
     def _find(pattern, text, default=""):
         m = re.search(pattern, text)
         return m.group(1).strip() if m else default
@@ -880,7 +1299,6 @@ def api_dashboard_live():
     if "**Status: RED" in dash:   status = "RED"
     elif "**Status: GREEN" in dash: status = "GREEN"
 
-    # --- Parse top deals table ---
     deals = []
     in_table = False
     for line in dash.splitlines():
@@ -908,14 +1326,11 @@ def api_dashboard_live():
         elif in_table and not line.startswith("|"):
             in_table = False
 
-    # --- Days stale per deal (from next-actions.md mtime) ---
-    slug_map = {a: a for a in get_accounts()}
     now_ts = datetime.datetime.now().timestamp()
     for d in deals:
         raw_slug = d["name"].lower()
         for ch, rep in [(" nordic",""),(" group",""),("ø","o"),("å","a"),("æ","ae"),(" ","-"),("'","")]:
             raw_slug = raw_slug.replace(ch, rep)
-        # Try exact match and first-word match
         candidates = [raw_slug, raw_slug.split("-")[0]]
         d["days_stale"] = None
         d["slug"] = ""
@@ -926,7 +1341,6 @@ def api_dashboard_live():
                 d["slug"] = cand
                 break
 
-    # --- Today's priority (top deal with named buyer) ---
     priority = None
     for d in deals:
         buyer = d.get("buyer", "TBD")
@@ -944,7 +1358,6 @@ def api_dashboard_live():
             }
             break
 
-    # --- Fresh signals from daily-leads files ---
     live_signals = []
     intel_dir = BASE_DIR / "intelligence" / "daily-leads"
     if intel_dir.exists():
@@ -961,7 +1374,6 @@ def api_dashboard_live():
             if len(live_signals) >= 6:
                 break
 
-    # --- Country split ---
     country_split = []
     for m in re.finditer(r'\|\s*(Norway|Sweden|Denmark)\s*\|\s*(€[\d.M]+)[^|]*\|\s*(\d+)\s*\|', dash):
         country_split.append({
@@ -4190,14 +4602,72 @@ function regenOutreach() {
 def gtm_daily_plan():
     """Generate today's 3-account action plan using Claude."""
     try:
-        # Read context files
-        signals   = read_file("intelligence/lead-log.md") or ""
-        top_opps  = read_file("intelligence/top-opportunities.md") or ""
-        pipeline  = read_file("intelligence/pipeline-dashboard.md") or ""
-        offerings = read_file("knowledge/offerings.md") or ""
+        today_str = datetime.date.today().strftime("%A %d %B %Y")
 
-        from datetime import date
-        today_str = date.today().strftime("%A %d %B %Y")
+        # Build context from DB if available, else fall back to files
+        accounts_context = ""
+        signals_context  = ""
+        actions_context  = ""
+
+        if CC_DB_OK:
+            try:
+                db = SessionLocal()
+                # Top 5 accounts scored by deal_score * win_probability
+                top_accts = db.query(Account).filter(
+                    Account.deal_score != None,
+                    Account.win_probability != None
+                ).all()
+                top_accts = sorted(
+                    top_accts,
+                    key=lambda a: (a.deal_score or 0) * (a.win_probability or 0),
+                    reverse=True
+                )[:5]
+                if top_accts:
+                    lines = ["TOP ACCOUNTS (by deal_score × win_prob):"]
+                    for a in top_accts:
+                        pv = f"€{int((a.pipeline_value or 0)/1000)}K" if a.pipeline_value else "—"
+                        lines.append(
+                            f"- {a.name} ({a.country}) | ICP {a.icp_score} | Deal {a.deal_score} | "
+                            f"Win {a.win_probability}% | Pipeline {pv} | "
+                            f"Buyer: {a.named_buyer or 'TBD'} ({a.buyer_role or '—'}) | "
+                            f"Stage: {a.deal_stage or 'identified'} | Notes: {(a.notes or '')[:120]}"
+                        )
+                    accounts_context = "\n".join(lines)
+
+                # Latest 3 signals
+                db_sigs = db.query(Signal).filter(Signal.is_active == True).order_by(
+                    Signal.severity, Signal.date.desc()
+                ).limit(3).all()
+                if db_sigs:
+                    sig_lines = ["LIVE SIGNALS:"]
+                    for s in db_sigs:
+                        sig_lines.append(f"- [{s.severity}] {s.title}: {(s.description or '')[:150]}")
+                    signals_context = "\n".join(sig_lines)
+
+                # Open actions
+                open_actions = db.query(Action).filter(Action.status == "open").order_by(
+                    Action.priority, Action.due_date
+                ).limit(10).all()
+                if open_actions:
+                    act_lines = ["OPEN ACTIONS:"]
+                    acct_map = {a.id: a.name for a in top_accts}
+                    for ac in open_actions:
+                        due = ac.due_date.strftime("%Y-%m-%d") if ac.due_date else "—"
+                        acct_name = acct_map.get(ac.account_id, f"account_id:{ac.account_id}")
+                        act_lines.append(f"- [{ac.priority}] {acct_name}: {ac.title} (due {due})")
+                    actions_context = "\n".join(act_lines)
+
+                db.close()
+            except Exception as db_err:
+                print(f"[GTM] daily-plan DB error: {db_err}")
+
+        # Fallback to file context if DB gave nothing
+        if not accounts_context:
+            accounts_context = "TOP OPPORTUNITIES:\n" + (read_file("intelligence/top-opportunities.md") or "")[:2000]
+        if not signals_context:
+            signals_context = "LEAD LOG:\n" + (read_file("intelligence/lead-log.md") or "")[:2000]
+        if not actions_context:
+            actions_context = "PIPELINE:\n" + (read_file("intelligence/pipeline-dashboard.md") or "")[:1000]
 
         prompt = f"""You are the JAKALA GTM OS. Today is {today_str}.
 
@@ -4206,14 +4676,11 @@ Generate TODAY'S ACTION PLAN: exactly 3 accounts to contact today.
 Select based on urgency signals: new executive in role (first 90 days), vacant leadership position, deal gone silent (14+ days), tech stack change, upcoming decision window.
 
 Context:
-LEAD LOG:
-{signals[:2000]}
+{accounts_context}
 
-TOP OPPORTUNITIES:
-{top_opps[:2000]}
+{signals_context}
 
-PIPELINE:
-{pipeline[:1000]}
+{actions_context}
 
 Return ONLY valid JSON, no markdown, no explanation:
 {{
@@ -4237,11 +4704,9 @@ Return ONLY valid JSON, no markdown, no explanation:
             max_tokens=1200,
             messages=[{"role": "user", "content": prompt}]
         )
-        import re as _re
         raw = response.content[0].text.strip()
-        # Strip markdown fences if present
-        raw = _re.sub(r'^```(?:json)?\s*', '', raw)
-        raw = _re.sub(r'\s*```$', '', raw)
+        raw = re.sub(r'^```(?:json)?\s*', '', raw)
+        raw = re.sub(r'\s*```$', '', raw)
         return jsonify(json.loads(raw))
     except Exception as e:
         return jsonify({"error": str(e), "plan": []}), 500
