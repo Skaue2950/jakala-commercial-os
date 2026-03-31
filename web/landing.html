@@ -5,359 +5,389 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>JAKALA Nordic — Commercial OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --blue:#153EED;
-  --blue-light:rgba(21,62,237,.08);
-  --blue-mid:rgba(21,62,237,.15);
-  --dark:#0A0A1E;
-  --exec:#0F1A2E;
-  --exec-mid:#1A2D4A;
-  --body:#F4F6FC;
-  --white:#FFFFFF;
+  --blue-dim:rgba(21,62,237,.08);
+  --blue-mid:rgba(21,62,237,.18);
+  --blue-glow:rgba(21,62,237,.35);
+  --ink:#08080F;
+  --ink2:#12121F;
+  --surface:#FFFFFF;
+  --body:#F5F7FC;
+  --border:#E3E7F2;
+  --border2:#D0D5E8;
   --text:#0F0F1A;
   --muted:#6B7280;
-  --border:#E4E7F0;
+  --muted2:#9CA3AF;
   --green:#00A67E;
   --amber:#D97706;
-  --font:'Inter',-apple-system,sans-serif;
-  --radius:16px;
+  --red:#DC2626;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --r:14px;
 }
 html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--body);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--ink);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
 /* ── NAV ── */
 nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  background:rgba(255,255,255,.9);
-  backdrop-filter:blur(16px);
-  border-bottom:1px solid var(--border);
-  height:58px;display:flex;align-items:center;
-  padding:0 40px;gap:20px;
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:60px;display:flex;align-items:center;padding:0 48px;
+  background:rgba(8,8,15,.8);backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
-.nav-logo{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--blue)}
-.nav-sep{width:1px;height:14px;background:var(--border)}
-.nav-title{font-size:12px;color:var(--muted);font-weight:500}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-mark{
+  width:28px;height:28px;background:var(--blue);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;color:#fff;letter-spacing:-.5px;
+}
+.nav-brand{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.9)}
+.nav-sep{width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 20px}
+.nav-tag{font-size:11px;color:rgba(255,255,255,.35);font-weight:500;letter-spacing:.02em}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
-.nav-btn{
-  padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;
-  cursor:pointer;text-decoration:none;transition:all .15s;letter-spacing:.01em;
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:9px;font-size:12px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:all .18s;letter-spacing:.01em;border:none;
+  font-family:var(--font);
 }
-.nav-btn.sales{border:1px solid var(--border);color:var(--text);background:var(--white)}
-.nav-btn.sales:hover{border-color:var(--blue);color:var(--blue)}
-.nav-btn.exec{background:var(--exec);color:#fff;border:1px solid var(--exec)}
-.nav-btn.exec:hover{opacity:.88}
+.btn-ghost{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.1)}
+.btn-ghost:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 0 0 0 var(--blue-glow)}
+.btn-primary:hover{background:#1a47f5;box-shadow:0 4px 24px var(--blue-glow);transform:translateY(-1px)}
 
 /* ── HERO ── */
 .hero{
-  padding:130px 40px 60px;
-  text-align:center;
-  max-width:740px;
-  margin:0 auto;
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:120px 48px 80px;position:relative;overflow:hidden;
+  background:var(--ink);
 }
+.hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(21,62,237,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21,62,237,.04) 1px, transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
+}
+.hero-glow{
+  position:absolute;top:20%;left:50%;transform:translateX(-50%);
+  width:800px;height:400px;
+  background:radial-gradient(ellipse at center, rgba(21,62,237,.18) 0%, transparent 70%);
+  pointer-events:none;
+}
+.hero-inner{position:relative;z-index:2;text-align:center;max-width:820px}
 .hero-badge{
-  display:inline-flex;align-items:center;gap:7px;
-  background:var(--blue-light);border:1px solid var(--blue-mid);
-  border-radius:20px;padding:5px 14px;
-  font-size:11px;font-weight:600;letter-spacing:.06em;
-  color:var(--blue);text-transform:uppercase;
-  margin-bottom:22px;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:100px;
+  background:rgba(21,62,237,.12);border:1px solid rgba(21,62,237,.25);
+  font-size:11px;font-weight:600;color:rgba(255,255,255,.7);
+  letter-spacing:.04em;text-transform:uppercase;margin-bottom:32px;
 }
-.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:pulse 2s infinite}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(0,166,126,.6);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-h1{
-  font-size:clamp(36px,5.5vw,62px);
-  font-weight:800;
-  letter-spacing:-.03em;
-  line-height:1.06;
-  color:var(--text);
-  margin-bottom:16px;
+.hero-h1{
+  font-size:clamp(44px,6vw,80px);font-weight:900;
+  line-height:1.0;letter-spacing:-.04em;
+  color:#fff;margin-bottom:24px;
 }
-h1 span{color:var(--blue)}
+.hero-h1 em{
+  font-style:normal;
+  background:linear-gradient(135deg,#6B9FFF 0%,var(--blue) 50%,#A78BFA 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
 .hero-sub{
-  font-size:16px;color:var(--muted);font-weight:400;
-  line-height:1.7;max-width:480px;margin:0 auto;
+  font-size:18px;font-weight:400;color:rgba(255,255,255,.45);
+  line-height:1.65;max-width:580px;margin:0 auto 40px;letter-spacing:-.01em;
 }
-
-/* ── TWO-PLATFORM LAYOUT ── */
-.platforms{
-  max-width:1100px;margin:0 auto;
-  padding:0 40px 80px;
-  display:grid;grid-template-columns:1fr 1fr;gap:24px;
-  align-items:stretch;
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-hero-primary{
+  padding:14px 28px;font-size:14px;font-weight:700;
+  background:var(--blue);color:#fff;border-radius:12px;
+  box-shadow:0 8px 32px rgba(21,62,237,.4);
+  transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
 }
-.platforms > div{display:flex;flex-direction:column;}
-.platform-card{display:flex;flex-direction:column;flex:1;}
-.gtm-mockup,.cc-mockup{flex:1;}
+.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(21,62,237,.5);background:#1a47f5}
+.btn-hero-secondary{
+  padding:14px 28px;font-size:14px;font-weight:600;
+  background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-hero-secondary:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)}
 
-/* ── AUDIENCE LABEL ── */
-.audience-label{
-  display:flex;align-items:center;gap:8px;
+/* ── METRICS BAR ── */
+.metrics-bar{
+  position:relative;z-index:2;
+  display:flex;justify-content:center;gap:0;
+  max-width:720px;margin:56px auto 0;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;overflow:hidden;
+}
+.metric{
+  flex:1;padding:20px 24px;text-align:center;
+  border-right:1px solid rgba(255,255,255,.07);
+}
+.metric:last-child{border-right:none}
+.metric-val{font-size:24px;font-weight:800;color:#fff;letter-spacing:-.03em}
+.metric-label{font-size:10px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.metric-sub{font-size:11px;color:rgba(255,255,255,.2);margin-top:2px}
+
+/* ── SCROLL INDICATOR ── */
+.scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  color:rgba(255,255,255,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+}
+.scroll-line{width:1px;height:32px;background:linear-gradient(to bottom,rgba(255,255,255,.2),transparent);animation:scroll-anim 2s infinite}
+@keyframes scroll-anim{0%,100%{opacity:.3;transform:scaleY(1)}50%{opacity:1;transform:scaleY(1.2)}}
+
+/* ── PLATFORMS ── */
+.section-platforms{
+  background:var(--body);padding:100px 48px;
+}
+.section-inner{max-width:1160px;margin:0 auto}
+.section-label{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:16px;
+}
+.section-label::before{content:'';width:20px;height:2px;background:var(--blue);border-radius:1px}
+.section-h2{
+  font-size:clamp(30px,3.5vw,48px);font-weight:800;
+  color:var(--text);letter-spacing:-.03em;line-height:1.1;
   margin-bottom:12px;
-  font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 }
-.audience-label .aud-dot{width:8px;height:8px;border-radius:50%}
-.audience-sales .aud-dot{background:var(--blue)}
-.audience-sales .aud-text{color:var(--blue)}
-.audience-exec .aud-dot{background:#64748B}
-.audience-exec .aud-text{color:#475569}
+.section-sub{font-size:16px;color:var(--muted);line-height:1.6;max-width:540px;margin-bottom:56px}
 
-/* ── PLATFORM CARDS ── */
-.platform-card{
-  border-radius:var(--radius);
-  overflow:hidden;
-  transition:box-shadow .22s,transform .22s;
+.platforms-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+.platforms-grid > div{display:flex;flex-direction:column}
+
+/* ── PLATFORM CARD ── */
+.pcard{
+  display:flex;flex-direction:column;flex:1;
+  border-radius:20px;overflow:hidden;
   text-decoration:none;color:inherit;
-  display:block;
+  transition:transform .22s,box-shadow .22s;
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  box-shadow:0 2px 12px rgba(0,0,0,.04);
 }
-.platform-card:hover{transform:translateY(-4px)}
-
-/* GTM card — light/bright */
-.card-gtm{
-  background:var(--white);
-  border:1.5px solid var(--blue-mid);
-  box-shadow:0 4px 20px rgba(21,62,237,.08);
+.pcard:hover{transform:translateY(-6px);box-shadow:0 24px 60px rgba(21,62,237,.12);border-color:rgba(21,62,237,.3)}
+.pcard-head{
+  padding:24px 28px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
 }
-.card-gtm:hover{box-shadow:0 20px 52px rgba(21,62,237,.16)}
-
-/* Command Center card — dark/executive */
-.card-cc{
-  background:var(--exec);
-  border:1.5px solid rgba(255,255,255,.06);
-  box-shadow:0 4px 24px rgba(0,0,0,.3);
-}
-.card-cc:hover{box-shadow:0 20px 52px rgba(0,0,0,.45)}
-
-/* ── CARD HEADER ── */
-.pc-header{
-  padding:20px 22px 16px;
-  border-bottom:1px solid;
-  display:flex;align-items:center;gap:14px;
-}
-.card-gtm .pc-header{border-color:var(--border)}
-.card-cc .pc-header{border-color:rgba(255,255,255,.08)}
-
-.pc-icon{
-  width:40px;height:40px;border-radius:10px;
+.pcard-icon{
+  width:44px;height:44px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  font-size:18px;font-weight:700;flex-shrink:0;
+  flex-shrink:0;
 }
-.card-gtm .pc-icon{background:var(--blue-light);border:1px solid var(--blue-mid);color:var(--blue)}
-.card-cc .pc-icon{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
-
-.pc-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
-.card-gtm .pc-label{color:var(--blue)}
-.card-cc .pc-label{color:rgba(255,255,255,.4)}
-.pc-name{font-size:16px;font-weight:700}
-.card-gtm .pc-name{color:var(--text)}
-.card-cc .pc-name{color:#fff}
+.pcard-icon.blue{background:var(--blue-dim);border:1px solid var(--blue-mid);color:var(--blue)}
+.pcard-icon.dark{background:#0F1A2E;border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.7)}
+.pcard-meta{flex:1}
+.pcard-audience{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px}
+.pcard-name{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+.pcard-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.pcard-arrow{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--blue-dim);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .18s;
+}
+.pcard:hover .pcard-arrow{background:var(--blue);color:#fff}
 
 /* ── GTM MOCKUP ── */
-.gtm-mockup{padding:18px 20px;min-height:270px;background:#FAFBFF}
-.gtm-chat{display:flex;flex-direction:column;gap:10px}
-.gtm-user{
-  align-self:flex-end;
-  background:var(--blue);color:#fff;
-  border-radius:14px 14px 3px 14px;
-  padding:9px 14px;font-size:11.5px;font-weight:500;max-width:82%;
-  line-height:1.5;
+.pcard-mockup{flex:1;padding:20px;background:#F8FAFF;border-bottom:1px solid var(--border)}
+.gtm-topbar{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  margin-bottom:12px;
 }
-.gtm-ai{
-  align-self:flex-start;
-  background:var(--white);border:1px solid var(--border);
-  border-radius:3px 14px 14px 14px;
-  padding:10px 14px;font-size:11.5px;color:var(--text);max-width:92%;
-  line-height:1.65;box-shadow:0 1px 4px rgba(0,0,0,.05);
-}
-.gtm-ai strong{color:var(--blue);font-weight:600}
-.typing{
-  display:flex;align-items:center;gap:4px;padding:10px 14px;
-  background:var(--white);border:1px solid var(--border);
-  border-radius:3px 14px 14px 14px;align-self:flex-start;width:54px;
-}
-.typing span{
-  width:5px;height:5px;border-radius:50%;background:var(--blue);opacity:.4;
-  animation:tb .9s ease-in-out infinite;
-}
-.typing span:nth-child(2){animation-delay:.15s}
-.typing span:nth-child(3){animation-delay:.3s}
-@keyframes tb{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
-
-/* Quick actions below chat */
-.gtm-quickbar{
-  margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;
-}
-.gtm-chip{
-  padding:4px 10px;border-radius:20px;font-size:10px;font-weight:600;
-  background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-mid);
-}
+.gtm-tb-logo{font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--blue)}
+.gtm-tb-sep{width:1px;height:10px;background:var(--border)}
+.gtm-tb-tab{font-size:10px;font-weight:600;color:var(--muted2);padding:3px 8px;border-radius:5px}
+.gtm-tb-tab.active{background:var(--blue-dim);color:var(--blue)}
+.gtm-tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;box-shadow:0 0 6px rgba(0,166,126,.5)}
+.gtm-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.gtm-kpi{background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.gtm-kpi-l{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);margin-bottom:4px}
+.gtm-kpi-v{font-size:17px;font-weight:800;letter-spacing:-.03em}
+.kv-blue{color:var(--blue)}.kv-green{color:var(--green)}.kv-amber{color:var(--amber)}
+.gtm-chat-wrap{display:flex;flex-direction:column;gap:8px}
+.gtm-msg{font-size:10.5px;line-height:1.55;padding:10px 13px;border-radius:10px;max-width:90%}
+.gtm-msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:3px;font-weight:500}
+.gtm-msg.ai{background:#fff;color:var(--text);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px}
+.gtm-msg.ai strong{color:var(--blue)}
 
 /* ── CC MOCKUP ── */
-.cc-mockup{padding:0;background:#F4F6FC;min-height:270px;display:flex;flex-direction:column}
-.cc-topbar{
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
-  background:#FFFFFF;border-bottom:1px solid #E4E7F0;
-  font-size:10px;font-weight:600;
+.cc-mockup-wrap{flex:1;background:#0D1525;border-bottom:1px solid rgba(255,255,255,.06)}
+.cc-bar{
+  display:flex;align-items:center;gap:8px;padding:10px 16px;
+  background:#091120;border-bottom:1px solid rgba(255,255,255,.05);
 }
-.cc-live-dot{width:6px;height:6px;border-radius:50%;background:#00A67E;box-shadow:0 0 6px rgba(0,166,126,.5)}
-.cc-live-text{color:#9CA3AF;font-size:10px;margin-left:4px}
-.cc-body{display:flex;flex:1;overflow:hidden}
-.cc-sidebar-dark{
-  width:108px;flex-shrink:0;background:#FFFFFF;
-  border-right:1px solid #E4E7F0;padding:10px 8px;
+.cc-bar-logo{font-size:9px;font-weight:800;letter-spacing:.14em;color:rgba(255,255,255,.5)}
+.cc-bar-name{font-size:10px;color:rgba(255,255,255,.2);font-weight:500}
+.cc-bar-live{display:flex;align-items:center;gap:5px;margin-left:auto}
+.cc-bar-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(0,166,126,.6);animation:pulse 2s infinite}
+.cc-bar-text{font-size:9px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase}
+.cc-body{display:flex}
+.cc-side{
+  width:96px;flex-shrink:0;background:#091120;
+  border-right:1px solid rgba(255,255,255,.05);padding:12px 8px;
   display:flex;flex-direction:column;gap:2px;
 }
-.cc-nav{
-  padding:6px 8px;border-radius:6px;font-size:10px;font-weight:500;
-  color:#9CA3AF;display:flex;align-items:center;gap:5px;
+.cc-nav-label{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.18);padding:8px 6px 3px}
+.cc-nav-item{
+  font-size:9.5px;font-weight:500;color:rgba(255,255,255,.3);
+  padding:6px 8px;border-radius:7px;display:flex;align-items:center;gap:6px;
 }
-.cc-nav.active{background:rgba(21,62,237,.08);color:#153EED;font-weight:600}
-.cc-nav-sep{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 8px 2px;color:#D1D5DB}
-.cc-content-dark{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;background:#F4F6FC}
-
-/* KPI cards */
-.cc-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.cc-kpi-dark{
-  background:#FFFFFF;border:1px solid #E4E7F0;
-  border-radius:8px;padding:9px 10px;
+.cc-nav-item.active{background:rgba(21,62,237,.2);color:rgba(255,255,255,.85);font-weight:600}
+.cc-nav-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.cc-main{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px}
+.cc-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cc-kpi{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;padding:10px 12px;
 }
-.cc-kpi-l{font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF;margin-bottom:3px}
-.cc-kpi-v{font-size:16px;font-weight:700;letter-spacing:-.02em}
-.kv-blue{color:#153EED}
-.kv-green{color:#00A67E}
-.kv-amber{color:#D97706}
-
-/* Country breakdown */
-.cc-countries{display:flex;flex-direction:column;gap:5px}
-.cc-country{
-  background:#FFFFFF;border:1px solid #E4E7F0;
-  border-radius:7px;padding:7px 10px;
-  display:flex;align-items:center;gap:8px;
+.cc-kpi-l{font-size:8px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:4px}
+.cc-kpi-v{font-size:17px;font-weight:800;letter-spacing:-.03em}
+.cc-rows{display:flex;flex-direction:column;gap:5px}
+.cc-row{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:10px;
 }
-.cc-country-flag{font-size:10px;font-weight:700;color:#6B7280}
-.cc-country-name{font-size:10px;font-weight:600;color:#1F2937;flex:1}
-.cc-country-bar-wrap{width:60px;height:3px;background:#E4E7F0;border-radius:2px;overflow:hidden}
-.cc-country-bar{height:100%;background:#153EED;border-radius:2px}
-.cc-country-val{font-size:10px;font-weight:700;color:#153EED}
+.cc-row-flag{font-size:9px;font-weight:800;color:rgba(255,255,255,.4);letter-spacing:.04em}
+.cc-row-name{font-size:10px;font-weight:600;color:rgba(255,255,255,.7);flex:1}
+.cc-bar-wrap{width:56px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.cc-bar-fill{height:100%;border-radius:2px;background:var(--blue)}
+.cc-row-val{font-size:10px;font-weight:700;color:#6B9FFF}
 
 /* ── CARD FOOTER ── */
-.pc-footer{
-  padding:14px 22px;border-top:1px solid;
-  display:flex;align-items:center;justify-content:space-between;
+.pcard-foot{
+  padding:16px 28px;display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--border);background:var(--surface);
 }
-.card-gtm .pc-footer{border-color:var(--border)}
-.card-cc .pc-footer{border-color:#E4E7F0}
-
-.pc-tags{display:flex;gap:5px;flex-wrap:wrap}
-.pc-tag{
-  padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;
+.pcard-tags{display:flex;gap:6px;flex-wrap:wrap}
+.pcard-tag{
+  font-size:10px;font-weight:600;padding:4px 10px;border-radius:100px;
+  background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-mid);
 }
-.card-gtm .pc-tag{background:var(--blue-light);color:var(--blue)}
-.card-cc .pc-tag{background:rgba(21,62,237,.06);color:#153EED}
-
-.pc-cta{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;transition:gap .15s}
-.card-gtm .pc-cta{color:var(--blue)}
-.card-cc .pc-cta{color:#153EED}
-.platform-card:hover .pc-cta{gap:9px}
-
-/* ── SEPARATOR LABEL ── */
-.platform-section-label{
-  display:flex;align-items:center;gap:10px;
-  margin-bottom:10px;
+.pcard-cta{
+  font-size:12px;font-weight:700;color:var(--blue);
+  display:flex;align-items:center;gap:5px;white-space:nowrap;transition:gap .15s;
 }
-.psl-line{flex:1;height:1px;background:var(--border)}
-.psl-text{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.pcard:hover .pcard-cta{gap:9px}
 
 /* ── FEATURES ── */
-.features{
-  background:var(--white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-  padding:56px 40px;
+.section-features{background:#fff;padding:100px 48px;border-top:1px solid var(--border)}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:56px;border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.feat-item{
+  padding:32px;background:#fff;
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  transition:background .18s;
 }
-.features-inner{max-width:1100px;margin:0 auto}
-.features-split{
-  display:grid;grid-template-columns:1fr 1fr;gap:48px;
-  margin-top:36px;
+.feat-item:hover{background:#F8FAFF}
+.feat-item:nth-child(3n){border-right:none}
+.feat-item:nth-last-child(-n+3){border-bottom:none}
+.feat-icon{
+  width:40px;height:40px;border-radius:11px;
+  background:var(--blue-dim);border:1px solid var(--blue-mid);
+  display:flex;align-items:center;justify-content:center;color:var(--blue);
+  margin-bottom:16px;
 }
-.feat-col-header{
-  display:flex;align-items:center;gap:10px;margin-bottom:20px;
-  padding-bottom:16px;border-bottom:2px solid;
-}
-.feat-col-header.sales-side{border-color:var(--blue)}
-.feat-col-header.exec-side{border-color:var(--exec)}
-.feat-col-title{font-size:14px;font-weight:700}
-.feat-col-subtitle{font-size:11px;font-weight:500;margin-top:1px}
-.feat-col-header.sales-side .feat-col-title{color:var(--blue)}
-.feat-col-header.sales-side .feat-col-subtitle{color:rgba(21,62,237,.6)}
-.feat-col-header.exec-side .feat-col-title{color:var(--exec)}
-.feat-col-header.exec-side .feat-col-subtitle{color:#64748B}
+.feat-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.01em}
+.feat-desc{font-size:13px;color:var(--muted);line-height:1.6}
 
-.feat-badge{
-  width:32px;height:32px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
+/* ── AUTOMATION ── */
+.section-auto{background:var(--body);padding:100px 48px;border-top:1px solid var(--border)}
+.auto-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:56px}
+.auto-visual{
+  background:var(--ink2);border-radius:20px;padding:28px;
+  border:1px solid rgba(255,255,255,.07);
 }
-.sales-badge{background:var(--blue-light);border:1px solid var(--blue-mid)}
-.exec-badge{background:#F1F5F9;border:1px solid #E2E8F0}
+.auto-timeline{display:flex;flex-direction:column;gap:0}
+.auto-event{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05);
+}
+.auto-event:last-child{border-bottom:none}
+.auto-time{
+  font-size:9px;font-weight:700;color:rgba(255,255,255,.3);
+  letter-spacing:.06em;white-space:nowrap;margin-top:3px;min-width:52px;
+}
+.auto-dot-col{display:flex;flex-direction:column;align-items:center;gap:0;padding-top:5px}
+.auto-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.auto-dot.blue{background:var(--blue);box-shadow:0 0 8px rgba(21,62,237,.5)}
+.auto-dot.green{background:var(--green);box-shadow:0 0 8px rgba(0,166,126,.5)}
+.auto-dot.amber{background:var(--amber)}
+.auto-dot.muted{background:rgba(255,255,255,.15)}
+.auto-text{flex:1}
+.auto-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:3px}
+.auto-sub{font-size:10px;color:rgba(255,255,255,.3);line-height:1.5}
+.auto-badge{
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;
+  background:rgba(21,62,237,.2);color:#6B9FFF;margin-top:5px;display:inline-block;
+}
+.auto-list{display:flex;flex-direction:column;gap:20px}
+.auto-feat{display:flex;gap:14px;align-items:flex-start}
+.auto-feat-icon{
+  width:40px;height:40px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:var(--blue);
+  background:var(--blue-dim);border:1px solid var(--blue-mid);
+}
+.auto-feat-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.01em}
+.auto-feat-desc{font-size:13px;color:var(--muted);line-height:1.55}
 
-.feat-list{display:flex;flex-direction:column;gap:14px}
-.feat-item{display:flex;gap:12px;align-items:flex-start}
-.feat-item-icon{
-  width:32px;height:32px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
+/* ── CTA SECTION ── */
+.section-cta{
+  background:var(--ink);padding:100px 48px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  position:relative;overflow:hidden;
 }
-.feat-item-body{}
-.feat-item-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
-.feat-item-desc{font-size:12px;color:var(--muted);line-height:1.6}
-
-.section-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
-
-/* ── QUOTE ── */
-.quote-section{
-  padding:80px 40px;text-align:center;
-  max-width:640px;margin:0 auto;
+.cta-glow{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:600px;height:300px;
+  background:radial-gradient(ellipse at center,rgba(21,62,237,.22) 0%,transparent 70%);
+  pointer-events:none;
 }
-.quote-mark{font-size:56px;color:var(--blue);opacity:.12;line-height:.8;font-family:Georgia,serif;margin-bottom:8px}
-.quote-text{
-  font-size:clamp(20px,2.8vw,26px);font-weight:600;
-  line-height:1.5;letter-spacing:-.02em;color:var(--text);
-  margin-bottom:18px;
-}
-.quote-text em{color:var(--blue);font-style:normal}
-.quote-attr{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.cta-inner{position:relative;z-index:2;max-width:640px}
+.cta-h2{font-size:clamp(32px,4vw,56px);font-weight:900;color:#fff;letter-spacing:-.04em;line-height:1.05;margin-bottom:16px}
+.cta-sub{font-size:16px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:40px}
+.cta-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 
 /* ── FOOTER ── */
 footer{
-  background:var(--dark);color:rgba(255,255,255,.5);
-  padding:28px 40px;
+  background:var(--ink);padding:28px 48px;
+  border-top:1px solid rgba(255,255,255,.06);
   display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:16px;
 }
-.footer-logo{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
-.footer-links{display:flex;gap:24px}
-.footer-link{font-size:12px;color:rgba(255,255,255,.35);text-decoration:none;transition:color .15s}
-.footer-link:hover{color:#fff}
+.footer-brand{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.25)}
 .footer-copy{font-size:11px;color:rgba(255,255,255,.18)}
 
-/* ── FADE IN ── */
-.fade-in{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s ease}
-.fade-in.visible{opacity:1;transform:none}
+/* ── ANIMATIONS ── */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
+.fade-up.visible{opacity:1;transform:translateY(0)}
 
-/* ── MOBILE ── */
-@media(max-width:800px){
-  nav{padding:0 20px}
-  .hero{padding:110px 24px 48px}
-  .platforms{grid-template-columns:1fr;padding:0 20px 60px;gap:32px}
-  .features-split{grid-template-columns:1fr;gap:40px}
-  .features{padding:40px 24px}
-  .quote-section{padding:56px 24px}
-  footer{padding:24px;flex-direction:column;align-items:flex-start}
-}
-@media(max-width:480px){
-  .nav-title{display:none}
-  .hero-ctas{flex-direction:column}
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  nav{padding:0 24px}
+  .hero{padding:100px 24px 60px}
+  .metrics-bar{flex-direction:column;border-radius:12px}
+  .metric{border-right:none;border-bottom:1px solid rgba(255,255,255,.07)}
+  .metric:last-child{border-bottom:none}
+  .section-platforms,.section-features,.section-auto,.section-cta{padding:64px 24px}
+  .platforms-grid,.feat-grid,.auto-grid{grid-template-columns:1fr}
+  .feat-item:nth-child(3n){border-right:1px solid var(--border)}
+  .feat-item{border-right:none}
+  footer{flex-direction:column;gap:12px;text-align:center;padding:24px}
 }
 </style>
 </head>
@@ -365,289 +395,421 @@ footer{
 
 <!-- ── NAV ── -->
 <nav>
-  <span class="nav-logo">JAKALA</span>
-  <span class="nav-sep"></span>
-  <span class="nav-title">Nordic Commercial OS</span>
+  <div class="nav-logo">
+    <div class="nav-logo-mark">J</div>
+    <span class="nav-brand">JAKALA</span>
+  </div>
+  <div class="nav-sep"></div>
+  <span class="nav-tag">Nordic Commercial OS</span>
   <div class="nav-right">
-    <a href="/login" class="nav-btn sales">GTM OS — Sales</a>
-    <a href="/cc" class="nav-btn exec">Command Center — Leadership</a>
+    <a href="/cc" class="btn btn-ghost">Command Center</a>
+    <a href="/login" class="btn btn-primary">
+      <i data-lucide="zap" style="width:13px;height:13px;"></i>
+      Open GTM OS
+    </a>
   </div>
 </nav>
 
 <!-- ── HERO ── -->
-<div class="hero fade-in">
-  <div class="hero-badge">
-    <span class="dot"></span>
-    Live · Norway · Denmark · Sweden
-  </div>
-  <h1>Close deals.<br><span>Predict the future.</span></h1>
-  <p class="hero-sub">
-    One tool to find, pitch, and close new business.
-    One platform to see where the market is going — and set the strategy to get there first.
-  </p>
-</div>
-
-<!-- ── TWO PLATFORMS ── -->
-<div class="platforms">
-
-  <!-- LEFT: GTM OS — SALES -->
-  <div class="fade-in">
-    <div class="audience-label audience-sales">
-      <span class="aud-dot"></span>
-      <span class="aud-text">For Sales Teams</span>
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-inner fade-up">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Live · Nordic pipeline · Auto-updated
     </div>
-    <a href="/login" class="platform-card card-gtm">
-      <div class="pc-header">
-        <div class="pc-icon">◎</div>
-        <div>
-          <div class="pc-label">For Sales · Close deals &amp; grow accounts</div>
-          <div class="pc-name">GTM Operating System</div>
-        </div>
-      </div>
-      <div class="gtm-mockup">
-        <div class="gtm-chat">
-          <div class="gtm-user">Pre-meeting brief: Elkjøp — Morten Syversen</div>
-          <div class="gtm-ai">
-            <strong>Morten Syversen</strong> — Chief Brand & Digital Officer, Elkjøp.<br><br>
-            Multi-channel retailer, 430+ stores. Commerce fragmentation across markets — no unified product layer.<br><br>
-            <strong>GTM:</strong> Commerce Optimization · Entry: catalog quality diagnostic · Pipeline: <strong>€700K</strong>
-          </div>
-          <div class="gtm-user">Write LinkedIn outreach in Norwegian</div>
-          <div class="typing">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
-        <div class="gtm-quickbar">
-          <span class="gtm-chip">Lead Radar</span>
-          <span class="gtm-chip">Outreach</span>
-          <span class="gtm-chip">Deal Blueprint</span>
-          <span class="gtm-chip">Meeting → Actions</span>
-          <span class="gtm-chip">Revenue Sim</span>
-        </div>
-      </div>
-      <div class="pc-footer">
-        <div class="pc-tags">
-          <span class="pc-tag">Close new deals</span>
-          <span class="pc-tag">Grow accounts</span>
-        </div>
-        <div class="pc-cta">Open GTM OS →</div>
-      </div>
-    </a>
-  </div>
-
-  <!-- RIGHT: MARKET COMMAND CENTER — LEADERSHIP -->
-  <div class="fade-in">
-    <div class="audience-label audience-exec">
-      <span class="aud-dot"></span>
-      <span class="aud-text">For Leadership</span>
+    <h1 class="hero-h1">
+      Your commercial team,<br>
+      <em>running on intelligence</em>
+    </h1>
+    <p class="hero-sub">
+      AI-native GTM platform for JAKALA Nordic. Discover leads, enrich accounts,
+      generate outreach and predict revenue — automatically.
+    </p>
+    <div class="hero-actions">
+      <a href="/login" class="btn-hero-primary">
+        Open GTM OS
+        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+      </a>
+      <a href="/cc" class="btn-hero-secondary">
+        Command Center
+        <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i>
+      </a>
     </div>
-    <a href="/cc" class="platform-card card-cc">
-      <div class="pc-header">
-        <div class="pc-icon">◉</div>
-        <div>
-          <div class="pc-label">For Leadership · Predict &amp; set strategy</div>
-          <div class="pc-name">Market Command Center</div>
-        </div>
+    <div class="metrics-bar">
+      <div class="metric">
+        <div class="metric-val">€6.8M</div>
+        <div class="metric-label">Pipeline</div>
+        <div class="metric-sub">Nordic total</div>
       </div>
-      <div class="cc-mockup">
-        <div class="cc-topbar">
-          <span style="font-weight:700;color:#153EED;letter-spacing:.1em;font-size:10px">JAKALA</span>
-          <span style="color:#9CA3AF;font-size:10px">Market Command Center</span>
-          <span style="flex:1"></span>
-          <span class="cc-live-dot"></span>
-          <span class="cc-live-text">Live · Nordic</span>
-        </div>
-        <div class="cc-body">
-          <div class="cc-sidebar-dark">
-            <div class="cc-nav-sep">View</div>
-            <div class="cc-nav active">⊛ Overview</div>
-            <div class="cc-nav">◎ Pipeline</div>
-            <div class="cc-nav-sep">Analyse</div>
-            <div class="cc-nav">◷ Forecast</div>
-            <div class="cc-nav">◈ Intel</div>
-            <div class="cc-nav">⚡ Foresight</div>
-          </div>
-          <div class="cc-content-dark">
-            <div class="cc-kpi-row">
-              <div class="cc-kpi-dark">
-                <div class="cc-kpi-l">Pipeline</div>
-                <div class="cc-kpi-v kv-blue">€6.8M</div>
-              </div>
-              <div class="cc-kpi-dark">
-                <div class="cc-kpi-l">Base Case</div>
-                <div class="cc-kpi-v kv-green">€420K</div>
-              </div>
-              <div class="cc-kpi-dark">
-                <div class="cc-kpi-l">Status</div>
-                <div class="cc-kpi-v kv-amber">AMBER</div>
-              </div>
-            </div>
-            <div class="cc-countries">
-              <div class="cc-country">
-                <span class="cc-country-flag">NO</span>
-                <span class="cc-country-name">Norway</span>
-                <div class="cc-country-bar-wrap"><div class="cc-country-bar" style="width:75%"></div></div>
-                <span class="cc-country-val">€3.2M</span>
-              </div>
-              <div class="cc-country">
-                <span class="cc-country-flag">DK</span>
-                <span class="cc-country-name">Denmark</span>
-                <div class="cc-country-bar-wrap"><div class="cc-country-bar" style="width:55%"></div></div>
-                <span class="cc-country-val">€2.1M</span>
-              </div>
-              <div class="cc-country">
-                <span class="cc-country-flag">SE</span>
-                <span class="cc-country-name">Sweden</span>
-                <div class="cc-country-bar-wrap"><div class="cc-country-bar" style="width:40%"></div></div>
-                <span class="cc-country-val">€1.5M</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="metric">
+        <div class="metric-val">45</div>
+        <div class="metric-label">Accounts</div>
+        <div class="metric-sub">Active prospects</div>
       </div>
-      <div class="pc-footer">
-        <div class="pc-tags">
-          <span class="pc-tag">Predict the future</span>
-          <span class="pc-tag">Set strategy</span>
-        </div>
-        <div class="pc-cta">Open Command Center →</div>
+      <div class="metric">
+        <div class="metric-val">18</div>
+        <div class="metric-label">Named buyers</div>
+        <div class="metric-sub">Confirmed contacts</div>
       </div>
-    </a>
+      <div class="metric">
+        <div class="metric-val">€420K</div>
+        <div class="metric-label">Base case</div>
+        <div class="metric-sub">Q2 2026</div>
+      </div>
+    </div>
   </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    Scroll
+  </div>
+</section>
 
-</div>
+<!-- ── PLATFORMS ── -->
+<section class="section-platforms">
+  <div class="section-inner">
+    <div class="fade-up">
+      <div class="section-label">Two platforms, one mission</div>
+      <h2 class="section-h2">Built for two different jobs to be done</h2>
+      <p class="section-sub">Sales teams close deals. Leadership sets strategy. Both deserve purpose-built tools.</p>
+    </div>
+    <div class="platforms-grid fade-up">
 
-<!-- ── FEATURES SPLIT BY AUDIENCE ── -->
-<div class="features fade-in">
-  <div class="features-inner">
-    <div class="section-label">Two fundamentally different jobs to be done</div>
-    <div class="features-split">
-
-      <!-- SALES COLUMN -->
+      <!-- GTM OS -->
       <div>
-        <div class="feat-col-header sales-side">
-          <div class="feat-badge sales-badge">◎</div>
-          <div>
-            <div class="feat-col-title">GTM OS — Close new deals &amp; grow existing accounts</div>
-            <div class="feat-col-subtitle">For account managers and business developers</div>
-          </div>
-        </div>
-        <div class="feat-list">
-          <div class="feat-item">
-            <div class="feat-item-icon sales-badge">◎</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Lead Radar &amp; Buying Signals</div>
-              <div class="feat-item-desc">Find the right accounts at the right moment. ICP scoring, new executive hires, tech stack changes — surfaced automatically so you reach out when the window is open.</div>
+        <a href="/login" class="pcard">
+          <div class="pcard-head">
+            <div class="pcard-icon blue">
+              <i data-lucide="target" style="width:20px;height:20px;"></i>
+            </div>
+            <div class="pcard-meta">
+              <div class="pcard-audience">For Sales Teams</div>
+              <div class="pcard-name">GTM Operating System</div>
+              <div class="pcard-desc">Close deals, manage accounts, generate outreach</div>
+            </div>
+            <div class="pcard-arrow">
+              <i data-lucide="arrow-right" style="width:15px;height:15px;"></i>
             </div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon sales-badge">◎</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Account Intelligence &amp; Outreach</div>
-              <div class="feat-item-desc">Pre-meeting briefs, deal blueprints, and personalised outreach in NO/DK/SE/EN — generated per account in seconds. Know the buyer before the call. Land the first message.</div>
+          <div class="pcard-mockup">
+            <div class="gtm-topbar">
+              <span class="gtm-tb-logo">JAKALA GTM OS</span>
+              <span class="gtm-tb-sep"></span>
+              <span class="gtm-tb-tab active">Dashboard</span>
+              <span class="gtm-tb-tab">Accounts</span>
+              <span class="gtm-tb-tab">Signals</span>
+              <span class="gtm-tb-dot"></span>
+            </div>
+            <div class="gtm-kpis">
+              <div class="gtm-kpi">
+                <div class="gtm-kpi-l">Pipeline</div>
+                <div class="gtm-kpi-v kv-blue">€6.8M</div>
+              </div>
+              <div class="gtm-kpi">
+                <div class="gtm-kpi-l">Forecast</div>
+                <div class="gtm-kpi-v kv-green">€420K</div>
+              </div>
+              <div class="gtm-kpi">
+                <div class="gtm-kpi-l">Status</div>
+                <div class="gtm-kpi-v kv-amber">AMBER</div>
+              </div>
+            </div>
+            <div class="gtm-chat-wrap">
+              <div class="gtm-msg user">Pre-meeting brief: Elkjøp — Morten Syversen, Chief Brand & Digital Officer</div>
+              <div class="gtm-msg ai"><strong>Elkjøp Nordic — €700K opportunity.</strong> Morten owns B2B commerce. Entry: Commerce Optimization Pilot. Key pain: product discovery at scale. Lead with the Maxbo case — similar profile, proven ROI.</div>
             </div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon sales-badge">◎</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Deal Blueprint &amp; Pitch Builder</div>
-              <div class="feat-item-desc">Full commercial execution plan per account: entry narrative, offer architecture, stakeholder map, objection handling, and a 7-day action sprint.</div>
+          <div class="pcard-foot">
+            <div class="pcard-tags">
+              <span class="pcard-tag">AI-powered chat</span>
+              <span class="pcard-tag">Lead radar</span>
+              <span class="pcard-tag">Auto outreach</span>
             </div>
+            <div class="pcard-cta">Open <i data-lucide="arrow-right" style="width:13px;height:13px;"></i></div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon sales-badge">◎</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Meeting Notes → Next Move</div>
-              <div class="feat-item-desc">Paste raw meeting notes. GTM OS extracts actions, identifies blockers, updates the account file, and recommends the next commercial move — in under 30 seconds.</div>
-            </div>
-          </div>
-          <div class="feat-item">
-            <div class="feat-item-icon sales-badge">◎</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Revenue Simulation &amp; Upsell Planning</div>
-              <div class="feat-item-desc">Model three revenue scenarios per account. Identify expansion paths in existing client relationships. Know when and how to go back with the next offer.</div>
-            </div>
-          </div>
-        </div>
+        </a>
       </div>
 
-      <!-- LEADERSHIP COLUMN -->
+      <!-- Command Center -->
       <div>
-        <div class="feat-col-header exec-side">
-          <div class="feat-badge exec-badge" style="background:#1E293B;border-color:rgba(255,255,255,.1);color:#fff">◉</div>
-          <div>
-            <div class="feat-col-title">Command Center — Predict the future &amp; set strategy</div>
-            <div class="feat-col-subtitle">For CCO, country leads, and senior management</div>
-          </div>
-        </div>
-        <div class="feat-list">
-          <div class="feat-item">
-            <div class="feat-item-icon" style="background:#F1F5F9;border:1px solid #E2E8F0">✦</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Market Foresight</div>
-              <div class="feat-item-desc">AI-generated buying window predictions, partnership opportunities, and emerging service gaps — per market, per quarter. Tells you where to place the next strategic bet before competitors move.</div>
+        <a href="/cc" class="pcard">
+          <div class="pcard-head">
+            <div class="pcard-icon blue">
+              <i data-lucide="bar-chart-2" style="width:20px;height:20px;"></i>
+            </div>
+            <div class="pcard-meta">
+              <div class="pcard-audience">For Leadership</div>
+              <div class="pcard-name">Market Command Center</div>
+              <div class="pcard-desc">Pipeline intelligence, foresight and strategic briefs</div>
+            </div>
+            <div class="pcard-arrow">
+              <i data-lucide="arrow-right" style="width:15px;height:15px;"></i>
             </div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon" style="background:#F1F5F9;border:1px solid #E2E8F0">✦</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Strategic AI &amp; Win Pattern Analysis</div>
-              <div class="feat-item-desc">What deal characteristics predict a win in the Nordic market? Which segments have the highest close rate? AI analysis of your own pipeline to surface what's working — and what isn't.</div>
+          <div class="cc-mockup-wrap">
+            <div class="cc-bar">
+              <span class="cc-bar-logo">JAKALA</span>
+              <span style="color:rgba(255,255,255,.12);margin:0 6px">|</span>
+              <span class="cc-bar-name">Market Command Center</span>
+              <div class="cc-bar-live">
+                <span class="cc-bar-dot"></span>
+                <span class="cc-bar-text">Live · Nordic</span>
+              </div>
+            </div>
+            <div class="cc-body">
+              <div class="cc-side">
+                <div class="cc-nav-label">Foresight</div>
+                <div class="cc-nav-item active"><span class="cc-nav-dot"></span> Market</div>
+                <div class="cc-nav-item"><span class="cc-nav-dot"></span> Signals</div>
+                <div class="cc-nav-label">Pipeline</div>
+                <div class="cc-nav-item"><span class="cc-nav-dot"></span> Overview</div>
+                <div class="cc-nav-item"><span class="cc-nav-dot"></span> Predict</div>
+                <div class="cc-nav-item"><span class="cc-nav-dot"></span> Accounts</div>
+              </div>
+              <div class="cc-main">
+                <div class="cc-kpis">
+                  <div class="cc-kpi">
+                    <div class="cc-kpi-l">Pipeline</div>
+                    <div class="cc-kpi-v kv-blue">€6.8M</div>
+                  </div>
+                  <div class="cc-kpi">
+                    <div class="cc-kpi-l">Base Case</div>
+                    <div class="cc-kpi-v kv-green">€420K</div>
+                  </div>
+                  <div class="cc-kpi">
+                    <div class="cc-kpi-l">Status</div>
+                    <div class="cc-kpi-v kv-amber">AMBER</div>
+                  </div>
+                </div>
+                <div class="cc-rows">
+                  <div class="cc-row">
+                    <span class="cc-row-flag">NO</span>
+                    <span class="cc-row-name">Norway</span>
+                    <div class="cc-bar-wrap"><div class="cc-bar-fill" style="width:75%"></div></div>
+                    <span class="cc-row-val">€3.2M</span>
+                  </div>
+                  <div class="cc-row">
+                    <span class="cc-row-flag">DK</span>
+                    <span class="cc-row-name">Denmark</span>
+                    <div class="cc-bar-wrap"><div class="cc-bar-fill" style="width:55%"></div></div>
+                    <span class="cc-row-val">€2.1M</span>
+                  </div>
+                  <div class="cc-row">
+                    <span class="cc-row-flag">SE</span>
+                    <span class="cc-row-name">Sweden</span>
+                    <div class="cc-bar-wrap"><div class="cc-bar-fill" style="width:40%"></div></div>
+                    <span class="cc-row-val">€1.5M</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon" style="background:#F1F5F9;border:1px solid #E2E8F0">📡</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Signal Radar &amp; Opportunity Map</div>
-              <div class="feat-item-desc">Aggregate market signals across NO/DK/SE. Which sectors are in motion? Where are leadership changes creating entry windows? Strategic-level intelligence, not individual account noise.</div>
+          <div class="pcard-foot">
+            <div class="pcard-tags">
+              <span class="pcard-tag">Weekly brief</span>
+              <span class="pcard-tag">AI foresight</span>
+              <span class="pcard-tag">Deal predictions</span>
             </div>
+            <div class="pcard-cta">Open <i data-lucide="arrow-right" style="width:13px;height:13px;"></i></div>
           </div>
-          <div class="feat-item">
-            <div class="feat-item-icon" style="background:#F1F5F9;border:1px solid #E2E8F0">◷</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Forecast Engine &amp; Scenario Planning</div>
-              <div class="feat-item-desc">Base case, upside, and downside forecasts with probability weighting. Weekly commit tracking. Board-ready numbers built from real pipeline data — not gut feel.</div>
-            </div>
-          </div>
-          <div class="feat-item">
-            <div class="feat-item-icon" style="background:#F1F5F9;border:1px solid #E2E8F0">◉</div>
-            <div class="feat-item-body">
-              <div class="feat-item-title">Live Pipeline &amp; Team Activity</div>
-              <div class="feat-item-desc">Aggregate pipeline across all three markets. Deal stage health, open actions, and recent meetings — leadership visibility without being in the weeds of every account.</div>
-            </div>
-          </div>
-        </div>
+        </a>
       </div>
 
     </div>
   </div>
-</div>
+</section>
 
-<!-- ── QUOTE ── -->
-<div class="quote-section fade-in">
-  <div class="quote-mark">"</div>
-  <div class="quote-text">
-    Turn <em>liquid gold</em><br>into solid bricks.
+<!-- ── FEATURES ── -->
+<section class="section-features">
+  <div class="section-inner">
+    <div class="fade-up">
+      <div class="section-label">What it does</div>
+      <h2 class="section-h2">Every commercial function, automated</h2>
+      <p class="section-sub">From lead discovery to pipeline forecasting — the OS handles the heavy lifting.</p>
+    </div>
+    <div class="feat-grid fade-up">
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="search" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Automated Lead Discovery</div>
+        <div class="feat-desc">Tavily scans Nordic news and signals daily. Claude scores each company against ICP criteria. Qualifying leads land directly in your pipeline.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="sparkles" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Service Enrichment</div>
+        <div class="feat-desc">Every account is automatically matched to the most relevant JAKALA services. Activation records are created and updated as new signals emerge.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="mail" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Outreach Generation</div>
+        <div class="feat-desc">Generate hyper-personalised outreach for any account and buyer in seconds. Calibrated to GTM strategy, tech stack and timing signals.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="file-text" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Meeting Intelligence</div>
+        <div class="feat-desc">Paste meeting notes. The OS extracts key insights, updates account files, rewrites next actions and identifies the next commercial move.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="trending-up" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Pipeline Forecasting</div>
+        <div class="feat-desc">Probability-weighted board forecasts. Base case, upside and stretch scenarios. Updated automatically as deal stages change.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-icon"><i data-lucide="presentation" style="width:18px;height:18px;"></i></div>
+        <div class="feat-title">Deck Generation</div>
+        <div class="feat-desc">One click generates a tailored 5-slide discovery deck per account — ready to download as PPTX and customise before the meeting.</div>
+      </div>
+    </div>
   </div>
-  <div class="quote-attr">— JAKALA Nordic</div>
-</div>
+</section>
+
+<!-- ── AUTOMATION ── -->
+<section class="section-auto">
+  <div class="section-inner">
+    <div class="auto-grid fade-up">
+      <div>
+        <div class="section-label">Always on</div>
+        <h2 class="section-h2">Runs while you sleep</h2>
+        <p class="section-sub" style="margin-bottom:36px">Every weekday morning the OS scans, scores and enriches — before you open your laptop.</p>
+        <div class="auto-list">
+          <div class="auto-feat">
+            <div class="auto-feat-icon"><i data-lucide="clock" style="width:18px;height:18px;"></i></div>
+            <div>
+              <div class="auto-feat-title">Daily Action Plan</div>
+              <div class="auto-feat-desc">Your top 3 accounts to contact today — with timing rationale, buyer name and suggested opening line. Generated at 07:00 every morning.</div>
+            </div>
+          </div>
+          <div class="auto-feat">
+            <div class="auto-feat-icon"><i data-lucide="radio" style="width:18px;height:18px;"></i></div>
+            <div>
+              <div class="auto-feat-title">Signal Monitoring</div>
+              <div class="auto-feat-desc">Leadership changes, platform migrations, funding rounds and regulatory triggers — surfaced and mapped to accounts automatically.</div>
+            </div>
+          </div>
+          <div class="auto-feat">
+            <div class="auto-feat-icon"><i data-lucide="bell" style="width:18px;height:18px;"></i></div>
+            <div>
+              <div class="auto-feat-title">In-App Notifications</div>
+              <div class="auto-feat-desc">New leads, stale accounts, service matches and weekly briefs — all delivered in the notification centre in real time.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="auto-visual">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:20px;">Today's automated activity</div>
+        <div class="auto-timeline">
+          <div class="auto-event">
+            <div class="auto-time">06:30</div>
+            <div class="auto-dot-col"><div class="auto-dot blue"></div></div>
+            <div class="auto-text">
+              <div class="auto-title">Lead scan complete</div>
+              <div class="auto-sub">Tavily searched 8 Nordic queries · Claude scored 14 results</div>
+              <span class="auto-badge">3 new accounts added</span>
+            </div>
+          </div>
+          <div class="auto-event">
+            <div class="auto-time">06:45</div>
+            <div class="auto-dot-col"><div class="auto-dot green"></div></div>
+            <div class="auto-text">
+              <div class="auto-title">Service enrichment</div>
+              <div class="auto-sub">Claude matched services to 3 new accounts</div>
+              <span class="auto-badge">6 activations created</span>
+            </div>
+          </div>
+          <div class="auto-event">
+            <div class="auto-time">07:00</div>
+            <div class="auto-dot-col"><div class="auto-dot blue"></div></div>
+            <div class="auto-text">
+              <div class="auto-title">Daily action plan</div>
+              <div class="auto-sub">Top 3 priorities generated for NO · DK · SE</div>
+              <span class="auto-badge">Notifications sent</span>
+            </div>
+          </div>
+          <div class="auto-event">
+            <div class="auto-time">07:05</div>
+            <div class="auto-dot-col"><div class="auto-dot amber"></div></div>
+            <div class="auto-text">
+              <div class="auto-title">Stale account check</div>
+              <div class="auto-sub">Scanned all accounts · flagged inactive contacts</div>
+              <span class="auto-badge" style="background:rgba(217,119,6,.15);color:#FBBF24">2 accounts flagged</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="section-cta">
+  <div class="cta-glow"></div>
+  <div class="cta-inner fade-up">
+    <h2 class="cta-h2">Ready to run on intelligence?</h2>
+    <p class="cta-sub">Your pipeline is live. Your leads are waiting. Log in and start closing.</p>
+    <div class="cta-actions">
+      <a href="/login" class="btn-hero-primary">
+        Open GTM OS
+        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+      </a>
+      <a href="/cc" class="btn-hero-secondary">
+        Command Center
+        <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i>
+      </a>
+    </div>
+  </div>
+</section>
 
 <!-- ── FOOTER ── -->
 <footer>
-  <div class="footer-logo">JAKALA Nordic OS</div>
-  <div class="footer-links">
-    <a href="/login" class="footer-link">GTM OS — Sales</a>
-    <a href="/cc" class="footer-link">Command Center — Leadership</a>
-  </div>
-  <div class="footer-copy">Internal platform · JAKALA Nordic</div>
+  <span class="footer-brand">JAKALA · Nordic Commercial OS</span>
+  <span class="footer-copy">Internal platform · Not for external distribution</span>
 </footer>
 
 <script>
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
-}, {threshold: 0.08});
-document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-document.querySelector('.hero').classList.add('visible');
+lucide.createIcons();
+
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.1, rootMargin: '0px 0px -40px 0px'});
+
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// Animate metrics counter
+function animateCount(el, target, prefix, suffix, decimals) {
+  const duration = 1800;
+  const start = performance.now();
+  const update = (now) => {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val = ease * target;
+    el.textContent = prefix + (decimals ? val.toFixed(1) : Math.round(val)) + suffix;
+    if (p < 1) requestAnimationFrame(update);
+  };
+  requestAnimationFrame(update);
+}
+
+const metricsObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const vals = e.target.querySelectorAll('.metric-val');
+      const targets = [6.8, 45, 18, 420];
+      const prefixes = ['€','','','€'];
+      const suffixes = ['M','','','K'];
+      const decimals = [1,0,0,0];
+      vals.forEach((v, i) => animateCount(v, targets[i], prefixes[i], suffixes[i], decimals[i]));
+      metricsObserver.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.5});
+
+const bar = document.querySelector('.metrics-bar');
+if (bar) metricsObserver.observe(bar);
 </script>
 </body>
 </html>
