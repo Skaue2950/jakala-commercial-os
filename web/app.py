@@ -2842,27 +2842,33 @@ body::after {
 .radar-sub { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 22px; }
 .radar-layout { display: flex; gap: 22px; align-items: flex-start; }
 .radar-svg-container {
-  flex: 1; max-width: 580px;
-  background: #0B1120; border: 1px solid rgba(255,255,255,.08);
-  border-radius: 16px; overflow: hidden; padding: 10px;
-  box-shadow: 0 4px 24px rgba(0,0,0,.15);
+  flex: 1; max-width: 540px;
+  background: #07101E;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 18px; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.3);
+  aspect-ratio: 1;
 }
-#radar-svg { width: 100%; height: auto; display: block; }
+#radar-svg { width: 100%; height: 100%; display: block; }
 @keyframes radarSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-#radar-sweep { animation: radarSweep 4s linear infinite; transform-origin: 300px 300px; }
-.radar-sidebar { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+#radar-sweep {
+  animation: radarSweep 5s linear infinite;
+  transform-origin: 250px 250px;
+  transform-box: fill-box;
+}
+.radar-sidebar { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
 .radar-panel {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 16px;
+  border-radius: 10px; padding: 14px;
 }
-.radar-panel-title { font-size: 9.5px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
-.legend-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 11.5px; color: var(--muted); }
-.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.radar-panel-title { font-size: 9px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.legend-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 11px; color: var(--muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .rhi { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
 .rhi:last-child { border-bottom: none; }
-.rhi:hover { opacity: 0.75; }
+.rhi:hover { opacity: 0.7; }
 .rhi-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.rhi-name { flex: 1; font-size: 11.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rhi-name { flex: 1; font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rhi-score { font-size: 10px; font-weight: 800; color: var(--muted); }
 
 /* ══════════════════════════════════════════
@@ -3614,41 +3620,65 @@ body::after {
       <div class="radar-sub">Each blip = one account &nbsp;·&nbsp; Distance from centre = deal score &nbsp;·&nbsp; Quadrant = GTM strategy &nbsp;·&nbsp; Colour = urgency &nbsp;·&nbsp; Click any blip to open account</div>
       <div class="radar-layout">
         <div class="radar-svg-container">
-          <svg id="radar-svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+          <svg id="radar-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <radialGradient id="sweepGrad" cx="0%" cy="0%" r="100%">
-                <stop offset="0%" stop-color="#153EED" stop-opacity="0.55"/>
+              <radialGradient id="sweepGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#153EED" stop-opacity="0.5"/>
                 <stop offset="100%" stop-color="#153EED" stop-opacity="0"/>
               </radialGradient>
+              <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#0F1E3A" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#07101E" stop-opacity="1"/>
+              </radialGradient>
             </defs>
-            <!-- Rings -->
-            <circle cx="300" cy="300" r="240" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-            <circle cx="300" cy="300" r="155" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
-            <circle cx="300" cy="300" r="78"  fill="none" stroke="rgba(21,62,237,0.35)"   stroke-width="1.5"/>
+
+            <!-- Background circle -->
+            <circle cx="250" cy="250" r="220" fill="url(#bgGrad)"/>
+
+            <!-- Quadrant fills (subtle) -->
+            <path d="M250,250 L250,30 A220,220 0 0,1 470,250 Z" fill="rgba(107,159,255,0.03)"/>
+            <path d="M250,250 L470,250 A220,220 0 0,1 250,470 Z" fill="rgba(167,139,250,0.03)"/>
+            <path d="M250,250 L250,470 A220,220 0 0,1 30,250 Z"  fill="rgba(251,191,36,0.03)"/>
+            <path d="M250,250 L30,250 A220,220 0 0,1 250,30 Z"   fill="rgba(0,212,160,0.03)"/>
+
             <!-- Axis lines -->
-            <line x1="300" y1="55"  x2="300" y2="545" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-            <line x1="55"  y1="300" x2="545" y2="300" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-            <!-- Ring labels -->
-            <text x="305" y="225" fill="rgba(0,212,160,0.7)" font-size="8" font-family="Inter,sans-serif" font-weight="700">HOT</text>
-            <text x="305" y="148" fill="rgba(107,159,255,0.7)" font-size="8" font-family="Inter,sans-serif" font-weight="700">WARM</text>
-            <text x="305" y="68"  fill="rgba(255,255,255,0.35)" font-size="8" font-family="Inter,sans-serif" font-weight="700">COLD</text>
-            <!-- Quadrant labels -->
-            <text x="315" y="75"  fill="rgba(107,159,255,0.8)"  font-size="10" font-family="Inter,sans-serif" font-weight="700">Data Revenue Unlock</text>
-            <text x="90"  y="75"  fill="rgba(0,212,160,0.8)"    font-size="10" font-family="Inter,sans-serif" font-weight="700">AI Readiness</text>
-            <text x="305" y="532" fill="rgba(167,139,250,0.8)"  font-size="10" font-family="Inter,sans-serif" font-weight="700">Commerce Optimization</text>
-            <text x="68"  y="532" fill="rgba(251,191,36,0.8)"   font-size="10" font-family="Inter,sans-serif" font-weight="700">Experience Transform.</text>
-            <!-- Rotating sweep -->
-            <g id="radar-sweep">
-              <path d="M 300 300 L 300 60 A 240 240 0 0 1 470 130 Z" fill="url(#sweepGrad)"/>
+            <line x1="250" y1="30"  x2="250" y2="470" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+            <line x1="30"  y1="250" x2="470" y2="250" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+            <!-- Rings -->
+            <circle cx="250" cy="250" r="73"  fill="none" stroke="rgba(21,62,237,0.3)"  stroke-width="1" stroke-dasharray="3,4"/>
+            <circle cx="250" cy="250" r="146" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+            <circle cx="250" cy="250" r="220" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+
+            <!-- Ring labels (on right axis) -->
+            <text x="256" y="180" fill="rgba(0,212,160,0.55)"   font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">HOT</text>
+            <text x="256" y="107" fill="rgba(107,159,255,0.45)" font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">WARM</text>
+            <text x="256" y="38"  fill="rgba(255,255,255,0.25)" font-size="7.5" font-family="Inter,sans-serif" font-weight="700" letter-spacing="1">COLD</text>
+
+            <!-- Quadrant corner labels -->
+            <text x="265" y="52"  fill="rgba(107,159,255,0.65)" font-size="9" font-family="Inter,sans-serif" font-weight="700">Data Revenue</text>
+            <text x="70"  y="52"  fill="rgba(0,212,160,0.65)"   font-size="9" font-family="Inter,sans-serif" font-weight="700">AI Readiness</text>
+            <text x="258" y="462" fill="rgba(167,139,250,0.65)" font-size="9" font-family="Inter,sans-serif" font-weight="700">Commerce</text>
+            <text x="80"  y="462" fill="rgba(251,191,36,0.65)"  font-size="9" font-family="Inter,sans-serif" font-weight="700">Experience</text>
+
+            <!-- Center dot -->
+            <circle cx="250" cy="250" r="3" fill="rgba(21,62,237,0.6)"/>
+
+            <!-- Rotating sweep — rotates around center 250,250 -->
+            <g id="radar-sweep" style="transform-origin:250px 250px;transform-box:fill-box">
+              <path d="M250,250 L250,30 A220,220 0 0,1 405,95 Z" fill="url(#sweepGrad)" opacity="0.7"/>
+              <line x1="250" y1="250" x2="250" y2="30" stroke="rgba(21,62,237,0.6)" stroke-width="1.5"/>
             </g>
-            <!-- Blips (populated by JS) -->
+
+            <!-- Blips (JS) -->
             <g id="radar-blips"></g>
-            <!-- Tooltip (populated by JS) -->
+
+            <!-- Tooltip (JS) -->
             <g id="radar-tt" display="none">
-              <rect id="tt-bg" rx="5" fill="rgba(4,4,15,0.95)" stroke="rgba(21,62,237,0.5)" stroke-width="1"/>
-              <text id="tt-name" fill="white" font-size="11.5" font-family="Inter,sans-serif" font-weight="700"/>
-              <text id="tt-deal" fill="#8080B0" font-size="10" font-family="Inter,sans-serif"/>
-              <text id="tt-val"  fill="#4B6EF7" font-size="10.5" font-family="Inter,sans-serif" font-weight="700"/>
+              <rect id="tt-bg" rx="6" fill="rgba(7,16,30,0.97)" stroke="rgba(21,62,237,0.6)" stroke-width="1.5"/>
+              <text id="tt-name" fill="white"   font-size="11" font-family="Inter,sans-serif" font-weight="700"/>
+              <text id="tt-deal" fill="#6B9FFF" font-size="9.5" font-family="Inter,sans-serif"/>
+              <text id="tt-val"  fill="#00D4A0" font-size="9.5" font-family="Inter,sans-serif" font-weight="700"/>
             </g>
           </svg>
         </div>
