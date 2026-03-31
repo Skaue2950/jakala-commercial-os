@@ -320,13 +320,13 @@ def api_chat():
                 for text in stream.text_stream:
                     yield f"data: {json.dumps({'text': text})}\n\n"
         except anthropic.AuthenticationError:
-            yield f"data: {json.dumps({'text': '⚠️ API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
+            yield f"data: {json.dumps({'text': '[ERROR] API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
         except anthropic.RateLimitError:
-            yield f"data: {json.dumps({'text': '⚠️ Rate limit reached — please wait a moment and try again.'})}\n\n"
+            yield f"data: {json.dumps({'text': '[ERROR] Rate limit reached — please wait a moment and try again.'})}\n\n"
         except anthropic.APIStatusError as e:
-            yield f"data: {json.dumps({'text': f'⚠️ API error {e.status_code}: {e.message}'})}\n\n"
+            yield f"data: {json.dumps({'text': f'[ERROR] API error {e.status_code}: {e.message}'})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'text': f'⚠️ Unexpected error: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'text': f'[ERROR] Unexpected error: {str(e)}'})}\n\n"
         finally:
             yield "data: [DONE]\n\n"
 
@@ -835,14 +835,14 @@ def api_monthly_partnerships():
 @app.route("/api/signals")
 def api_signals():
     hot = [
-        {"company":"Sport Outlet","text":"CTO + CDO both vacant March 2026. Entry via CEO Tor-André Skeie. Vacancy = budget already approved.","tag":"URGENT","tagColor":"red","icon":"🔴","slug":"sport-outlet"},
-        {"company":"Trumf (NorgesGruppen)","text":"Rikke Etholm-Idsøe — new Commercial Director in newly created role. 90-day honeymoon window open now.","tag":"90-DAY WINDOW","tagColor":"red","icon":"⚡","slug":"trumf"},
-        {"company":"Vinmonopolet","text":"Espen Terland new CDO (ex-XXL 15 years). Agenda not set — honeymoon phase. Ideal discovery entry.","tag":"NEW EXEC","tagColor":"amber","icon":"🆕","slug":"vinmonopolet"},
-        {"company":"Skeidar","text":"\"Best furniture portal in the Nordics\" declared publicly by CEO. CIO Sujit Nath confirmed buyer.","tag":"NAMED BUYER","tagColor":"amber","icon":"🏗️","slug":"skeidar"},
-        {"company":"BI Handelshøyskolen","text":"Rector Karen Spens leaving August 2026. Institution in transition — new leadership will reset priorities.","tag":"TRANSITION","tagColor":"amber","icon":"🎓","slug":"bi-handelshoyskolen"},
-        {"company":"GANT Norway","text":"New CEO Fredrik Malm + IMPACT Commerce new ecom partner (Feb 2026). Integration phase = JAKALA entry.","tag":"NEW CEO","tagColor":"amber","icon":"👔","slug":"gant-norway"},
-        {"company":"H&M Sweden","text":"ICP 9/10 · Deal 9/10 · €900K unweighted. No named buyer confirmed yet. Largest untouched opportunity.","tag":"TOP PRIORITY","tagColor":"blue","icon":"💎","slug":"hm"},
-        {"company":"Matas","text":"ICP 9/10 · Deal 9/10 · €700K. AI Readiness entry. Loyalty data + personalisation play — Matas More programme.","tag":"HIGH VALUE","tagColor":"blue","icon":"💡","slug":"matas"},
+        {"company":"Sport Outlet","text":"CTO + CDO both vacant March 2026. Entry via CEO Tor-André Skeie. Vacancy = budget already approved.","tag":"URGENT","tagColor":"red","icon":'<span style="width:8px;height:8px;background:#DC2626;border-radius:50%;display:inline-block;"></span>',"slug":"sport-outlet"},
+        {"company":"Trumf (NorgesGruppen)","text":"Rikke Etholm-Idsøe — new Commercial Director in newly created role. 90-day honeymoon window open now.","tag":"90-DAY WINDOW","tagColor":"red","icon":'<i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"trumf"},
+        {"company":"Vinmonopolet","text":"Espen Terland new CDO (ex-XXL 15 years). Agenda not set — honeymoon phase. Ideal discovery entry.","tag":"NEW EXEC","tagColor":"amber","icon":'<i data-lucide="plus-circle" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"vinmonopolet"},
+        {"company":"Skeidar","text":"\"Best furniture portal in the Nordics\" declared publicly by CEO. CIO Sujit Nath confirmed buyer.","tag":"NAMED BUYER","tagColor":"amber","icon":'<i data-lucide="building-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"skeidar"},
+        {"company":"BI Handelshøyskolen","text":"Rector Karen Spens leaving August 2026. Institution in transition — new leadership will reset priorities.","tag":"TRANSITION","tagColor":"amber","icon":'<i data-lucide="graduation-cap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"bi-handelshoyskolen"},
+        {"company":"GANT Norway","text":"New CEO Fredrik Malm + IMPACT Commerce new ecom partner (Feb 2026). Integration phase = JAKALA entry.","tag":"NEW CEO","tagColor":"amber","icon":'<i data-lucide="user" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"gant-norway"},
+        {"company":"H&M Sweden","text":"ICP 9/10 · Deal 9/10 · €900K unweighted. No named buyer confirmed yet. Largest untouched opportunity.","tag":"TOP PRIORITY","tagColor":"blue","icon":'<i data-lucide="gem" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"hm"},
+        {"company":"Matas","text":"ICP 9/10 · Deal 9/10 · €700K. AI Readiness entry. Loyalty data + personalisation play — Matas More programme.","tag":"HIGH VALUE","tagColor":"blue","icon":'<i data-lucide="lightbulb" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":"matas"},
     ]
     # Append signals from intelligence folder
     extra = []
@@ -852,7 +852,7 @@ def api_signals():
             if f.suffix == ".md":
                 for line in f.read_text(encoding="utf-8").splitlines():
                     if line.startswith("## ") and len(line) > 4:
-                        extra.append({"company": line[3:].strip(), "text": f"From daily radar {f.stem}", "tag":"RADAR","tagColor":"blue","icon":"📡","slug":""})
+                        extra.append({"company": line[3:].strip(), "text": f"From daily radar {f.stem}", "tag":"RADAR","tagColor":"blue","icon":'<i data-lucide="radio" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>',"slug":""})
     return jsonify({"signals": hot + extra[:4]})
 
 
@@ -1051,11 +1051,11 @@ Start the conversation by briefly introducing yourself and asking what brings th
                 for text in stream.text_stream:
                     yield f"data: {json.dumps({'text': text})}\n\n"
         except anthropic.AuthenticationError:
-            yield f"data: {json.dumps({'text': '⚠️ API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
+            yield f"data: {json.dumps({'text': '[ERROR] API key error — check ANTHROPIC_API_KEY in Railway environment variables.'})}\n\n"
         except anthropic.APIStatusError as e:
-            yield f"data: {json.dumps({'text': f'⚠️ API error {e.status_code}: {e.message}'})}\n\n"
+            yield f"data: {json.dumps({'text': f'[ERROR] API error {e.status_code}: {e.message}'})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'text': f'⚠️ Error: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'text': f'[ERROR] Error: {str(e)}'})}\n\n"
         finally:
             yield "data: [DONE]\n\n"
 
@@ -2229,6 +2229,7 @@ body::after {
   background: none; color: var(--muted); border: none; font-size: 12px; cursor: pointer; font-family: inherit; margin-left: auto;
 }
 </style>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 
@@ -2237,14 +2238,14 @@ body::after {
   <div id="cmd-box">
     <div id="cmd-input-wrap">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
-      <input id="cmd-input" placeholder="Søg kommando eller account…" oninput="cmdFilter()" onkeydown="cmdKey(event)" autocomplete="off" spellcheck="false">
+      <input id="cmd-input" placeholder="Search command or account…" oninput="cmdFilter()" onkeydown="cmdKey(event)" autocomplete="off" spellcheck="false">
       <span id="cmd-kb">ESC</span>
     </div>
     <div id="cmd-results"></div>
     <div id="cmd-footer">
-      <span class="cmd-hint"><kbd>↑↓</kbd> naviger</span>
-      <span class="cmd-hint"><kbd>↵</kbd> udfør</span>
-      <span class="cmd-hint"><kbd>ESC</kbd> luk</span>
+      <span class="cmd-hint"><kbd>↑↓</kbd> navigate</span>
+      <span class="cmd-hint"><kbd>↵</kbd> execute</span>
+      <span class="cmd-hint"><kbd>ESC</kbd> close</span>
     </div>
   </div>
 </div>
@@ -2254,19 +2255,19 @@ body::after {
   <div id="outreach-box">
     <div id="outreach-header">
       <div>
-        <div id="outreach-title">Genererer outreach…</div>
-        <div id="outreach-subtitle">LinkedIn · klar til afsendelse</div>
+        <div id="outreach-title">Generating outreach…</div>
+        <div id="outreach-subtitle">LinkedIn · ready to send</div>
       </div>
       <button id="outreach-close" onclick="closeOutreachModal()">✕</button>
     </div>
     <div id="outreach-body">
-      <div id="outreach-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:4px">Skriver besked…</span></div>
+      <div id="outreach-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:4px">Writing message…</span></div>
       <div id="outreach-text" style="display:none"></div>
     </div>
     <div id="outreach-actions">
-      <button id="outreach-copy-btn" onclick="copyOutreach()" style="display:none">📋 Kopiér besked</button>
-      <button id="outreach-chat-btn" onclick="openOutreachInChat()" style="display:none">Åbn i chat →</button>
-      <button id="outreach-regen-btn" onclick="regenOutreach()" style="display:none">↻ Generér igen</button>
+      <button id="outreach-copy-btn" onclick="copyOutreach()" style="display:none"><i data-lucide="clipboard" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Copy message</button>
+      <button id="outreach-chat-btn" onclick="openOutreachInChat()" style="display:none">Open in chat →</button>
+      <button id="outreach-regen-btn" onclick="regenOutreach()" style="display:none">↻ Regenerate</button>
     </div>
   </div>
 </div>
@@ -2319,17 +2320,17 @@ body::after {
     <svg id="skills-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;flex-shrink:0"><polyline points="4,6 8,10 12,6"/></svg>
   </button>
   <div id="skills-panel" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
-    <button class="skill-btn" onclick="insertSkill('contact')" style="background:#111;color:#fff;font-weight:700;">⚡ Who To Contact Today</button>
-    <button class="skill-btn" onclick="insertSkill('blueprint')" style="background:linear-gradient(135deg,rgba(21,62,237,0.18),rgba(123,92,245,0.12));border-color:rgba(21,62,237,0.4);color:#6B8EF7;font-weight:700;">🏗 Deal Blueprint</button>
-    <button class="skill-btn" onclick="insertSkill('outreach')">✉ Outreach Generator</button>
-    <button class="skill-btn" onclick="insertSkill('brief')">📋 Pre-Meeting Brief</button>
-    <button class="skill-btn" onclick="insertSkill('revenue')">💰 Revenue Simulation</button>
-    <button class="skill-btn" onclick="insertSkill('pitch')">🎯 Pitch Partner</button>
-    <button class="skill-btn" onclick="insertSkill('signal')">⚡ Signal to Action</button>
-    <button class="skill-btn" onclick="insertSkill('prospect')">🔍 Prospect Hunt</button>
-    <button class="skill-btn" onclick="insertSkill('strategic')">⭐ Strategic Framework</button>
+    <button class="skill-btn" onclick="insertSkill('contact')" style="background:#111;color:#fff;font-weight:700;"><i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Who To Contact Today</button>
+    <button class="skill-btn" onclick="insertSkill('blueprint')" style="background:linear-gradient(135deg,rgba(21,62,237,0.18),rgba(123,92,245,0.12));border-color:rgba(21,62,237,0.4);color:#6B8EF7;font-weight:700;"><i data-lucide="building-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Deal Blueprint</button>
+    <button class="skill-btn" onclick="insertSkill('outreach')"><i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Outreach Generator</button>
+    <button class="skill-btn" onclick="insertSkill('brief')"><i data-lucide="clipboard" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Pre-Meeting Brief</button>
+    <button class="skill-btn" onclick="insertSkill('revenue')"><i data-lucide="dollar-sign" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Revenue Simulation</button>
+    <button class="skill-btn" onclick="insertSkill('pitch')"><i data-lucide="target" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Pitch Partner</button>
+    <button class="skill-btn" onclick="insertSkill('signal')"><i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Signal to Action</button>
+    <button class="skill-btn" onclick="insertSkill('prospect')"><i data-lucide="search" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Prospect Hunt</button>
+    <button class="skill-btn" onclick="insertSkill('strategic')"><i data-lucide="star" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Strategic Framework</button>
     <button class="skill-btn" onclick="insertSkill('morning')">Morning Briefing</button>
-    <button class="skill-btn" onclick="insertSkill('websiteopt')">🔍 Website Optimizer</button>
+    <button class="skill-btn" onclick="insertSkill('websiteopt')"><i data-lucide="search" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Website Optimizer</button>
   </div>
 
   <button class="sidebar-accounts-toggle" id="accounts-toggle" onclick="toggleAccountsPanel()">
@@ -2357,10 +2358,10 @@ body::after {
           <div style="display:flex;gap:8px;align-items:center">
             <button onclick="openPalette()" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:border-color 0.15s" onmouseenter="this.style.borderColor='rgba(255,255,255,0.2)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.1)'">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
-              Søg
+              Search
               <kbd style="background:rgba(255,255,255,0.08);border-radius:3px;padding:1px 5px;font-size:10px;font-family:inherit">⌘K</kbd>
             </button>
-            <button class="btn-board" id="board-report-btn" onclick="generateBoardReport()">📊 Board Report</button>
+            <button class="btn-board" id="board-report-btn" onclick="generateBoardReport()"><i data-lucide="bar-chart-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Board Report</button>
           </div>
           <div class="dash-meta">
             <div class="dm-label">Current time</div>
@@ -2377,11 +2378,11 @@ body::after {
           <span id="live-label">LIVE</span>
         </div>
         <span>·</span>
-        <span>Sidst opdateret: <span id="live-last-updated">—</span></span>
+        <span>Last updated: <span id="live-last-updated">—</span></span>
         <span>·</span>
-        <span>Næste opdatering om <span id="live-countdown" style="color:var(--text);font-weight:600">5:00</span></span>
+        <span>Next update in <span id="live-countdown" style="color:var(--text);font-weight:600">5:00</span></span>
         <span style="margin-left:auto">
-          <button onclick="loadLiveDashboard(true)" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit">↻ Opdater nu</button>
+          <button onclick="loadLiveDashboard(true)" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit">↻ Refresh now</button>
         </span>
       </div>
 
@@ -2389,16 +2390,16 @@ body::after {
       <div id="daily-plan-section" style="margin-bottom:24px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div>
-            <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">⚡ Dagens handlingsplan</div>
-            <div style="font-size:13px;color:var(--muted);font-weight:400" id="daily-plan-date">Genererer plan…</div>
+            <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px"><i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Today's Action Plan</div>
+            <div style="font-size:13px;color:var(--muted);font-weight:400" id="daily-plan-date">Generating plan…</div>
           </div>
-          <button onclick="loadDailyPlan(true)" id="daily-plan-refresh" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↻ Opdater</button>
+          <button onclick="loadDailyPlan(true)" id="daily-plan-refresh" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↻ Refresh</button>
         </div>
         <div id="daily-plan-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
           <!-- Loading state -->
           <div style="grid-column:1/-1;background:rgba(21,62,237,0.04);border:1px dashed rgba(21,62,237,0.2);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:13px">
-            <div style="font-size:20px;margin-bottom:8px">⚡</div>
-            Genererer din handlingsplan for i dag…
+            <div style="font-size:20px;margin-bottom:8px"><i data-lucide="zap" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
+            Generating your action plan for today…
           </div>
         </div>
       </div>
@@ -2460,7 +2461,7 @@ body::after {
       <div class="dash-card" style="margin-top:18px">
         <div class="dash-card-head">
           <div class="dash-card-title">Top 6 Deals — Velocity</div>
-          <div class="dash-card-tag">Win % · Weighted value · Dage uden handling</div>
+          <div class="dash-card-tag">Win % · Weighted value · Days without action</div>
         </div>
         <div id="deal-velocity-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding-top:4px">
           <div style="color:var(--muted);font-size:12px">Indlæser deals…</div>
@@ -2475,28 +2476,28 @@ body::after {
         </div>
         <div class="strat-row">
           <div class="strat-card">
-            <div class="strat-icon">💡</div>
+            <div class="strat-icon"><i data-lucide="lightbulb" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
             <div class="strat-name">Data Revenue Unlock</div>
             <div class="strat-num" id="strat-dru">—</div>
             <div class="strat-sub">accounts</div>
             <div class="strat-bar-wrap"><div class="strat-bar" style="background:linear-gradient(90deg,#153EED,#7B5CF5);width:0" id="sb-dru"></div></div>
           </div>
           <div class="strat-card">
-            <div class="strat-icon">🤖</div>
+            <div class="strat-icon"><i data-lucide="bot" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
             <div class="strat-name">AI Readiness Accelerator</div>
             <div class="strat-num" id="strat-ai">—</div>
             <div class="strat-sub">accounts</div>
             <div class="strat-bar-wrap"><div class="strat-bar" style="background:linear-gradient(90deg,#7B5CF5,#A080FF);width:0" id="sb-ai"></div></div>
           </div>
           <div class="strat-card">
-            <div class="strat-icon">🛒</div>
+            <div class="strat-icon"><i data-lucide="shopping-cart" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
             <div class="strat-name">Commerce Optimization</div>
             <div class="strat-num" id="strat-co">—</div>
             <div class="strat-sub">accounts</div>
             <div class="strat-bar-wrap"><div class="strat-bar" style="background:linear-gradient(90deg,#00D4A0,#00A880);width:0" id="sb-co"></div></div>
           </div>
           <div class="strat-card">
-            <div class="strat-icon">✨</div>
+            <div class="strat-icon"><i data-lucide="sparkles" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
             <div class="strat-name">Experience Transformation</div>
             <div class="strat-num" id="strat-xt">—</div>
             <div class="strat-sub">accounts</div>
@@ -2520,7 +2521,7 @@ body::after {
     </div>
     <div id="messages">
       <div id="welcome">
-        <div class="welcome-icon">⚡</div>
+        <div class="welcome-icon"><i data-lucide="zap" style="width:28px;height:28px;display:inline-block;vertical-align:middle;"></i></div>
         <div class="big">How can I help you win?</div>
         <div class="sub">Ask anything about the pipeline, accounts, or get outreach, briefs and commercial analysis. Select an account from the sidebar to pre-load context.</div>
         <div class="quick-chips">
@@ -2548,7 +2549,7 @@ body::after {
   <!-- ── NOTES ── -->
   <div class="tab-pane" id="tab-notes">
     <div id="notes-pane">
-      <h2>📝 Meeting Notes</h2>
+      <h2><i data-lucide="file-text" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i> Meeting Notes</h2>
       <p class="desc">Paste raw meeting notes below. GTM OS will summarise the meeting, extract next actions, and update account files automatically.</p>
       <div class="form-group">
         <label>Account</label>
@@ -2587,7 +2588,7 @@ body::after {
   <!-- ── ACCOUNTS ── -->
   <div class="tab-pane" id="tab-accounts">
     <div id="accounts-pane">
-      <h2>🏢 Accounts</h2>
+      <h2><i data-lucide="building" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i> Accounts</h2>
       <p class="desc">All ICP-scored accounts in the Nordic GTM OS. Click any account to load it in the assistant.</p>
       <div class="filter-row">
         <button class="filter-btn active" onclick="filterGrid(this,'all')">All</button>
@@ -2678,13 +2679,13 @@ body::after {
     </div>
     <div id="sim-persona-bar">
       <div class="sim-persona">
-        <div class="sim-persona-icon">🎯</div>
+        <div class="sim-persona-icon"><i data-lucide="target" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
         <div>
           <div class="sim-persona-name" id="sim-persona-name">Buyer</div>
           <div class="sim-persona-sub" id="sim-persona-sub">Playing the decision maker</div>
         </div>
       </div>
-      <button class="btn-score" onclick="scorePitch()">📊 Score My Pitch</button>
+      <button class="btn-score" onclick="scorePitch()"><i data-lucide="bar-chart-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Score My Pitch</button>
     </div>
     <div id="sim-messages">
       <div style="text-align:center;padding:60px 20px;color:var(--muted)">
@@ -2705,31 +2706,31 @@ body::after {
   <!-- ── PARTNERSHIPS ── -->
   <div class="tab-pane" id="tab-partners">
     <div id="partners-wrap">
-      <div class="partners-title">🤝 Partnership Intelligence</div>
-      <div class="partners-sub">Valider en potentiel partner mod JAKALA's GTM-strategi, positionering og revenue-potentiale — eller se månedlige markedsanalyser.</div>
+      <div class="partners-title"><i data-lucide="handshake" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i> Partnership Intelligence</div>
+      <div class="partners-sub">Validate a potential partner against JAKALA's GTM strategy, positioning and revenue potential — or view monthly market analyses.</div>
 
       <!-- Validator form -->
       <div class="partner-form-card">
-        <div class="partner-form-title">Valider en partner</div>
+        <div class="partner-form-title">Validate a partner</div>
         <div class="partner-form-row">
           <div class="pf-group grow">
-            <label>Virksomhed / Partner</label>
-            <input type="text" id="partner-name" placeholder="fx Akeneo, Contentful, Algolia, Sitoo…" />
+            <label>Company / Partner</label>
+            <input type="text" id="partner-name" placeholder="e.g. Akeneo, Contentful, Algolia, Sitoo…" />
           </div>
           <div class="pf-group">
-            <label>Marked</label>
+            <label>Market</label>
             <select id="partner-market">
               <option value="Nordic">Nordic (NO/SE/DK)</option>
-              <option value="Norway">Norge</option>
-              <option value="Sweden">Sverige</option>
-              <option value="Denmark">Danmark</option>
+              <option value="Norway">Norway</option>
+              <option value="Sweden">Sweden</option>
+              <option value="Denmark">Denmark</option>
             </select>
           </div>
           <div class="pf-group grow">
-            <label>Kontekst (valgfri)</label>
-            <input type="text" id="partner-context" placeholder="fx 'PIM-vendor', 'mødes med CEO næste uge', 'de arbejder med Elkjøp'…" />
+            <label>Context (optional)</label>
+            <input type="text" id="partner-context" placeholder="e.g. 'PIM-vendor', 'meeting CEO next week', 'they work with Elkjøp'…" />
           </div>
-          <button class="btn-validate" id="validate-btn" onclick="validatePartner()">Valider ↗</button>
+          <button class="btn-validate" id="validate-btn" onclick="validatePartner()">Validate ↗</button>
         </div>
       </div>
 
@@ -2783,7 +2784,7 @@ body::after {
   <!-- ── SIGNAL FEED ── -->
   <div class="tab-pane" id="tab-signals">
     <div id="signals-wrap">
-      <div class="signals-title">⚡ Signal Feed</div>
+      <div class="signals-title"><i data-lucide="zap" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"></i> Signal Feed</div>
       <div class="signals-sub">Live commercial signals from the Nordic market. Click "Write Outreach" to generate a message and load the account.</div>
       <div id="signals-content"></div>
     </div>
@@ -2836,13 +2837,13 @@ async function loadDailyPlan(force) {
   const urgencyBg     = { HOT: 'rgba(229,62,62,.08)', WARM: 'rgba(217,119,6,.08)', NOW: 'rgba(123,92,245,.08)' };
   const urgencyBorder = { HOT: 'rgba(229,62,62,.35)', WARM: 'rgba(217,119,6,.35)', NOW: 'rgba(123,92,245,.35)' };
 
-  cards.innerHTML = '<div style="grid-column:1/-1;background:rgba(21,62,237,0.04);border:1px dashed rgba(21,62,237,0.2);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:20px;margin-bottom:8px">⚡</div>Analyserer pipeline og signaler…</div>';
+  cards.innerHTML = '<div style="grid-column:1/-1;background:rgba(21,62,237,0.04);border:1px dashed rgba(21,62,237,0.2);border-radius:12px;padding:32px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:20px;margin-bottom:8px"><i data-lucide="zap" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>Analysing pipeline and signals…</div>';
 
   try {
     const r = await fetch('/api/gtm/daily-plan');
     const d = await r.json();
     if (d.error || !d.plan || !d.plan.length) {
-      cards.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:13px">Ingen plan tilgængelig — tilføj kontoer til pipelinen.</div>';
+      cards.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:13px">No plan available — add accounts to the pipeline.</div>';
       return;
     }
 
@@ -2869,18 +2870,18 @@ async function loadDailyPlan(force) {
         +   '<div style="flex-shrink:0;background:'+col+';color:#fff;border-radius:5px;padding:2px 8px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">'+urg+'</div>'
         + '</div>'
         + '<div style="background:rgba(0,0,0,.25);border-radius:7px;padding:10px 12px">'
-        +   '<div style="font-size:9px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Hvorfor i dag</div>'
+        +   '<div style="font-size:9px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Why today</div>'
         +   '<div style="font-size:12px;color:var(--muted);line-height:1.5">'+(item.why_today||'—')+'</div>'
         + '</div>'
         + '<div style="background:rgba(0,0,0,.2);border-radius:7px;padding:10px 12px">'
-        +   '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Åbningslinje</div>'
+        +   '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Opening line</div>'
         +   '<div style="font-size:12px;color:var(--text-light,#CBD5E1);line-height:1.6;font-style:italic">&ldquo;'+(item.opening_line||'—')+'&rdquo;</div>'
         + '</div>'
         + '<div style="display:flex;align-items:center;justify-content:space-between">'
         +   '<div style="font-size:11px;font-weight:700;color:'+col+'">'+(item.pipeline_value||'')+' · '+(item.gtm_strategy||'')+'</div>'
         +   '<div style="display:flex;gap:6px">'
-        +     (acc ? '<button data-slug="'+acc.slug+'" data-name="'+acc.name+'" onclick="selectAccount(this.dataset.slug,this.dataset.name);showTab(\\'chat\\')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Åbn →</button>' : '')
-        +     '<button onclick="insertCustomSkill(\\'Write a personalised LinkedIn outreach message for '+accName+'. Buyer: '+buyerEsc+'. GTM strategy: '+gtmEsc+'. Opening angle: '+whyEsc+'. Language: Norwegian.\\');showTab(\\'chat\\')" style="background:#153EED;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Skriv besked →</button>'
+        +     (acc ? '<button data-slug="'+acc.slug+'" data-name="'+acc.name+'" onclick="selectAccount(this.dataset.slug,this.dataset.name);showTab(\\'chat\\')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Open →</button>' : '')
+        +     '<button onclick="insertCustomSkill(\\'Write a personalised LinkedIn outreach message for '+accName+'. Buyer: '+buyerEsc+'. GTM strategy: '+gtmEsc+'. Opening angle: '+whyEsc+'. Language: Norwegian.\\');showTab(\\'chat\\')" style="background:#153EED;border:none;color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Write message →</button>'
         +   '</div>'
         + '</div>'
         + '</div>';
@@ -3064,7 +3065,7 @@ async function loadLiveDashboard(manual = false) {
         const staleBarColor = stale > 14 ? '#F6574A' : stale > 7 ? '#F5A623' : '#00D4A0';
         const staleBarW = stale === null ? 0 : Math.min(100, (stale / 21) * 100);
         const staleTagClass = stale === null ? 'fresh' : stale > 14 ? 'hot' : stale > 7 ? 'warm' : 'fresh';
-        const staleLabel = stale === null ? 'Aktiv' : stale === 0 ? 'I dag' : stale + ' dage siden';
+        const staleLabel = stale === null ? 'Active' : stale === 0 ? 'Today' : stale + ' days ago';
         const buyerShort = (deal.buyer || 'TBD').split('(')[0].trim().slice(0, 30);
         const hasBuyer = buyerShort && buyerShort !== 'TBD';
         const winColor = parseInt(deal.win_pct) >= 60 ? 'var(--green)' : parseInt(deal.win_pct) >= 40 ? 'var(--amber)' : 'var(--red)';
@@ -3088,10 +3089,10 @@ async function loadLiveDashboard(manual = false) {
           '</div>' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">' +
             '<span class="dv-stale-tag ' + staleTagClass + '">● ' + staleLabel + '</span>' +
-            (hasBuyer ? '<span class="dv-buyer">👤 ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)">⚠ Buyer TBD</span>') +
+            (hasBuyer ? '<span class="dv-buyer"><i data-lucide="user" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> ' + buyerShort + '</span>' : '<span class="dv-buyer" style="color:var(--red)"><i data-lucide="alert-triangle" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i> Buyer TBD</span>') +
           '</div>' +
           '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">' +
-            '<button class="dv-outreach-btn" style="width:100%;background:rgba(21,62,237,0.12);border:1px solid rgba(21,62,237,0.3);color:#6B8EF7;border-radius:6px;padding:7px 0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s">✉ Generér outreach</button>' +
+            '<button class="dv-outreach-btn" style="width:100%;background:rgba(21,62,237,0.12);border:1px solid rgba(21,62,237,0.3);color:#6B8EF7;border-radius:6px;padding:7px 0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s"><i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Generate outreach</button>' +
           '</div>';
         // Wire up outreach button without bubbling to card click
         const btn = div.querySelector('.dv-outreach-btn');
@@ -3108,6 +3109,7 @@ async function loadLiveDashboard(manual = false) {
       });
       dvc.innerHTML = '';
       cards.forEach(function(c) { dvc.appendChild(c); });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     // --- Live Signals ---
@@ -3115,21 +3117,22 @@ async function loadLiveDashboard(manual = false) {
     if (sl) {
       // Always show hot hardcoded signals first, append live signals below
       const hardcoded = [
-        {icon:'🔴', co:'Sport Outlet', txt:'CTO + CDO both vacant March 2026. Contact CEO Tor-André Skeie directly.', tag:'URGENT', tagClass:''},
-        {icon:'⚡', co:'Trumf (NorgesGruppen)', txt:'Rikke Etholm-Idsøe — new Commercial Director. 90-day honeymoon window open.', tag:'90-DAY WINDOW', tagClass:''},
-        {icon:'🆕', co:'Vinmonopolet', txt:'Espen Terland new CDO (ex-XXL 15 yrs). Agenda not yet set.', tag:'NEW EXEC', tagClass:'amber'},
-        {icon:'💎', co:'Siteimprove', txt:'Jen Jones — CMO day 5. Honeymoon window: 3-5x response rate vs 30 days later.', tag:'URGENT', tagClass:''},
+        {icon:'<span style="width:8px;height:8px;background:#DC2626;border-radius:50%;display:inline-block;"></span>', co:'Sport Outlet', txt:'CTO + CDO both vacant March 2026. Contact CEO Tor-André Skeie directly.', tag:'URGENT', tagClass:''},
+        {icon:'<i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>', co:'Trumf (NorgesGruppen)', txt:'Rikke Etholm-Idsøe — new Commercial Director. 90-day honeymoon window open.', tag:'90-DAY WINDOW', tagClass:''},
+        {icon:'<i data-lucide="plus-circle" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>', co:'Vinmonopolet', txt:'Espen Terland new CDO (ex-XXL 15 yrs). Agenda not yet set.', tag:'NEW EXEC', tagClass:'amber'},
+        {icon:'<i data-lucide="gem" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>', co:'Siteimprove', txt:'Jen Jones — CMO day 5. Honeymoon window: 3-5x response rate vs 30 days later.', tag:'URGENT', tagClass:''},
       ];
       let html = hardcoded.map(s =>
         '<div class="signal"><div class="signal-icon">' + s.icon + '</div><div style="flex:1"><div class="signal-co">' + s.co + '</div><div class="signal-txt">' + s.txt + '</div></div><div class="signal-tag ' + s.tagClass + '">' + s.tag + '</div></div>'
       ).join('');
       if (d.live_signals && d.live_signals.length) {
-        html += '<div style="font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:2px;margin:12px 0 6px">Fra daglig radar</div>';
+        html += '<div style="font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:2px;margin:12px 0 6px">From daily radar</div>';
         html += d.live_signals.slice(0,3).map(s =>
-          '<div class="signal"><div class="signal-icon">📡</div><div style="flex:1"><div class="signal-co">' + s.company + '</div><div class="signal-txt">' + (s.text || '').slice(0,100) + '</div></div><div class="signal-tag" style="background:var(--blue-dim2);color:var(--blue-light)">' + (s.date || 'RADAR') + '</div></div>'
+          '<div class="signal"><div class="signal-icon"><i data-lucide="radio" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i></div><div style="flex:1"><div class="signal-co">' + s.company + '</div><div class="signal-txt">' + (s.text || '').slice(0,100) + '</div></div><div class="signal-tag" style="background:var(--blue-dim2);color:var(--blue-light)">' + (s.date || 'RADAR') + '</div></div>'
         ).join('');
       }
       sl.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
   } catch(e) {
@@ -3526,7 +3529,7 @@ async function validatePartner() {
   if (!name) { showToast('Angiv partnerens navn', true); return; }
 
   const btn = document.getElementById('validate-btn');
-  btn.disabled = true; btn.textContent = 'Analyserer\u2026';
+  btn.disabled = true; btn.textContent = 'Analysing\u2026';
   document.getElementById('partner-result').style.display = 'none';
 
   try {
@@ -3541,20 +3544,26 @@ async function validatePartner() {
   } catch(e) {
     showToast('Request fejlede', true);
   } finally {
-    btn.disabled = false; btn.textContent = 'Valider \u2197';
+    btn.disabled = false; btn.textContent = 'Validate \u2197';
   }
 }
 
 function renderPartnerResult(d) {
   const verdict = (d.verdict || '').toLowerCase().replace(/\s+/g, '-').replace('not-recommended','not-rec');
-  const icons   = { 'strong-fit': '\u2705', 'potential-fit': '💡', 'weak-fit': '\u26A0\uFE0F', 'not-rec': '\u274C' };
+  const icons   = {
+    'strong-fit':   '<i data-lucide="check-circle" style="width:22px;height:22px;display:inline-block;vertical-align:middle;color:#00A67E;"></i>',
+    'potential-fit':'<i data-lucide="lightbulb" style="width:22px;height:22px;display:inline-block;vertical-align:middle;color:#D97706;"></i>',
+    'weak-fit':     '<i data-lucide="alert-triangle" style="width:22px;height:22px;display:inline-block;vertical-align:middle;color:#D97706;"></i>',
+    'not-rec':      '<i data-lucide="x-circle" style="width:22px;height:22px;display:inline-block;vertical-align:middle;color:#DC2626;"></i>'
+  };
   const colors  = { 'strong-fit': 'strong', 'potential-fit': 'potential', 'weak-fit': 'weak', 'not-rec': 'not-rec' };
   const cls     = colors[verdict] || 'potential';
 
   // Banner
   const banner = document.getElementById('verdict-banner');
   banner.className = 'verdict-banner ' + cls;
-  document.getElementById('verdict-icon').textContent   = icons[verdict] || '💡';
+  document.getElementById('verdict-icon').innerHTML = icons[verdict] || icons['potential-fit'];
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   document.getElementById('verdict-label').textContent  = d.verdict || '\u2014';
   document.getElementById('verdict-label').className    = 'verdict-label ' + cls;
   document.getElementById('verdict-reason').textContent = d.verdict_reason || '\u2014';
@@ -3603,7 +3612,7 @@ async function loadPartnerHistory() {
     const res  = await fetch('/api/partner-history');
     const data = await res.json();
     if (!data.length) {
-      container.innerHTML = '<div style="color:var(--muted);font-size:12px">Ingen tidligere valideringer endnu.</div>';
+      container.innerHTML = '<div style="color:var(--muted);font-size:12px">No previous validations yet.</div>';
       return;
     }
     const vmap = { 'STRONG FIT':'strong', 'POTENTIAL FIT':'potential', 'WEAK FIT':'weak', 'NOT RECOMMENDED':'not-rec' };
@@ -3639,7 +3648,7 @@ async function generateBoardReport() {
   } catch(e) {
     showToast('Download failed', true);
   } finally {
-    btn.disabled = false; btn.textContent = '📊 Board Report';
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="bar-chart-2" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Board Report'; lucide.createIcons();
   }
 }
 
@@ -3931,6 +3940,7 @@ async function renderSignalFeed() {
         '</div>' +
       '</div>';
     }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch(e) {
     content.innerHTML = '<div style="color:var(--red);font-size:12px">Failed to load signals</div>';
   }
@@ -3948,22 +3958,22 @@ function signalOutreach(slug, name) {
 // ══════════════════════════════════════════════════════════════════
 
 const STATIC_COMMANDS = [
-  { icon:'⚡', label:'Hvem kontakter jeg i dag?',  sub:'Who To Contact Today',    action: function(){ closePalette(); insertSkill('contact'); } },
-  { icon:'🏗', label:'Deal Blueprint',             sub:'Komplet kommerciel eksekutionsplan', action: function(){ closePalette(); insertSkill('blueprint'); } },
-  { icon:'🔍', label:'Prospect Hunt',              sub:'Find nye leads',           action: function(){ closePalette(); insertSkill('prospect'); } },
-  { icon:'⚔️', label:'Commercial War Room',        sub:'Fuld situation assessment',action: function(){ closePalette(); insertSkill('warroom'); } },
-  { icon:'☀️', label:'Morning Briefing',           sub:'CCO daglig briefing',      action: function(){ closePalette(); insertSkill('morning'); } },
-  { icon:'📊', label:'Q2 Forecast',                sub:'Probability-weighted',     action: function(){ closePalette(); insertSkill('forecast'); } },
-  { icon:'✉️', label:'Outreach Generator',         sub:'LinkedIn / email',         action: function(){ closePalette(); insertSkill('outreach'); } },
-  { icon:'🎯', label:'Pitch Partner',              sub:'Prep til meeting',         action: function(){ closePalette(); insertSkill('pitch'); } },
-  { icon:'📋', label:'Pre-Meeting Brief',          sub:'90-sekunders battle card', action: function(){ closePalette(); insertSkill('brief'); } },
-  { icon:'💰', label:'Revenue Simulation',         sub:'3 scenarier',             action: function(){ closePalette(); insertSkill('revenue'); } },
-  { icon:'📡', label:'Signal to Action',           sub:'Konverter signal til plan',action: function(){ closePalette(); insertSkill('signal'); } },
-  { icon:'📈', label:'Dashboard',                  sub:'Command Center',           action: function(){ closePalette(); showTab('dashboard'); } },
-  { icon:'💬', label:'GTM Assistant',              sub:'AI chat',                  action: function(){ closePalette(); showTab('chat'); } },
-  { icon:'📝', label:'Meeting Notes',              sub:'Processor mødenotater',    action: function(){ closePalette(); showTab('notes'); } },
-  { icon:'🏢', label:'Accounts',                   sub:'Alle accounts',            action: function(){ closePalette(); showTab('accounts'); } },
-  { icon:'🎮', label:'Pitch Simulator',            sub:'Øv din pitch',            action: function(){ closePalette(); showTab('simulator'); } },
+  { type:'skill', icon:'<i data-lucide="zap" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',           label:'Who to contact today?',      sub:'Who To Contact Today',              action: function(){ closePalette(); insertSkill('contact'); } },
+  { type:'skill', icon:'<i data-lucide="building-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',     label:'Deal Blueprint',             sub:'Complete commercial execution plan', action: function(){ closePalette(); insertSkill('blueprint'); } },
+  { type:'skill', icon:'<i data-lucide="search" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',         label:'Prospect Hunt',              sub:'Find new leads',                    action: function(){ closePalette(); insertSkill('prospect'); } },
+  { type:'skill', icon:'<i data-lucide="sword" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',          label:'Commercial War Room',        sub:'Full situation assessment',          action: function(){ closePalette(); insertSkill('warroom'); } },
+  { type:'skill', icon:'<i data-lucide="sun" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',            label:'Morning Briefing',           sub:'CCO daily briefing',                action: function(){ closePalette(); insertSkill('morning'); } },
+  { type:'skill', icon:'<i data-lucide="bar-chart-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',    label:'Q2 Forecast',                sub:'Probability-weighted',              action: function(){ closePalette(); insertSkill('forecast'); } },
+  { type:'skill', icon:'<i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',           label:'Outreach Generator',         sub:'LinkedIn / email',                  action: function(){ closePalette(); insertSkill('outreach'); } },
+  { type:'skill', icon:'<i data-lucide="target" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',         label:'Pitch Partner',              sub:'Prep for meeting',                  action: function(){ closePalette(); insertSkill('pitch'); } },
+  { type:'skill', icon:'<i data-lucide="clipboard" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',      label:'Pre-Meeting Brief',          sub:'90-second battle card',             action: function(){ closePalette(); insertSkill('brief'); } },
+  { type:'skill', icon:'<i data-lucide="dollar-sign" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',    label:'Revenue Simulation',         sub:'3 scenarios',                       action: function(){ closePalette(); insertSkill('revenue'); } },
+  { type:'skill', icon:'<i data-lucide="radio" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',          label:'Signal to Action',           sub:'Convert signal to plan',            action: function(){ closePalette(); insertSkill('signal'); } },
+  { type:'skill', icon:'<i data-lucide="layout-dashboard" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>', label:'Dashboard',                sub:'Command Center',                    action: function(){ closePalette(); showTab('dashboard'); } },
+  { type:'skill', icon:'<i data-lucide="message-circle" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>', label:'GTM Assistant',              sub:'AI chat',                           action: function(){ closePalette(); showTab('chat'); } },
+  { type:'skill', icon:'<i data-lucide="file-text" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',      label:'Meeting Notes',              sub:'Process meeting notes',             action: function(){ closePalette(); showTab('notes'); } },
+  { type:'skill', icon:'<i data-lucide="building" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',       label:'Accounts',                   sub:'All accounts',                      action: function(){ closePalette(); showTab('accounts'); } },
+  { type:'skill', icon:'<i data-lucide="gamepad-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',      label:'Pitch Simulator',            sub:'Practice your pitch',               action: function(){ closePalette(); showTab('simulator'); } },
 ];
 
 let _cmdSelected = 0;
@@ -3988,7 +3998,8 @@ function cmdFilter() {
   // Build command list: static + accounts
   const accountCmds = (allAccounts || []).map(function(a) {
     return {
-      icon: '🏢',
+      type: 'account',
+      icon: '<i data-lucide="building" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>',
       label: a.name,
       sub: (a.country !== '\u2014' ? a.country + ' · ' : '') + (a.icp !== '\u2014' ? 'ICP ' + a.icp : ''),
       action: (function(slug, name){ return function(){ closePalette(); selectAccount(slug, name); showTab('chat'); }; })(a.slug, a.name)
@@ -4003,17 +4014,17 @@ function cmdFilter() {
   _cmdSelected = 0;
 
   if (_cmdVisible.length === 0) {
-    results.innerHTML = '<div id="cmd-empty">Ingen resultater for "' + q + '"</div>';
+    results.innerHTML = '<div id="cmd-empty">No results for "' + q + '"</div>';
     return;
   }
 
   // Split into skills vs accounts
-  const skillItems = _cmdVisible.filter(function(c){ return c.icon !== '🏢'; });
-  const accItems   = _cmdVisible.filter(function(c){ return c.icon === '🏢'; });
+  const skillItems = _cmdVisible.filter(function(c){ return c.type !== 'account'; });
+  const accItems   = _cmdVisible.filter(function(c){ return c.type === 'account'; });
 
   let html = '';
   if (skillItems.length) {
-    if (!q) html += '<div class="cmd-section">Handlinger</div>';
+    if (!q) html += '<div class="cmd-section">Actions</div>';
     skillItems.forEach(function(c, i) {
       html += '<div class="cmd-item' + (i === 0 && !accItems.length - 1 ? ' selected' : '') + '" data-idx="' + i + '" onclick="cmdExecute(' + i + ')">' +
         '<span class="cmd-icon">' + c.icon + '</span>' +
@@ -4024,7 +4035,7 @@ function cmdFilter() {
     });
   }
   if (accItems.length) {
-    if (!q) html += '<div class="cmd-section">Accounts</div>';
+    if (!q) html += '<div class="cmd-section">Accounts</div>';  // already English
     accItems.forEach(function(c, i) {
       const idx = skillItems.length + i;
       html += '<div class="cmd-item" data-idx="' + idx + '" onclick="cmdExecute(' + idx + ')">' +
@@ -4036,6 +4047,7 @@ function cmdFilter() {
     });
   }
   results.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   cmdHighlight();
 }
 
@@ -4080,7 +4092,7 @@ function openOutreachModal(slug, name, buyer) {
   _outreachFull = '';
 
   document.getElementById('outreach-title').textContent = name || 'Outreach';
-  document.getElementById('outreach-subtitle').textContent = (buyer ? buyer + ' · ' : '') + 'LinkedIn · klar til afsendelse';
+  document.getElementById('outreach-subtitle').textContent = (buyer ? buyer + ' · ' : '') + 'LinkedIn · ready to send';
   document.getElementById('outreach-loading').style.display = 'flex';
   document.getElementById('outreach-text').style.display = 'none';
   document.getElementById('outreach-text').textContent = '';
@@ -4150,7 +4162,7 @@ function copyOutreach() {
     const btn = document.getElementById('outreach-copy-btn');
     btn.textContent = '✓ Kopieret!';
     btn.style.background = '#00A880';
-    setTimeout(function(){ btn.textContent = '📋 Kopiér besked'; btn.style.background = '#153EED'; }, 2000);
+    setTimeout(function(){ btn.innerHTML = '<i data-lucide="clipboard" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Copy message'; btn.style.background = '#153EED'; lucide.createIcons(); }, 2000);
   });
 }
 
@@ -4168,6 +4180,7 @@ function regenOutreach() {
   openOutreachModal(_outreachContext.slug, _outreachContext.name, _outreachContext.buyer);
 }
 </script>
+<script>lucide.createIcons();</script>
 </body>
 </html>"""
 
@@ -4601,7 +4614,7 @@ def cc_country_data():
             return {"id": a.id, "name": a.name, "slug": a.slug,
                     "account_type": a.account_type,
                     "industry": ind_map[a.industry_id].name if a.industry_id in ind_map else "Other",
-                    "industry_icon": ind_map[a.industry_id].icon if a.industry_id in ind_map else "🏢",
+                    "industry_icon": ind_map[a.industry_id].icon if a.industry_id in ind_map else "building",
                     "industry_slug": ind_map[a.industry_id].slug if a.industry_id in ind_map else "",
                     "icp": a.icp_score, "deal": a.deal_score,
                     "pipeline": a.pipeline_value, "win_prob": a.win_probability,
@@ -6126,6 +6139,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
 .cmd-target-icp{font-size:10px;color:var(--m);margin-top:2px}
 .cmd-brief-card{background:#fff;border:1px solid rgba(21,62,237,.2);border-radius:14px;padding:24px;box-shadow:0 4px 20px rgba(21,62,237,.06)}
 </style>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 
@@ -6179,10 +6193,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
           <span class="nav-icon">✦</span> Market Foresight
         </div>
         <div class="nav-item" data-view="intelligence" onclick="switchView('intelligence')">
-          <span class="nav-icon">🔮</span> Strategic AI
+          <i data-lucide="eye" style="width:16px;height:16px;display:inline-block;vertical-align:middle;" class="nav-icon"></i> Strategic AI
         </div>
         <div class="nav-item" data-view="trends" onclick="switchView('trends')">
-          <span class="nav-icon">📡</span> Signal Radar
+          <i data-lucide="radio" style="width:16px;height:16px;display:inline-block;vertical-align:middle;" class="nav-icon"></i> Signal Radar
         </div>
       </div>
       <div class="sb-divider"></div>
@@ -6195,7 +6209,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
           <span class="nav-icon">◎</span> Pipeline Overview
         </div>
         <div class="nav-item" data-view="predictions" onclick="switchView('predictions')">
-          <span class="nav-icon">⚡</span> Deal Predictions
+          <i data-lucide="zap" style="width:16px;height:16px;display:inline-block;vertical-align:middle;" class="nav-icon"></i> Deal Predictions
         </div>
         <div class="nav-item" data-view="new-biz" onclick="switchView('new-biz')">
           <span class="nav-icon">◈</span> Opportunity Map
@@ -6255,15 +6269,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
           <div id="weekly-brief-section" style="margin:0 32px 28px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
               <div>
-                <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px">◉ Denne uges strategiske billede</div>
-                <div style="font-size:12px;color:var(--m)" id="brief-meta">Genererer…</div>
+                <div style="font-size:10px;font-weight:800;color:#153EED;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px">◉ This week's strategic picture</div>
+                <div style="font-size:12px;color:var(--m)" id="brief-meta">Generating…</div>
               </div>
-              <button onclick="loadWeeklyBrief(true)" style="background:none;border:1px solid var(--border);color:var(--m);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--m)'">↻ Opdater</button>
+              <button onclick="loadWeeklyBrief(true)" style="background:none;border:1px solid var(--border);color:var(--m);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s" onmouseenter="this.style.borderColor='#153EED';this.style.color='#153EED'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--m)'">↻ Refresh</button>
             </div>
 
             <!-- Loading -->
             <div id="brief-loading" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;color:var(--m);font-size:13px">
-              <div class="loading-pulse" style="justify-content:center"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span style="margin-left:10px">Analyserer pipeline og markedssignaler…</span></div>
+              <div class="loading-pulse" style="justify-content:center"><div class="pulse-dot"></div><div class="pulse-dot"></div><div class="pulse-dot"></div><span style="margin-left:10px">Analysing pipeline and market signals…</span></div>
             </div>
 
             <!-- Content (hidden until loaded) -->
@@ -7501,7 +7515,7 @@ function renderIntelligence() {
 
   // Churn risk card
   html += '<div class="intel-card risk">';
-  html += '<div class="intel-sec-title"><span style="color:var(--red)">🔴 Churn Risk (' + d.churn_risks.length + ')</span><span style="font-size:11px;color:var(--m)">Existing clients</span></div>';
+  html += '<div class="intel-sec-title"><span style="color:var(--red)"><span style="width:8px;height:8px;background:#DC2626;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></span> Churn Risk (' + d.churn_risks.length + ')</span><span style="font-size:11px;color:var(--m)">Existing clients</span></div>';
   if (!d.churn_risks.length) {
     html += '<div style="color:var(--m);font-size:13px">No churn risks detected.</div>';
   } else {
@@ -7705,6 +7719,7 @@ async function runForesight() {
     document.getElementById('fs-last-run').textContent = 'Generated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) + ' · ' + new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
 
     body.innerHTML = renderForesightSections(windows, partners, services);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch(e) {
     body.innerHTML = '<div style="padding:40px;color:var(--red);font-size:14px">Error: ' + e.message + '</div>';
   }
@@ -7767,7 +7782,7 @@ function renderForesightSections(windows, partners, services) {
     <div class="fsight-section">
       <div class="fsight-sec-header">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="fsight-sec-icon window">🎯</div>
+          <div class="fsight-sec-icon window"><i data-lucide="target" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
           <div>
             <div class="fsight-sec-title">Buying Windows</div>
             <div class="fsight-sec-sub">Accounts predicted to enter a buying decision in the next 90 days</div>
@@ -7781,7 +7796,7 @@ function renderForesightSections(windows, partners, services) {
     <div class="fsight-section">
       <div class="fsight-sec-header">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="fsight-sec-icon partner">🤝</div>
+          <div class="fsight-sec-icon partner"><i data-lucide="handshake" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
           <div>
             <div class="fsight-sec-title">Partnership Opportunities</div>
             <div class="fsight-sec-sub">Technology and agency alliances that unlock new revenue for JAKALA Nordic</div>
@@ -7795,7 +7810,7 @@ function renderForesightSections(windows, partners, services) {
     <div class="fsight-section">
       <div class="fsight-sec-header">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="fsight-sec-icon service">⚡</div>
+          <div class="fsight-sec-icon service"><i data-lucide="zap" style="width:20px;height:20px;display:inline-block;vertical-align:middle;"></i></div>
           <div>
             <div class="fsight-sec-title">New Service Opportunities</div>
             <div class="fsight-sec-sub">Service gaps the Nordic market needs — that no competitor offers yet</div>
@@ -7897,6 +7912,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 </script>
+<script>lucide.createIcons();</script>
 </body>
 </html>"""
 
