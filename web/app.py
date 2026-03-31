@@ -2838,13 +2838,14 @@ body::after {
 ══════════════════════════════════════════ */
 #tab-radar { overflow-y: auto; }
 #radar-wrap { padding: 28px 36px; }
-.radar-title { font-size: 22px; font-weight: 800; color: var(--white); letter-spacing: -0.4px; }
-.radar-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; margin-bottom: 22px; }
+.radar-title { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
+.radar-sub { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 22px; }
 .radar-layout { display: flex; gap: 22px; align-items: flex-start; }
 .radar-svg-container {
   flex: 1; max-width: 580px;
-  background: var(--bg2); border: 1px solid var(--border);
+  background: #0B1120; border: 1px solid rgba(255,255,255,.08);
   border-radius: 16px; overflow: hidden; padding: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.15);
 }
 #radar-svg { width: 100%; height: auto; display: block; }
 @keyframes radarSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -2855,7 +2856,7 @@ body::after {
   border-radius: 10px; padding: 16px;
 }
 .radar-panel-title { font-size: 9.5px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
-.legend-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 11.5px; color: var(--muted2); }
+.legend-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 11.5px; color: var(--muted); }
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .rhi { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
 .rhi:last-child { border-bottom: none; }
@@ -3621,21 +3622,21 @@ body::after {
               </radialGradient>
             </defs>
             <!-- Rings -->
-            <circle cx="300" cy="300" r="240" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <circle cx="300" cy="300" r="155" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-            <circle cx="300" cy="300" r="78"  fill="none" stroke="rgba(21,62,237,0.15)"   stroke-width="1"/>
+            <circle cx="300" cy="300" r="240" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+            <circle cx="300" cy="300" r="155" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+            <circle cx="300" cy="300" r="78"  fill="none" stroke="rgba(21,62,237,0.35)"   stroke-width="1.5"/>
             <!-- Axis lines -->
-            <line x1="300" y1="55"  x2="300" y2="545" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="55"  y1="300" x2="545" y2="300" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="300" y1="55"  x2="300" y2="545" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+            <line x1="55"  y1="300" x2="545" y2="300" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
             <!-- Ring labels -->
-            <text x="305" y="225" fill="rgba(0,212,160,0.4)" font-size="8" font-family="Inter,sans-serif">HOT</text>
-            <text x="305" y="148" fill="rgba(75,110,247,0.4)" font-size="8" font-family="Inter,sans-serif">WARM</text>
-            <text x="305" y="68"  fill="rgba(255,255,255,0.2)" font-size="8" font-family="Inter,sans-serif">COLD</text>
+            <text x="305" y="225" fill="rgba(0,212,160,0.7)" font-size="8" font-family="Inter,sans-serif" font-weight="700">HOT</text>
+            <text x="305" y="148" fill="rgba(107,159,255,0.7)" font-size="8" font-family="Inter,sans-serif" font-weight="700">WARM</text>
+            <text x="305" y="68"  fill="rgba(255,255,255,0.35)" font-size="8" font-family="Inter,sans-serif" font-weight="700">COLD</text>
             <!-- Quadrant labels -->
-            <text x="330" y="78"  fill="rgba(21,62,237,0.55)"   font-size="10" font-family="Inter,sans-serif" font-weight="600">Data Revenue Unlock</text>
-            <text x="98"  y="78"  fill="rgba(0,212,160,0.55)"   font-size="10" font-family="Inter,sans-serif" font-weight="600">AI Readiness</text>
-            <text x="330" y="528" fill="rgba(123,92,245,0.55)"  font-size="10" font-family="Inter,sans-serif" font-weight="600">Commerce Optimization</text>
-            <text x="70"  y="528" fill="rgba(245,166,35,0.55)"  font-size="10" font-family="Inter,sans-serif" font-weight="600">Experience Transform.</text>
+            <text x="315" y="75"  fill="rgba(107,159,255,0.8)"  font-size="10" font-family="Inter,sans-serif" font-weight="700">Data Revenue Unlock</text>
+            <text x="90"  y="75"  fill="rgba(0,212,160,0.8)"    font-size="10" font-family="Inter,sans-serif" font-weight="700">AI Readiness</text>
+            <text x="305" y="532" fill="rgba(167,139,250,0.8)"  font-size="10" font-family="Inter,sans-serif" font-weight="700">Commerce Optimization</text>
+            <text x="68"  y="532" fill="rgba(251,191,36,0.8)"   font-size="10" font-family="Inter,sans-serif" font-weight="700">Experience Transform.</text>
             <!-- Rotating sweep -->
             <g id="radar-sweep">
               <path d="M 300 300 L 300 60 A 240 240 0 0 1 470 130 Z" fill="url(#sweepGrad)"/>
