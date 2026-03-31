@@ -192,52 +192,52 @@ h1 span{color:var(--blue)}
 }
 
 /* ── CC MOCKUP ── */
-.cc-mockup{padding:0;background:#111827;min-height:270px;display:flex;flex-direction:column}
+.cc-mockup{padding:0;background:#F4F6FC;min-height:270px;display:flex;flex-direction:column}
 .cc-topbar{
   display:flex;align-items:center;gap:8px;padding:10px 14px;
-  background:#0F1A2E;border-bottom:1px solid rgba(255,255,255,.07);
+  background:#FFFFFF;border-bottom:1px solid #E4E7F0;
   font-size:10px;font-weight:600;
 }
-.cc-live-dot{width:6px;height:6px;border-radius:50%;background:#00A67E;box-shadow:0 0 6px rgba(0,166,126,.6)}
-.cc-live-text{color:rgba(255,255,255,.5);font-size:10px;margin-left:4px}
+.cc-live-dot{width:6px;height:6px;border-radius:50%;background:#00A67E;box-shadow:0 0 6px rgba(0,166,126,.5)}
+.cc-live-text{color:#9CA3AF;font-size:10px;margin-left:4px}
 .cc-body{display:flex;flex:1;overflow:hidden}
 .cc-sidebar-dark{
-  width:100px;flex-shrink:0;background:#0F1A2E;
-  border-right:1px solid rgba(255,255,255,.06);padding:10px 8px;
+  width:108px;flex-shrink:0;background:#FFFFFF;
+  border-right:1px solid #E4E7F0;padding:10px 8px;
   display:flex;flex-direction:column;gap:2px;
 }
 .cc-nav{
   padding:6px 8px;border-radius:6px;font-size:10px;font-weight:500;
-  color:rgba(255,255,255,.35);display:flex;align-items:center;gap:5px;
+  color:#9CA3AF;display:flex;align-items:center;gap:5px;
 }
-.cc-nav.active{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9);font-weight:600}
-.cc-nav-sep{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 8px 2px;color:rgba(255,255,255,.2)}
-.cc-content-dark{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;background:#111827}
+.cc-nav.active{background:rgba(21,62,237,.08);color:#153EED;font-weight:600}
+.cc-nav-sep{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 8px 2px;color:#D1D5DB}
+.cc-content-dark{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;background:#F4F6FC}
 
-/* KPI cards on dark */
+/* KPI cards */
 .cc-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .cc-kpi-dark{
-  background:#1E293B;border:1px solid rgba(255,255,255,.07);
+  background:#FFFFFF;border:1px solid #E4E7F0;
   border-radius:8px;padding:9px 10px;
 }
-.cc-kpi-l{font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:3px}
+.cc-kpi-l{font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF;margin-bottom:3px}
 .cc-kpi-v{font-size:16px;font-weight:700;letter-spacing:-.02em}
-.kv-blue{color:#60A5FA}
-.kv-green{color:#34D399}
-.kv-amber{color:#FBBF24}
+.kv-blue{color:#153EED}
+.kv-green{color:#00A67E}
+.kv-amber{color:#D97706}
 
 /* Country breakdown */
 .cc-countries{display:flex;flex-direction:column;gap:5px}
 .cc-country{
-  background:#1E293B;border:1px solid rgba(255,255,255,.07);
+  background:#FFFFFF;border:1px solid #E4E7F0;
   border-radius:7px;padding:7px 10px;
   display:flex;align-items:center;gap:8px;
 }
-.cc-country-flag{font-size:12px}
-.cc-country-name{font-size:10px;font-weight:600;color:rgba(255,255,255,.8);flex:1}
-.cc-country-bar-wrap{width:60px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
-.cc-country-bar{height:100%;background:#60A5FA;border-radius:2px}
-.cc-country-val{font-size:10px;font-weight:700;color:#60A5FA}
+.cc-country-flag{font-size:10px;font-weight:700;color:#6B7280}
+.cc-country-name{font-size:10px;font-weight:600;color:#1F2937;flex:1}
+.cc-country-bar-wrap{width:60px;height:3px;background:#E4E7F0;border-radius:2px;overflow:hidden}
+.cc-country-bar{height:100%;background:#153EED;border-radius:2px}
+.cc-country-val{font-size:10px;font-weight:700;color:#153EED}
 
 /* ── CARD FOOTER ── */
 .pc-footer{
@@ -245,18 +245,18 @@ h1 span{color:var(--blue)}
   display:flex;align-items:center;justify-content:space-between;
 }
 .card-gtm .pc-footer{border-color:var(--border)}
-.card-cc .pc-footer{border-color:rgba(255,255,255,.08)}
+.card-cc .pc-footer{border-color:#E4E7F0}
 
 .pc-tags{display:flex;gap:5px;flex-wrap:wrap}
 .pc-tag{
   padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;
 }
 .card-gtm .pc-tag{background:var(--blue-light);color:var(--blue)}
-.card-cc .pc-tag{background:rgba(255,255,255,.07);color:rgba(255,255,255,.5)}
+.card-cc .pc-tag{background:rgba(21,62,237,.06);color:#153EED}
 
 .pc-cta{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;transition:gap .15s}
 .card-gtm .pc-cta{color:var(--blue)}
-.card-cc .pc-cta{color:rgba(255,255,255,.7)}
+.card-cc .pc-cta{color:#153EED}
 .platform-card:hover .pc-cta{gap:9px}
 
 /* ── SEPARATOR LABEL ── */
@@ -448,8 +448,8 @@ footer{
       </div>
       <div class="cc-mockup">
         <div class="cc-topbar">
-          <span style="font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.1em;font-size:10px">JAKALA</span>
-          <span style="color:rgba(255,255,255,.2);font-size:10px">Market Command Center</span>
+          <span style="font-weight:700;color:#153EED;letter-spacing:.1em;font-size:10px">JAKALA</span>
+          <span style="color:#9CA3AF;font-size:10px">Market Command Center</span>
           <span style="flex:1"></span>
           <span class="cc-live-dot"></span>
           <span class="cc-live-text">Live · Nordic</span>
