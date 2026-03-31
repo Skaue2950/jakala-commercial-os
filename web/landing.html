@@ -86,8 +86,11 @@ h1 span{color:var(--blue)}
   max-width:1100px;margin:0 auto;
   padding:0 40px 80px;
   display:grid;grid-template-columns:1fr 1fr;gap:24px;
-  align-items:start;
+  align-items:stretch;
 }
+.platforms > div{display:flex;flex-direction:column;}
+.platform-card{display:flex;flex-direction:column;flex:1;}
+.gtm-mockup,.cc-mockup{flex:1;}
 
 /* ── AUDIENCE LABEL ── */
 .audience-label{
