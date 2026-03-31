@@ -7013,6 +7013,117 @@ Be commercially sharp, specific, and grounded in the account and signal data. No
         db.close()
 
 
+# ── User Management Routes ────────────────────────────────────────────────────
+
+@app.route("/api/cc/users", methods=["GET"])
+def cc_list_users():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "unauthorized"}), 401
+    if u.role != "global":
+        return jsonify({"error": "admin only"}), 403
+    db = SessionLocal()
+    try:
+        users = db.query(User).order_by(User.country, User.name).all()
+        return jsonify([{
+            "id": usr.id,
+            "name": usr.name,
+            "email": usr.email,
+            "role": usr.role,
+            "country": usr.country,
+            "initials": usr.initials,
+            "created_at": usr.created_at.strftime("%Y-%m-%d") if usr.created_at else None
+        } for usr in users])
+    finally:
+        db.close()
+
+@app.route("/api/cc/users", methods=["POST"])
+def cc_create_user():
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "unauthorized"}), 401
+    if u.role != "global":
+        return jsonify({"error": "admin only"}), 403
+    db = SessionLocal()
+    try:
+        data = request.json or {}
+        import bcrypt as _bcrypt
+        pw_hash = _bcrypt.hashpw(data["password"].encode(), _bcrypt.gensalt()).decode()
+        initials = "".join([p[0].upper() for p in data.get("name", "").split()[:2]])
+        new_user = User(
+            name=data["name"].strip(),
+            email=data["email"].strip().lower(),
+            password_hash=pw_hash,
+            role=data.get("role", "country_head"),
+            country=data.get("country") or None,
+            initials=initials
+        )
+        db.add(new_user)
+        db.commit()
+        return jsonify({"ok": True, "id": new_user.id})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/api/cc/users/<int:uid>", methods=["PATCH"])
+def cc_update_user(uid):
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "unauthorized"}), 401
+    if u.role != "global":
+        return jsonify({"error": "admin only"}), 403
+    db = SessionLocal()
+    try:
+        target = db.query(User).filter(User.id == uid).first()
+        if not target:
+            return jsonify({"error": "not found"}), 404
+        data = request.json or {}
+        if "name" in data:
+            target.name = data["name"].strip()
+            target.initials = "".join([p[0].upper() for p in target.name.split()[:2]])
+        if "email" in data:
+            target.email = data["email"].strip().lower()
+        if "role" in data:
+            target.role = data["role"]
+        if "country" in data:
+            target.country = data["country"] or None
+        if "password" in data and data["password"]:
+            import bcrypt as _bcrypt
+            target.password_hash = _bcrypt.hashpw(data["password"].encode(), _bcrypt.gensalt()).decode()
+        db.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/api/cc/users/<int:uid>", methods=["DELETE"])
+def cc_delete_user(uid):
+    u = cc_current_user()
+    if not u:
+        return jsonify({"error": "unauthorized"}), 401
+    if u.role != "global":
+        return jsonify({"error": "admin only"}), 403
+    if uid == u.id:
+        return jsonify({"error": "cannot delete yourself"}), 400
+    db = SessionLocal()
+    try:
+        target = db.query(User).filter(User.id == uid).first()
+        if not target:
+            return jsonify({"error": "not found"}), 404
+        db.delete(target)
+        db.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+
 CC_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7552,6 +7663,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         </div>
       </div>
       <div class="sb-divider"></div>
+      <div class="sb-section" id="sb-admin-section" style="display:none">
+        <div class="sb-label">Admin</div>
+        <div class="nav-item" data-view="users" onclick="switchView('users')">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="display:inline-block;vertical-align:middle;margin-right:6px;flex-shrink:0"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5s5 2 5 5"/><circle cx="13" cy="5" r="2"/><path d="M13 10c1.5.5 2.5 1.8 2.5 3.5"/></svg>Users
+        </div>
+      </div>
+      <div class="sb-divider"></div>
       <div class="sb-signals" id="sb-signals-summary"></div>
       <!-- Global: country switcher -->
       <div id="sb-country-switcher" style="display:none">
@@ -7880,7 +7998,75 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         </div>
       </div>
 
+      <!-- ══ USERS VIEW ══ -->
+      <div class="view" id="view-users">
+        <div style="max-width:900px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
+            <div>
+              <div style="font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--w);">Team Users</div>
+              <div style="font-size:13px;color:var(--m);margin-top:4px;">Manage platform access by region</div>
+            </div>
+            <button onclick="openUserModal()" style="display:flex;align-items:center;gap:6px;padding:10px 18px;background:var(--blue);border:none;border-radius:10px;color:#fff;font:700 13px var(--font);cursor:pointer;">
+              <i data-lucide="user-plus" style="width:15px;height:15px;"></i> Add User
+            </button>
+          </div>
+          <div id="users-grid" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+
     </main>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div id="user-modal-overlay" onclick="if(event.target===this)closeUserModal()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);backdrop-filter:blur(6px);z-index:9500;align-items:center;justify-content:center;">
+  <div style="background:#1a1f35;border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-size:15px;font-weight:700;color:var(--w);" id="user-modal-title">Add User</div>
+      <button onclick="closeUserModal()" style="background:none;border:none;cursor:pointer;color:var(--m);">
+        <i data-lucide="x" style="width:18px;height:18px;"></i>
+      </button>
+    </div>
+    <form id="user-form" onsubmit="submitUser(event)" style="padding:24px;display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="user-edit-id" value="">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Full Name *</label>
+          <input id="user-name" required placeholder="e.g. Anna Jensen" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--w);background:rgba(255,255,255,0.05);outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Email *</label>
+          <input id="user-email" type="email" required placeholder="anna@jakala.com" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--w);background:rgba(255,255,255,0.05);outline:none;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Role *</label>
+          <select id="user-role" onchange="toggleCountryField()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--w);background:#1a1f35;outline:none;box-sizing:border-box;">
+            <option value="country_head">Country Head</option>
+            <option value="global">Global (Admin)</option>
+          </select>
+        </div>
+        <div id="country-field">
+          <label style="font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Country *</label>
+          <select id="user-country" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--w);background:#1a1f35;outline:none;box-sizing:border-box;">
+            <option value="no">Norway</option>
+            <option value="dk">Denmark</option>
+            <option value="se">Sweden</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;" id="pw-label">Password *</label>
+        <input id="user-password" type="password" placeholder="Min. 8 characters" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--w);background:rgba(255,255,255,0.05);outline:none;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;">
+        <button type="button" onclick="closeUserModal()" style="padding:9px 18px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--m);cursor:pointer;">Cancel</button>
+        <button type="submit" id="user-submit-btn" style="padding:9px 20px;background:var(--blue);border:none;border-radius:8px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">
+          <span id="user-submit-text">Create User</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -8117,6 +8303,12 @@ async function initApp(user) {
     gi.style.display = '';
     document.getElementById('sb-country-switcher').style.display = 'block';
     buildCountrySwitcher();
+    // Show admin section for global users
+    const adminSection = document.getElementById('sb-admin-section');
+    if (adminSection) {
+      adminSection.style.display = '';
+      adminSection.querySelectorAll('.nav-item').forEach(n => n.style.display = '');
+    }
     switchView('global');
     loadGlobalData();
   } else {
@@ -8922,6 +9114,7 @@ function switchView(view) {
   if (view === 'meetings') renderMeetingsList('meetings-list', null);
   if (view === 'foresight') loadWeeklyBrief();
   if (view === 'intelligence') loadIntelligence();
+  if (view === 'users') loadUsers();
 }
 
 // ══ WEEKLY STRATEGIC BRIEF ═══════════════════════════════════════════════════
@@ -9305,6 +9498,132 @@ async function markCCAllRead() {
 // Poll for new CC notifications every 60 seconds
 setInterval(loadCCNotifications, 60000);
 document.addEventListener('DOMContentLoaded', function() { setTimeout(loadCCNotifications, 1000); });
+
+// ── User Management ────────────────────────────────────────────────
+async function loadUsers() {
+  const grid = document.getElementById('users-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--m);font-size:13px;padding:16px;">Loading\u2026</div>';
+  try {
+    const r = await fetch('/api/cc/users');
+    if (r.status === 403) {
+      grid.innerHTML = '<div style="color:var(--m);font-size:13px;padding:16px;">Admin access required.</div>';
+      return;
+    }
+    const users = await r.json();
+    const countryLabel = {no:'Norway', dk:'Denmark', se:'Sweden'};
+    const roleColor = {global:'var(--blue)', country_head:'var(--green)'};
+    grid.innerHTML = users.map(u => `
+      <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;">${u.initials||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--w);">${u.name}</div>
+          <div style="font-size:12px;color:var(--m);margin-top:2px;">${u.email}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:${roleColor[u.role]||'var(--m)'};color:#fff;text-transform:uppercase;letter-spacing:.05em;">${u.role==='global'?'Global Admin':'Country Head'}</span>
+          ${u.country ? `<span style="font-size:11px;font-weight:600;color:var(--m);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:6px;">${countryLabel[u.country]||u.country.toUpperCase()}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="editUser(${JSON.stringify(u).replace(/"/g,'&quot;')})" style="padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;color:var(--m);cursor:pointer;">Edit</button>
+          <button onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')" style="padding:6px 12px;background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.2);border-radius:7px;font-size:12px;font-weight:600;color:#DC2626;cursor:pointer;">Remove</button>
+        </div>
+      </div>
+    `).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--m);font-size:13px;padding:16px;">Failed to load users.</div>';
+  }
+}
+
+function openUserModal() {
+  document.getElementById('user-modal-overlay').style.display = 'flex';
+  document.getElementById('user-form').reset();
+  document.getElementById('user-edit-id').value = '';
+  document.getElementById('user-modal-title').textContent = 'Add User';
+  document.getElementById('user-submit-text').textContent = 'Create User';
+  document.getElementById('pw-label').textContent = 'Password *';
+  document.getElementById('user-password').required = true;
+  document.getElementById('user-submit-btn').disabled = false;
+  toggleCountryField();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function editUser(u) {
+  document.getElementById('user-modal-overlay').style.display = 'flex';
+  document.getElementById('user-edit-id').value = u.id;
+  document.getElementById('user-name').value = u.name;
+  document.getElementById('user-email').value = u.email;
+  document.getElementById('user-role').value = u.role;
+  document.getElementById('user-country').value = u.country || 'no';
+  document.getElementById('user-password').value = '';
+  document.getElementById('user-password').required = false;
+  document.getElementById('user-modal-title').textContent = 'Edit User';
+  document.getElementById('user-submit-text').textContent = 'Save Changes';
+  document.getElementById('pw-label').textContent = 'New Password (leave blank to keep)';
+  document.getElementById('user-submit-btn').disabled = false;
+  toggleCountryField();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeUserModal() {
+  document.getElementById('user-modal-overlay').style.display = 'none';
+}
+
+function toggleCountryField() {
+  const role = document.getElementById('user-role').value;
+  document.getElementById('country-field').style.opacity = role === 'global' ? '0.3' : '1';
+  document.getElementById('user-country').disabled = role === 'global';
+}
+
+async function submitUser(e) {
+  e.preventDefault();
+  const btn = document.getElementById('user-submit-btn');
+  const btnText = document.getElementById('user-submit-text');
+  btn.disabled = true;
+  const orig = btnText.textContent;
+  btnText.textContent = 'Saving\u2026';
+
+  const editId = document.getElementById('user-edit-id').value;
+  const role = document.getElementById('user-role').value;
+  const payload = {
+    name:     document.getElementById('user-name').value.trim(),
+    email:    document.getElementById('user-email').value.trim(),
+    role:     role,
+    country:  role === 'global' ? null : document.getElementById('user-country').value,
+    password: document.getElementById('user-password').value
+  };
+
+  try {
+    const url = editId ? '/api/cc/users/' + editId : '/api/cc/users';
+    const method = editId ? 'PATCH' : 'POST';
+    const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const d = await r.json();
+    if (d.ok) {
+      closeUserModal();
+      loadUsers();
+    } else {
+      btnText.textContent = d.error || 'Error';
+      btn.disabled = false;
+    }
+  } catch(err) {
+    btnText.textContent = 'Error \u2014 try again';
+    btn.disabled = false;
+    setTimeout(() => { btnText.textContent = orig; }, 2000);
+  }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm('Remove ' + name + ' from the platform?')) return;
+  try {
+    const r = await fetch('/api/cc/users/' + id, {method:'DELETE'});
+    const d = await r.json();
+    if (d.ok) loadUsers();
+    else alert(d.error || 'Failed to delete user');
+  } catch(e) {
+    alert('Failed to delete user');
+  }
+}
 </script>
 <script>lucide.createIcons();</script>
 </body>
