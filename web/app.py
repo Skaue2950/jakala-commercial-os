@@ -124,6 +124,184 @@ def job_deactivate_stale_signals():
     finally:
         db.close()
 
+def job_scan_new_leads():
+    """Runs every weekday at 06:30 — scans web for new Nordic leads and adds qualifying ones to DB."""
+    import os as _os_leads
+    tavily_key = _os_leads.getenv("TAVILY_API_KEY")
+    if not tavily_key:
+        print("[LEADS] TAVILY_API_KEY not set — skipping lead scan")
+        return
+
+    try:
+        from tavily import TavilyClient
+        tavily = TavilyClient(api_key=tavily_key)
+    except Exception as e:
+        print(f"[LEADS] Tavily import failed: {e}")
+        return
+
+    # Search queries targeting Nordic buying signals
+    searches = [
+        "ny CDO OR ny CMO OR ny digitalsjef norsk selskap 2026",
+        "new Chief Digital Officer Nordic retail 2026",
+        "new CMO Denmark Norway Sweden retail ecommerce 2026",
+        "digital transformation Nordic retail ecommerce 2026",
+        "ny teknologisjef OR ny IT-direktør Norge 2026",
+        "funding round Nordic ecommerce retail tech 2026",
+        "Adobe Commerce migration Nordic 2026",
+        "AI strategy Nordic retail 2026",
+    ]
+
+    raw_results = []
+    for query in searches:
+        try:
+            r = tavily.search(query=query, max_results=5, search_depth="basic")
+            for item in r.get("results", []):
+                raw_results.append({
+                    "title": item.get("title", ""),
+                    "content": item.get("content", "")[:400],
+                    "url": item.get("url", ""),
+                    "query": query
+                })
+        except Exception as e:
+            print(f"[LEADS] Tavily search failed for '{query}': {e}")
+            continue
+
+    if not raw_results:
+        print("[LEADS] No results from Tavily")
+        return
+
+    # Deduplicate by title
+    seen = set()
+    unique = []
+    for r in raw_results:
+        key = r["title"][:60].lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+
+    # Ask Claude to identify and score new leads
+    results_text = "\n\n".join([
+        f"Title: {r['title']}\nContent: {r['content']}\nURL: {r['url']}"
+        for r in unique[:20]
+    ])
+
+    prompt = f"""You are a B2B lead qualification expert for JAKALA — a Nordic data, AI and commerce consultancy.
+
+Analyze these search results and identify companies that could be strong new leads for JAKALA Nordic (Denmark, Norway, Sweden only).
+
+ICP criteria for scoring:
+- Nordic companies (NO/DK/SE only — exclude UK, US, global companies unless they have Nordic HQ)
+- Revenue: €50M+ preferred
+- Industries: Retail, E-commerce, Fashion, Finance/Banking, Home & DIY, Sports, Education, Food & Grocery
+- Signals: New digital executive, tech platform migration, AI investment, digital transformation, funding
+- NOT already well-known accounts (skip H&M, IKEA, Zara, Nike etc — too large/global)
+
+For each qualifying company found, return a JSON array. Each entry:
+{{
+  "name": "Company name",
+  "country": "no" | "dk" | "se",
+  "industry": "retail" | "fashion" | "finance" | "home-diy" | "sports" | "education" | "food" | "tech-saas" | "energy" | "health",
+  "icp_score": 1-10,
+  "deal_score": 1-10,
+  "pipeline_value": estimated deal value in EUR (integer),
+  "win_probability": 0.1-0.9,
+  "named_buyer": "Name and title if mentioned, else null",
+  "buyer_role": "Role/title",
+  "revenue": "Estimated revenue as string e.g. €200M",
+  "tech_stack": "Known tech or platform",
+  "signal": "One sentence explaining why this is a lead right now",
+  "source_url": "URL of the signal"
+}}
+
+Only include companies with icp_score >= 7. Return ONLY the JSON array, no other text. If no qualifying leads found, return [].
+
+Search results:
+{results_text}"""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw_json = response.content[0].text.strip()
+        # Strip markdown code fences if present
+        if raw_json.startswith("```"):
+            raw_json = raw_json.split("```")[1]
+            if raw_json.startswith("json"):
+                raw_json = raw_json[4:]
+        leads = json.loads(raw_json)
+    except Exception as e:
+        print(f"[LEADS] Claude scoring failed: {e}")
+        return
+
+    if not leads:
+        print("[LEADS] No qualifying leads found this scan")
+        return
+
+    db = SessionLocal()
+    added = 0
+    try:
+        # Get industry map
+        industries = {i.slug: i for i in db.query(Industry).all()}
+
+        for lead in leads:
+            # Skip if account already exists (by name, case-insensitive)
+            existing = db.query(Account).filter(
+                Account.name.ilike(f"%{lead.get('name', '')}%")
+            ).first()
+            if existing:
+                continue
+
+            slug = lead.get("name", "").lower().replace(" ", "-").replace("/", "-")[:80]
+
+            ind = industries.get(lead.get("industry", "retail"))
+
+            acc = Account(
+                name=lead.get("name", "Unknown"),
+                slug=slug,
+                country=lead.get("country", "no"),
+                industry_id=ind.id if ind else None,
+                account_type="prospect",
+                icp_score=float(lead.get("icp_score", 7)),
+                deal_score=float(lead.get("deal_score", 7)),
+                pipeline_value=float(lead.get("pipeline_value", 100000)),
+                win_probability=float(lead.get("win_probability", 0.2)),
+                named_buyer=lead.get("named_buyer"),
+                buyer_role=lead.get("buyer_role"),
+                revenue=lead.get("revenue"),
+                tech_stack=lead.get("tech_stack"),
+                notes=f"Auto-discovered via lead scan. Signal: {lead.get('signal', '')} Source: {lead.get('source_url', '')}",
+                deal_stage="identified",
+                last_activity=None
+            )
+            db.add(acc)
+            db.flush()
+
+            # Add signal for this lead
+            sig = Signal(
+                country=lead.get("country", "no"),
+                vertical=lead.get("industry", "retail").title(),
+                signal_type="market",
+                severity="info",
+                title=f"New lead: {lead.get('name')} — {lead.get('signal', '')[:100]}",
+                description=lead.get("signal", ""),
+                action_recommended=f"Research {lead.get('name')} and book discovery call with {lead.get('named_buyer') or lead.get('buyer_role', 'key decision maker')}.",
+                source=lead.get("source_url", "Auto lead scan"),
+                is_active=True
+            )
+            db.add(sig)
+            added += 1
+
+        db.commit()
+        print(f"[LEADS] Scan complete — {added} new leads added to DB")
+    except Exception as e:
+        db.rollback()
+        print(f"[LEADS] DB insert failed: {e}")
+    finally:
+        db.close()
+
+
 # Start scheduler (only in main process, not in reloader child)
 import os as _os_sched
 if not _os_sched.environ.get("WERKZEUG_RUN_MAIN"):
@@ -132,9 +310,10 @@ if not _os_sched.environ.get("WERKZEUG_RUN_MAIN"):
     _scheduler.add_job(job_flag_stale_accounts,  CronTrigger(hour=7, minute=5),  id="stale_accounts", replace_existing=True)
     _scheduler.add_job(job_weekly_briefs,        CronTrigger(day_of_week="mon", hour=6, minute=55), id="weekly_briefs", replace_existing=True)
     _scheduler.add_job(job_deactivate_stale_signals, CronTrigger(day_of_week="sun", hour=23, minute=0), id="signal_cleanup", replace_existing=True)
+    _scheduler.add_job(job_scan_new_leads,       CronTrigger(day_of_week="mon-fri", hour=6, minute=30), id="lead_scan", replace_existing=True)
     _scheduler.start()
     atexit.register(lambda: _scheduler.shutdown())
-    print("[SCHEDULER] Started — daily plans 07:00, weekly briefs Mon 06:55, stale check 07:05")
+    print("[SCHEDULER] Started — daily plans 07:00, weekly briefs Mon 06:55, stale check 07:05, lead scan Mon-Fri 06:30")
 
 # ── File helpers ─────────────────────────────────────────────────────────────
 
@@ -335,6 +514,17 @@ def scheduler_status():
         return jsonify({"running": True, "jobs": jobs})
     except Exception as e:
         return jsonify({"running": False, "error": str(e)})
+
+
+@app.route("/api/leads/scan", methods=["POST"])
+def trigger_lead_scan():
+    """Manually trigger a lead scan — useful for testing."""
+    if not session.get("logged_in") and not session.get("cc_user_id"):
+        return jsonify({"error": "unauthorized"}), 401
+    import threading
+    t = threading.Thread(target=job_scan_new_leads, daemon=True)
+    t.start()
+    return jsonify({"status": "scan started — check server logs for results"})
 
 
 @app.route("/api/accounts")
