@@ -1,0 +1,36 @@
+name: CEO Morning Brief
+
+on:
+  workflow_dispatch:   # Run manually from GitHub UI anytime
+  schedule:
+    # Every Monday at 07:00 CET (06:00 UTC)
+    - cron: "0 6 * * 1"
+
+jobs:
+  morning-brief:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate and send CEO Morning Brief
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SENDGRID_API_KEY:  ${{ secrets.SENDGRID_API_KEY }}
+          TO_EMAIL:          ${{ secrets.TO_EMAIL }}
+          FROM_EMAIL:        ${{ secrets.FROM_EMAIL }}
+        run: python3 scripts/morning_brief.py

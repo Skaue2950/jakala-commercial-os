@@ -1,6 +1,6 @@
 # Top Opportunities
 
-Last updated: 2026-03-08
+Last updated: 2026-03-10
 
 ---
 
@@ -10,7 +10,7 @@ Last updated: 2026-03-08
 |------|---------|---------|----------|-----|------|-------|---------|-------------|
 | 1 | Elkjøp Nordic | Norge | Commerce Optimization | 8/10 | 9/10 | 65% | €455K | Morten Syversen (Chief Brand & Digital Officer) |
 | 2 | H&M Group | Sverige | Data & AI — Data Revenue | 9/10 | 9/10 | 25% (capped) | €225K | TBD — Global Product Information Lead |
-| 3 | Boozt | Danmark | Data & AI — AI Readiness | 9/10 | 8/10 | 70% | €210K | Jesper Brøndum (CTO / Co-founder) |
+| 3 | Boozt | Sverige | Data & AI — AI Readiness | 9/10 | 8/10 | 70% | €210K | Jesper Brøndum (CTO / Co-founder) |
 | 4 | Clas Ohlson | Sverige | Commerce Optimization | 7/10 | 8/10 | 55% | €193K | Helena Holmström (CMO) |
 | 5 | Trumf | Norge | Data & AI — Data Revenue | 9/10 | 9/10 | 40% | €180K | Kristin Bigseth (MD) · Rikke Etholm-Idsøe (Commercial Dir.) |
 | 6 | Matas Group | Danmark | Data & AI — AI Readiness | 9/10 | 9/10 | 25% (capped) | €175K | TBD — CTO / CDO |

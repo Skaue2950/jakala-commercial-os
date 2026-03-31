@@ -270,6 +270,77 @@ https://www.jakala.com/en-us/activations/communication-media-activation
 
 ---
 
+## Offering 8 — J-IGNITE (Innovation Pipeline Platform)
+
+**Practice:** AI & Strategy
+**Type:** SaaS platform + implementation
+**Price range:** €30K–€80K (pilot / discovery) · €150K–€500K (full implementation + licence)
+**Typical scope:** 6 weeks (pilot) · 3–6 months (full rollout)
+
+### What we deliver
+J-IGNITE is a JAKALA-developed AI platform that transforms enterprise innovation pipelines. It takes organisations from 6 months of bureaucratic process to 6 weeks of structured progress — ensuring the right ideas move forward and nothing good gets lost.
+
+**Three-step model:**
+1. **Submit your idea** — Guided conversational intake refines ideas into structured proposals in minutes
+2. **AI does the heavy lifting** — Evaluates, scores, drafts all documents, routes to the right team automatically
+3. **Humans decide** — Everything needed to make a confident yes/no decision, in one place
+
+**Six platform capabilities:**
+- **Intelligent Intake** — Context refinement, duplicate detection, strategy alignment check
+- **Autonomous Evaluation** — Multi-dimensional scoring, risk flagging, compliance checking
+- **Smart Routing** — Optimal team assignment, stakeholder connections, priority sequencing
+- **Generative Docs** — Auto-generated business cases, project briefs, continuous refinement
+- **Project Execution** — Integrated learning loop that continuously improves all capabilities
+- **Portfolio Intelligence** — Real-time dashboard, predictive modeling, resource allocation
+
+### The problem it solves
+| Symptom | Industry benchmark |
+|---------|-------------------|
+| Time from idea to decision | 3–6 months (most ideas never make it) |
+| Manual evaluation time | 12,000 hrs/year spent on people-driven evaluation |
+| Ideas lost in bureaucracy | 90% die before anyone evaluates them |
+| Budget on process overhead | +20% of innovation budget spent on managing the process |
+
+### Proven in production
+Built with Fortune 100 complexity. Scaled to 70 users across 3 business units in 6 months — while others were still in procurement.
+
+### Ideal for
+- Large enterprises (500+ employees) with active but chaotic innovation programmes
+- Multi-brand, multi-BU organisations where ideas die between units
+- Organisations with a C-suite AI mandate but no structured innovation governance
+- Companies post-acquisition needing to consolidate and prioritise competing innovation agendas
+- CDOs, CIOs, and Heads of Innovation who own the innovation pipeline but lack tooling
+
+### Signals that indicate fit
+- "We have more ideas than we can evaluate" — classic innovation bottleneck
+- AI transformation mandate from board or CEO without clear prioritisation framework
+- Innovation lab or CoE exists but conversion rate from idea to project is low
+- Post-merger integration — competing roadmaps, no common evaluation layer
+- New CDO/CIO/Head of Innovation hired — wants to demonstrate early impact
+
+### Entry offer
+**J-IGNITE Discovery Workshop** — €30–50K
+8-week pilot across one business unit. Maps current innovation process, identifies top 20 ideas, demonstrates AI evaluation layer. Output: platform business case + rollout roadmap.
+
+### Expansion path
+Discovery Pilot → Full platform rollout (1 BU) → Multi-BU expansion → Portfolio Intelligence layer → Ongoing licence + JAKALA advisory retainer
+
+### Do not sell to
+- SMEs or scale-ups without a structured innovation process
+- Accounts where the immediate problem is commerce or data — lead with those offerings first, introduce J-IGNITE as a second conversation
+- Organisations without an internal innovation mandate or budget owner
+
+### Buyer persona
+- Chief Digital Officer (CDO)
+- Chief Innovation Officer / Head of Innovation
+- CIO / CTO with transformation mandate
+- CEO (new in role, wants early innovation wins)
+
+### Pricing note
+Licence model TBD — entry via Discovery Workshop. Full implementation pricing to be confirmed with JAKALA product team before first client conversations.
+
+---
+
 ## Offering-to-ICP Quick Map
 
 | Offering | Best ICP | Avg Entry Value | Primary Signal |
@@ -281,6 +352,7 @@ https://www.jakala.com/en-us/activations/communication-media-activation
 | Commerce Optimization Pilot | Live ecommerce, weak discovery/search | €60K pilot | B2B launch, DC automation, low online share |
 | Hello Growth | SaaS scale-up, Microsoft SDC | DKK 150–250K fixed fee (~€20–34K) | Azure Marketplace listing, Microsoft partnership |
 | DXP Transformation | Enterprise, multi-brand, exec sponsor | €500K+ | Post-diagnostic expansion, transformation mandate |
+| J-IGNITE | Large enterprise, CDO/CIO/Head of Innovation, 500+ employees | €30–50K discovery | AI transformation mandate, innovation bottleneck, post-acquisition, new CDO/CIO |
 
 ---
 
@@ -315,3 +387,18 @@ https://www.jakala.com/en-us/activations/communication-media-activation
 | NAF | Data Revenue Diagnostic | 500K members, EV service evolution | €75K–€200K |
 | GANT Norway | Data Revenue Diagnostic (Club GANT) | Dynamic Yield + IMPACT Commerce | €100K–€250K |
 | Strai Kjøkken | Shopify Commerce Build or Commerce Optimization | Odoo implemented, record growth | €60K–€150K |
+
+---
+
+### J-IGNITE — Nordic Account Fit
+
+| Account | Country | Why J-IGNITE fits | Signal | Buyer | Est. Entry Value |
+|---------|---------|-------------------|--------|-------|-----------------|
+| H&M Group | SE | 30+ AI initiatives running in parallel — classic innovation throughput problem. Multi-brand coordination across markets. | Google Cloud AI partnership + AI strategy public | Global Head of Innovation / CDO (TBD) | €50–80K |
+| ICA Gruppen | SE | 2,000+ employees in AI training, Shop with AI live — active innovation agenda but governance unclear | AI training rollout + RELEX + Ocado automation | CDO / Head of Innovation | €40–70K |
+| NorgesGruppen | NO | 12 retail chains, complex group structure — innovation dies between BUs. Trumf AI programme adjacent. | Retail media + data transformation agenda | Group CDO / CIO | €40–70K |
+| Salling Group | DK | Large multi-format retail group (Netto, Bilka, Føtex, BR). WPP partnership + 550-store digitalization. | WPP Open Intelligence + VusionGroup deployment | Group CDO / Head of Digital | €40–70K |
+| Varner Group | NO | 7 brands, 1,200+ stores, Sitoo rollout — active innovation but fragmented across brands | No shared PIM = innovation fragmentation signal | CDO (TBD) | €40–60K |
+| Bestseller | DK | 13 brands, 70 markets, €5.1B revenue — exactly the multi-BU innovation coordination problem J-IGNITE solves | Group transformation mandate | Group CTO/CDO (TBD) | €50–80K |
+| Equinor | NO | Energy transition mandate — massive innovation portfolio with complex stakeholder governance | Public sustainability + AI strategy | Head of Innovation / Chief Digital Officer | €50–80K |
+| DNB | NO | Major bank with innovation lab (DNB Ventures) — classic "ideas die before evaluation" problem | Active fintech/AI programme | Chief Innovation Officer / CDO | €40–70K |

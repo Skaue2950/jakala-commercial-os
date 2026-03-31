@@ -1,6 +1,6 @@
 # Pipeline Dashboard
 
-Last updated: 2026-03-08 — Week 11
+Last updated: 2026-03-16 — Week 12
 
 **Scope: Nordic only (DK/NO/SE). UK and France accounts excluded from Nordic pipeline.**
 
@@ -10,10 +10,10 @@ Last updated: 2026-03-08 — Week 11
 
 | Metric | Value |
 |---|---|
-| Total target accounts | 59 (53 Commerce/Data + 6 SaaS Hello Growth) |
-| Active leads (named buyer + entry offer ready) | 14 |
-| Pipeline Value (total) | €9.2M Commerce/Data + DKK 1.2M Hello Growth |
-| Pipeline Change vs Last Week | +€1.8M · +8 new accounts (Track A discovery) · +4 named buyers |
+| Total target accounts | 63 (57 Commerce/Data + 6 SaaS Hello Growth) |
+| Active leads (named buyer + entry offer ready) | 16 |
+| Pipeline Value (total) | €10.5M Commerce/Data + DKK 1.2M Hello Growth |
+| Pipeline Change vs Last Week | +€1.3M · +4 new accounts (Salling Group, ICA Gruppen, KappAhl, Europris) · +2 new signals |
 | Accounts in Discovery | 14 (active outreach-ready) |
 | Accounts in Pilot / Diagnostic | 0 |
 | Accounts in Proposal | 0 |
@@ -22,14 +22,14 @@ Last updated: 2026-03-08 — Week 11
 | Average deal score (top 6) | 8.8 / 10 |
 | Average ICP score (top 6) | 8.7 / 10 |
 | Average win probability (top 6) | 47% |
-| Probability-weighted forecast (top 6) | €1.44M |
-| Base case Q2 forecast | €465K Commerce/Data + DKK 450K Hello Growth |
+| Probability-weighted forecast (top 6) | **€1.8M** (updated — H&M buyer Adam Ull unlocked, +€360K) |
+| Base case Q2 forecast | **€600K** Commerce/Data + DKK 450K Hello Growth (revised up from €465K) |
 | Deal velocity | 90–180 days to first diagnostic (Commerce/Data) · 30–60 days (Hello Growth) |
 | Active delivery accounts | 1 (Maxbo — Speedtrain) |
 | Outreach sent | 0 — all deals pre-first contact |
 | Meetings booked | 0 |
 
-**Status: RED — Zero pipeline conversion after 11 weeks. Three outreach messages drafted and ready. Sending today moves status to Amber.**
+**Status: RED — Zero pipeline conversion after 12 weeks. Siteimprove window now day 13. H&M buyer unlocked (+€360K weighted). Outreach must go out today.**
 
 ---
 
@@ -38,12 +38,12 @@ Last updated: 2026-03-08 — Week 11
 | Rank | Account | Country | Offering | ICP | Win % | Entry Value | Weighted | Named Buyer | Status |
 |------|---------|---------|----------|-----|-------|-------------|---------|-------------|--------|
 | 1 | Elkjøp Nordic | NO | Commerce Optimization | 8 | 65% | €700K | €455K | Morten Syversen ✓ | Ready — outreach drafted |
-| 2 | H&M Group | SE | Data Revenue + Speedtrain | 9 | 25% | €900K | €225K | TBD — buyer gap | Stalled — buyer needed |
+| 2 | H&M Group | SE | Data Revenue + Speedtrain | 9 | 65% | €900K | **€585K** | **Adam Ull ✓** (Global Product Information Lead) | Ready — LinkedIn outreach today |
 | 3 | Boozt | DK | AI Readiness Diagnostic | 9 | 70% | €300K | €210K | Jesper Brøndum ✓ | Ready — LinkedIn warm-up first |
 | 4 | Clas Ohlson | SE | Commerce Optimization | 7 | 55% | €350K | €193K | Helena Holmström ✓ | Ready — draft outreach |
 | 5 | Trumf | NO | Data Revenue + Speedtrain | 9 | 40% | €450K | €180K | Bigseth + Etholm-Idsøe ✓ | Ready — outreach drafted |
 | 6 | Matas Group | DK | AI Readiness Diagnostic | 9 | 25% | €700K | €175K | TBD — buyer gap | Stalled — buyer needed |
-| **Total** | | | | | | **€3.4M** | **€1.44M** | | |
+| **Total** | | | | | | **€3.4M** | **€1.8M** | | |
 
 **Cap rule:** Accounts without a named buyer are capped at 25% win probability regardless of ICP/Deal score.
 

@@ -1,6 +1,6 @@
 # Weekly GTM Summary
 
-Last updated: 2026-03-09 — Week 11 Monday
+Last updated: 2026-03-10 — Week 11 Tuesday
 
 ---
 
@@ -39,7 +39,7 @@ Last updated: 2026-03-09 — Week 11 Monday
 | Metric | Value |
 |--------|-------|
 | Total accounts | 59 (53 commerce/retail + 6 SaaS/Hello Growth) |
-| Total pipeline value | €9.2M (commerce + data) + DKK 1.2M (Hello Growth) |
+| Total pipeline value | €10.5M (commerce + data) + DKK 1.2M (Hello Growth) |
 | Named buyers identified | 28 |
 | Probability-weighted forecast (top 6) | €1.44M |
 | Base case Q2 forecast | €465K |

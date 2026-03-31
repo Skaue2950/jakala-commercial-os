@@ -176,13 +176,155 @@ Last updated: 2026-03-07
 
 ---
 
+## LEAD-007 — Salling Group (Denmark)
+
+**Signal:** Salling Group joined WPP Media's Open Intelligence For Commerce (January 27, 2026), enabling first-party retail data for custom targeting across Netto, Bilka, and føtex. Separately, Netto Denmark selected VusionGroup to digitalize all 550 stores with electronic shelf labels and in-store digital infrastructure. On top of this: TCS partnership (June 2025) for AI-enabled cloud migration across 2,100 stores and 68,000 employees.
+
+**Why it matters:** Three overlapping signals in 8 months: cloud foundation (TCS), in-store digitalization (VusionGroup), and retail media data activation (WPP Media). Each new system adds integration complexity and data layer gaps. Salling is building the infrastructure — but the experience and personalization layer on top is still unaddressed.
+
+**GTM Strategy:** Data Revenue Unlock → Commerce Optimization
+
+**Entry offer:** Data Revenue Diagnostic — map how Netto/Bilka/føtex loyalty and purchase data flows across the new TCS cloud environment, and where personalization and retail media monetization is leaking.
+
+**Best buyer:** CDO / Head of eCommerce & Digital / Head of Retail Media
+
+**Expansion path:** Data diagnostic → retail media activation → experience personalization across all Salling brands
+
+**ICP Score:** 8/10
+- Industry fit: 2 (Denmark's largest retailer, grocery + specialty)
+- Data complexity: 2 (2,100 stores, multi-brand, multi-market, loyalty + ESL data)
+- AI potential: 2 (TCS AI cloud + WPP retail media = AI intent confirmed)
+- Architecture complexity: 1 (TCS migration still in progress)
+- Revenue impact: 1 (massive retail estate)
+
+**Deal potential:** High — largest retailer in Denmark, active multi-system investment cycle, retail media as clear wedge
+
+**Next action:** Identify Salling Group CDO or Head of eCommerce & Digital. Lead with retail media data activation angle — frame as "you've built the infrastructure, now activate the data."
+
+---
+
+## LEAD-008 — Boozt (Sweden / Nordics)
+
+**Signal:** Boozt published a technical blog post (February 2026) titled "A glimpse into our journey delivering AI-powered services at Boozt." Q4 2025 earnings call highlighted AI integration driving strategic shifts and growth. Active AI programs cover personalization, customer segmentation, and customer service automation.
+
+**Why it matters:** Boozt is a pure-play fashion ecommerce company that is explicitly investing in AI at the commerce layer. The Feb 2026 blog signals internal build capacity — but the problem they're describing (segmentation, personalization in fashion) is exactly where JAKALA's product data and AI readiness capabilities are strongest. Internal builds in fashion AI typically plateau without external data architecture support.
+
+**GTM Strategy:** AI Readiness Accelerator → Commerce Optimization
+
+**Entry offer:** AI Readiness Diagnostic — assess the data architecture and product data layer supporting Boozt's AI personalization programs. Identify where product information quality is limiting recommendation accuracy.
+
+**Best buyer:** CTO / Head of AI / Head of Product
+
+**Expansion path:** AI architecture assessment → product data enrichment → personalization layer optimization
+
+**ICP Score:** 8/10
+- Industry fit: 2 (fashion ecommerce pure-play, Nordic + international)
+- Data complexity: 2 (large fashion catalog, multi-brand, customer segmentation complexity)
+- AI potential: 2 (explicitly building — need architecture support)
+- Architecture complexity: 2 (complex fashion data model, multi-market)
+- Revenue impact: 0 (pure-play ecommerce, digital-native, smaller scale)
+
+**Deal potential:** Medium-High — AI-active, Nordic pure-play, clear data architecture entry point
+
+**Next action:** Research Boozt CTO or Head of AI/Product. Lead with the product data and AI readiness narrative — reference their own Feb 2026 blog as conversation context.
+
+---
+
+## LEAD-009 — ICA Gruppen (Sweden)
+
+**Signal:** ICA Gruppen is ramping up AI use across all projects, solutions, and ways of working (2025–2026). Over 2,000 employees enrolled in AI-focused training via ICA Greenhouse. "Shop with AI" feature live — personalized menus and shopping lists based on customer data. RELEX implemented for AI-driven inventory forecasting and replenishment. Automated ecommerce warehouse in Brunna (Ocado technology) fully operational. Peter Muld (CIO) leading the Digital & Technology organization.
+
+**Why it matters:** ICA is Sweden's largest grocery chain and is in active, board-level AI transformation. The RELEX integration handles supply chain — but the customer experience, product data, and personalization layers are still early. "Shop with AI" is a thin feature on top of shallow data architecture. The AI ambition clearly exceeds the underlying data quality and personalization infrastructure.
+
+**GTM Strategy:** Data Revenue Unlock → AI Readiness Accelerator
+
+**Entry offer:** AI Readiness Diagnostic — assess the data and architecture readiness behind ICA's AI programs (personalization, Shop with AI, customer data). Identify the gap between AI ambition and actual data infrastructure.
+
+**Best buyer:** CIO Peter Muld / CDO / Head of Digital Commerce
+
+**Expansion path:** AI diagnostic → data architecture → personalization platform → retail media activation
+
+**ICP Score:** 9/10
+- Industry fit: 2 (Sweden's largest grocery chain, loyalty program, high transaction frequency)
+- Data complexity: 2 (millions of loyalty members, multi-format, multi-channel)
+- AI potential: 2 (board-level AI investment, 2,000+ employees trained, multiple active programs)
+- Architecture complexity: 2 (Ocado automation, RELEX, digital bank, pharmacy — highly complex)
+- Revenue impact: 1 (massive retail estate but ICA stores are franchised)
+
+**Deal potential:** High — Sweden's largest retailer, confirmed AI investment, strong data assets, accessible buyer (Peter Muld is public)
+
+**Next action:** LinkedIn outreach to Peter Muld (CIO) or identify Head of Digital Commerce. Lead with AI readiness narrative — frame as "you've invested in AI at scale, now ensure the data layer can sustain it."
+
+---
+
+## LEAD-010 — KappAhl (Sweden / Nordics)
+
+**Signal:** KappAhl completed a full ecommerce platform modernization — migrated from legacy on-premise to Optimizely (Avensia Nitro), with Inriver PIM and Voyado Elevate integrated. New hybrid mobile app launched. Simultaneously, Vanderlande FASTPICK logistics automation implemented in new distribution centre. Platform is now live.
+
+**Why it matters:** A freshly modernized commerce platform creates a clear next-phase opportunity. The new tech stack (Optimizely + Inriver + Voyado) is exactly JAKALA's domain. Post-migration, KappAhl will be ready to optimize: PIM enrichment, product discovery, personalization, and cross-market experience unification (SE, NO, FI, PL). Post-launch platforms always have data quality gaps — and the new DC automation increases pressure to have clean product data.
+
+**GTM Strategy:** Commerce Optimization → Data Revenue Unlock
+
+**Entry offer:** Commerce Optimization Pilot — product data enrichment and discovery optimization on the new Optimizely/Inriver stack. Frame as "Phase 2 of your platform investment."
+
+**Best buyer:** Head of Digital / CMO / Head of eCommerce
+
+**Expansion path:** PIM optimization → product discovery → personalization → Nordic market expansion
+
+**ICP Score:** 7/10
+- Industry fit: 2 (fashion retail, multi-market SE/NO/FI/PL, high-SKU)
+- Data complexity: 1 (Inriver PIM just implemented — data quality still maturing)
+- AI potential: 1 (Voyado Elevate = personalization intent, but early stage)
+- Architecture complexity: 2 (new composable stack + DC automation = integration complexity)
+- Revenue impact: 1 (mid-size Nordic fashion retailer)
+
+**Deal potential:** Medium — platform freshly modernized, JAKALA-native stack, clear next-phase hook
+
+**Next action:** Identify KappAhl Head of Digital or CMO. Lead with "Phase 2 of your Optimizely investment" — frame around product data quality and discovery optimization on the new platform.
+
+---
+
+## LEAD-011 — Europris (Norway / Sweden)
+
+**Signal:** Europris is executing a comprehensive IT modernization initiative in 2025–2026. Their RESTORE program will remodel 40–45 ÖoB stores in Sweden in 2026. New ÖoB CEO Anders Lorentzson (started November 2025) is driving the Swedish turnaround. Norway segment delivered 53% EBIT growth in Q3 2025. E-commerce diversification: partial ownership in Lekekassen, Strikkemekka, and Designhandel.
+
+**Why it matters:** IT modernization + new CEO for the Swedish business + e-commerce diversification = multiple signals converging. Europris is building a multi-channel business — discount retail + digital commerce ventures. The e-commerce investments are early-stage, which means the data and commerce architecture decisions are not yet made. This is an early entry window before they commit to a tech stack.
+
+**GTM Strategy:** Commerce Optimization → Data Revenue Unlock
+
+**Entry offer:** Commerce Optimization Pilot — digital commerce architecture advisory as Europris expands its e-commerce estate and executes the RESTORE program.
+
+**Best buyer:** CTO / Head of Digital / Anders Lorentzson (ÖoB CEO)
+
+**Expansion path:** Commerce architecture advisory → PIM for multi-format retail → data activation across loyalty and digital commerce
+
+**ICP Score:** 7/10
+- Industry fit: 2 (discount retail + digital commerce expansion, multi-format)
+- Data complexity: 1 (early digital commerce, loyalty still developing)
+- AI potential: 1 (not yet publicly AI-active)
+- Architecture complexity: 2 (IT modernization + new stores + e-commerce ventures)
+- Revenue impact: 1 (strong Norway performance, Sweden turnaround underway)
+
+**Deal potential:** Medium — active investment cycle, new Swedish leadership, e-commerce architecture decisions still open
+
+**Next action:** Identify Europris CTO or Head of IT/Digital. Alternatively, contact ÖoB CEO Anders Lorentzson on Swedish turnaround digital strategy. Frame as "your remodeling program needs a digital backbone."
+
+---
+
 ## Summary — Lead Priority
+
+Last updated: 2026-03-09
 
 | Rank | Company | Country | GTM Strategy | ICP Score | Priority |
 |------|---------|---------|-------------|-----------|----------|
-| 1 | Matas Group | Denmark/Nordics | AI Readiness Accelerator | 9/10 | High |
-| 2 | Carrefour | France | Data Revenue Unlock | 9/10 | High |
-| 3 | Kingfisher | UK/France | AI Readiness Accelerator | 8/10 | High |
-| 4 | Elkjøp Nordic | Norway/Nordics | Commerce Optimization | 8/10 | High |
-| 5 | H&M Group | Sweden | Data Revenue Unlock | 8/10 | Medium-High |
-| 6 | Clas Ohlson | Sweden | Commerce Optimization | 7/10 | Medium |
+| 1 | Matas Group | DK/Nordics | AI Readiness Accelerator | 9/10 | High |
+| 2 | ICA Gruppen | SE | Data Revenue Unlock | 9/10 | High |
+| 3 | Elkjøp Nordic | NO/Nordics | Commerce Optimization | 8/10 | High |
+| 4 | Salling Group | DK | Data Revenue Unlock | 8/10 | High |
+| 5 | Boozt | SE/Nordics | AI Readiness Accelerator | 8/10 | Medium-High |
+| 6 | H&M Group | SE | Data Revenue Unlock | 8/10 | Medium-High |
+| 7 | Clas Ohlson | SE | Commerce Optimization | 7/10 | Medium |
+| 8 | KappAhl | SE/Nordics | Commerce Optimization | 7/10 | Medium |
+| 9 | Europris | NO/SE | Commerce Optimization | 7/10 | Medium |
+| — | Carrefour | France | — | — | OUT OF SCOPE |
+| — | Kingfisher | UK | — | — | OUT OF SCOPE |
