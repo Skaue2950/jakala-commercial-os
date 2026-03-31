@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 try:
     import bcrypt
-    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit, PartnerValidation
+    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit, PartnerValidation, Notification
     CC_DB_OK = True
 except Exception as _cc_err:
     print(f"[CC] Import error: {_cc_err}")
@@ -81,6 +81,16 @@ def job_flag_stale_accounts():
                     is_active=True
                 )
                 db.add(sig)
+                notif_stale = Notification(
+                    country=acc.country,
+                    account_id=acc.id,
+                    title=f"No activity: {acc.name}",
+                    body=f"No contact in 14+ days. Buyer: {acc.named_buyer or 'TBD'}. Stage: {acc.deal_stage}.",
+                    type="stale",
+                    priority="high" if acc.icp_score and acc.icp_score >= 8 else "medium",
+                    link=f"/app?tab=accounts&account={acc.slug}"
+                )
+                db.add(notif_stale)
         db.commit()
         print(f"[SCHEDULER] Flagged {len(stale)} stale accounts")
     except Exception as e:
@@ -291,6 +301,16 @@ Search results:
                 is_active=True
             )
             db.add(sig)
+            notif = Notification(
+                country=lead.get("country", "no"),
+                account_id=acc.id,
+                title=f"New lead discovered: {lead.get('name')}",
+                body=f"ICP {lead.get('icp_score', '?')} · {lead.get('signal', '')[:120]}",
+                type="lead",
+                priority="high" if lead.get("icp_score", 0) >= 8 else "medium",
+                link=f"/app?tab=accounts&account={slug}"
+            )
+            db.add(notif)
             added += 1
 
         db.commit()
@@ -298,6 +318,125 @@ Search results:
     except Exception as e:
         db.rollback()
         print(f"[LEADS] DB insert failed: {e}")
+    finally:
+        db.close()
+
+    if added > 0:
+        import threading
+        threading.Thread(target=job_enrich_accounts, daemon=True).start()
+
+
+def job_enrich_accounts():
+    """Runs after lead scan and weekly — Claude recommends JAKALA services for unenriched accounts."""
+    db = SessionLocal()
+    try:
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+
+        enriched_ids = db.query(Activation.account_id).distinct().subquery()
+        unenriched = db.query(Account).filter(
+            ~Account.id.in_(db.query(enriched_ids.c.account_id))
+        ).limit(10).all()
+
+        if not unenriched:
+            print("[ENRICHMENT] All accounts have activations — skipping")
+            return
+
+        services = db.query(Service).all()
+        services_text = "\n".join([
+            f"- {s.name} ({s.short_name}): {s.practice} practice. Entry: \u20ac{int(s.entry_price_min/1000)}K\u2013\u20ac{int(s.entry_price_max/1000)}K. Expansion: \u20ac{int(s.expansion_price_min/1000)}K\u2013\u20ac{int(s.expansion_price_max/1000)}K. Slug: {s.slug}"
+            for s in services
+        ])
+
+        enriched_count = 0
+        for acc in unenriched:
+            prompt = f"""You are a senior JAKALA consultant recommending services to a Nordic prospect.
+
+Account: {acc.name}
+Country: {acc.country.upper()}
+Revenue: {acc.revenue or 'unknown'}
+Tech Stack: {acc.tech_stack or 'unknown'}
+Named Buyer: {acc.named_buyer or 'TBD'} ({acc.buyer_role or 'unknown role'})
+Notes: {acc.notes or ''}
+
+Available JAKALA services:
+{services_text}
+
+Recommend the TOP 2 most relevant services for this account. For each:
+- Which service (use the slug)
+- Why it fits (1 sentence)
+- Estimated deal stage: 'identified' | 'proposed'
+- Cost estimate in EUR
+- Timeline in weeks
+- ROI estimate in EUR
+
+Return JSON array only:
+[
+  {{
+    "slug": "service-slug",
+    "reason": "Why this fits",
+    "stage": "identified",
+    "cost_estimate": 60000,
+    "timeline_weeks": 10,
+    "roi_estimate": 200000
+  }}
+]"""
+
+            try:
+                response = client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=800,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                raw = response.content[0].text.strip()
+                if raw.startswith("```"):
+                    raw = raw.split("```")[1]
+                    if raw.startswith("json"):
+                        raw = raw[4:]
+                recommendations = json.loads(raw)
+            except Exception as e:
+                print(f"[ENRICHMENT] Claude failed for {acc.name}: {e}")
+                continue
+
+            svc_map = {s.slug: s for s in services}
+            added_services = []
+            for rec in recommendations:
+                svc = svc_map.get(rec.get("slug"))
+                if not svc:
+                    continue
+                activation = Activation(
+                    account_id=acc.id,
+                    service_id=svc.id,
+                    manager="Auto-enriched",
+                    stage=rec.get("stage", "identified"),
+                    cost_estimate=float(rec.get("cost_estimate", 60000)),
+                    timeline_weeks=int(rec.get("timeline_weeks", 10)),
+                    roi_estimate=float(rec.get("roi_estimate", 150000)),
+                    notes=rec.get("reason", "")
+                )
+                db.add(activation)
+                added_services.append(svc.short_name)
+
+            if added_services:
+                svc_label = " \u00b7 ".join(added_services)
+                acc_notes_short = acc.notes[:100] if acc.notes else ""
+                notif = Notification(
+                    country=acc.country,
+                    account_id=acc.id,
+                    title=f"Service match: {acc.name}",
+                    body=f"Recommended: {svc_label}. {acc_notes_short}",
+                    type="enrichment",
+                    priority="medium" if acc.icp_score and acc.icp_score >= 8 else "low",
+                    link=f"/app?tab=accounts&account={acc.slug}"
+                )
+                db.add(notif)
+                enriched_count += 1
+
+        db.commit()
+        print(f"[ENRICHMENT] Enriched {enriched_count} accounts with service recommendations")
+    except Exception as e:
+        db.rollback()
+        print(f"[ENRICHMENT] Job failed: {e}")
     finally:
         db.close()
 
@@ -311,6 +450,8 @@ if not _os_sched.environ.get("WERKZEUG_RUN_MAIN"):
     _scheduler.add_job(job_weekly_briefs,        CronTrigger(day_of_week="mon", hour=6, minute=55), id="weekly_briefs", replace_existing=True)
     _scheduler.add_job(job_deactivate_stale_signals, CronTrigger(day_of_week="sun", hour=23, minute=0), id="signal_cleanup", replace_existing=True)
     _scheduler.add_job(job_scan_new_leads,       CronTrigger(day_of_week="mon-fri", hour=6, minute=30), id="lead_scan", replace_existing=True)
+    _scheduler.add_job(job_enrich_accounts, CronTrigger(day_of_week="mon-fri", hour=6, minute=45), id="enrich_accounts", replace_existing=True)
+    _scheduler.add_job(job_enrich_accounts, CronTrigger(day_of_week="mon", hour=8, minute=0),       id="enrich_weekly",  replace_existing=True)
     _scheduler.start()
     atexit.register(lambda: _scheduler.shutdown())
     print("[SCHEDULER] Started — daily plans 07:00, weekly briefs Mon 06:55, stale check 07:05, lead scan Mon-Fri 06:30")
@@ -514,6 +655,62 @@ def scheduler_status():
         return jsonify({"running": True, "jobs": jobs})
     except Exception as e:
         return jsonify({"running": False, "error": str(e)})
+
+
+@app.route("/api/notifications")
+def get_notifications():
+    if not session.get("logged_in") and not session.get("cc_user_id"):
+        return jsonify({"error": "unauthorized"}), 401
+    country = session.get("cc_country") or request.args.get("country", "no")
+    db = SessionLocal()
+    try:
+        notifs = db.query(Notification).filter(
+            (Notification.country == country) | (Notification.country == None)
+        ).order_by(Notification.created_at.desc()).limit(30).all()
+        unread = sum(1 for n in notifs if not n.is_read)
+        return jsonify({
+            "unread": unread,
+            "notifications": [{
+                "id": n.id,
+                "title": n.title,
+                "body": n.body,
+                "type": n.type,
+                "priority": n.priority,
+                "is_read": n.is_read,
+                "link": n.link,
+                "created_at": n.created_at.strftime("%Y-%m-%d %H:%M") if n.created_at else None
+            } for n in notifs]
+        })
+    finally:
+        db.close()
+
+
+@app.route("/api/notifications/<int:nid>/read", methods=["POST"])
+def mark_notification_read(nid):
+    db = SessionLocal()
+    try:
+        n = db.query(Notification).filter(Notification.id == nid).first()
+        if n:
+            n.is_read = True
+            db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
+
+
+@app.route("/api/notifications/read-all", methods=["POST"])
+def mark_all_read():
+    country = session.get("cc_country") or (request.json or {}).get("country", "no")
+    db = SessionLocal()
+    try:
+        db.query(Notification).filter(
+            (Notification.country == country) | (Notification.country == None),
+            Notification.is_read == False
+        ).update({"is_read": True})
+        db.commit()
+        return jsonify({"ok": True})
+    finally:
+        db.close()
 
 
 @app.route("/api/leads/scan", methods=["POST"])
@@ -3003,6 +3200,24 @@ body::after {
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
   </div>
 
+  <!-- GTM OS Notification Bell -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px 2px;">
+    <div id="notif-bell" onclick="toggleNotifPanel()" style="position:relative;cursor:pointer;padding:6px 8px;border-radius:8px;display:flex;align-items:center;gap:6px;color:var(--muted);transition:all .15s;" onmouseenter="this.style.background='rgba(255,255,255,0.06)'" onmouseleave="this.style.background='transparent'">
+      <i data-lucide="bell" style="width:16px;height:16px;"></i>
+      <span style="font-size:11px;color:var(--muted);">Notifications</span>
+      <span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px;"></span>
+    </div>
+  </div>
+
+  <!-- GTM OS Notification Panel -->
+  <div id="notif-panel" style="display:none;position:fixed;top:12px;left:200px;width:380px;max-height:520px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.5);z-index:8000;overflow:hidden;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.08);">
+      <span style="font-size:13px;font-weight:700;color:#fff;">Notifications</span>
+      <button onclick="markAllRead()" style="font-size:11px;color:#6B8EF7;background:none;border:none;cursor:pointer;font-weight:600;">Mark all read</button>
+    </div>
+    <div id="notif-list" style="overflow-y:auto;max-height:420px;"></div>
+  </div>
+
   <div class="sidebar-label">Execute</div>
   <button class="nav-btn" onclick="showTab('dashboard')" id="nav-dashboard">
     <span class="icon"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span> Deal Board
@@ -4899,6 +5114,77 @@ function openOutreachInChat() {
 function regenOutreach() {
   openOutreachModal(_outreachContext.slug, _outreachContext.name, _outreachContext.buyer);
 }
+
+// ── Notification Center (GTM OS) ──────────────────────────────────────────
+let _notifOpen = false;
+
+function toggleNotifPanel() {
+  _notifOpen = !_notifOpen;
+  const panel = document.getElementById('notif-panel');
+  panel.style.display = _notifOpen ? 'flex' : 'none';
+  if (_notifOpen) loadNotifications();
+}
+
+document.addEventListener('click', function(e) {
+  const bell = document.getElementById('notif-bell');
+  const panel = document.getElementById('notif-panel');
+  if (bell && panel && !bell.contains(e.target) && !panel.contains(e.target)) {
+    panel.style.display = 'none';
+    _notifOpen = false;
+  }
+});
+
+async function loadNotifications() {
+  try {
+    const r = await fetch('/api/notifications');
+    if (!r.ok) return;
+    const d = await r.json();
+    const badge = document.getElementById('notif-badge');
+    if (d.unread > 0) {
+      badge.textContent = d.unread > 9 ? '9+' : d.unread;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    if (!d.notifications || !d.notifications.length) {
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;">No notifications</div>';
+      return;
+    }
+    const typeColor = {lead:'#3B82F6', signal:'#F59E0B', enrichment:'#10B981', stale:'#EF4444', action:'#10B981', info:'#6B7280'};
+    const typeIcon  = {lead:'user-plus', signal:'radio', enrichment:'sparkles', stale:'clock', action:'check-circle', info:'info'};
+    list.innerHTML = d.notifications.map(function(n) {
+      return '<div onclick="handleNotifClick(' + n.id + ',\\'' + (n.link||'') + '\\')" style="display:flex;gap:12px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;background:' + (n.is_read ? 'transparent' : 'rgba(107,142,247,0.08)') + ';transition:background .15s;">' +
+        '<div style="width:32px;height:32px;border-radius:8px;background:' + (typeColor[n.type]||'#6B7280') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.8;">' +
+          '<i data-lucide="' + (typeIcon[n.type]||'info') + '" style="width:16px;height:16px;color:#fff;"></i>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:12px;font-weight:' + (n.is_read?'500':'700') + ';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + n.title + '</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;line-height:1.4;">' + (n.body||'') + '</div>' +
+          '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;">' + (n.created_at||'') + '</div>' +
+        '</div>' +
+        (!n.is_read ? '<div style="width:6px;height:6px;border-radius:50%;background:#6B8EF7;flex-shrink:0;margin-top:4px;"></div>' : '') +
+      '</div>';
+    }).join('');
+    lucide.createIcons();
+  } catch(e) { console.error('Notifications failed', e); }
+}
+
+async function handleNotifClick(id, link) {
+  await fetch('/api/notifications/' + id + '/read', {method:'POST'});
+  loadNotifications();
+  if (link) { window.location.href = link; }
+}
+
+async function markAllRead() {
+  await fetch('/api/notifications/read-all', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+  loadNotifications();
+}
+
+// Poll for new notifications every 60 seconds
+setInterval(loadNotifications, 60000);
+document.addEventListener('DOMContentLoaded', function() { setTimeout(loadNotifications, 1000); });
 </script>
 <script>lucide.createIcons();</script>
 </body>
@@ -6951,6 +7237,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--t);min-height:100v
         <div class="topbar-avatar" id="tb-avatar"></div>
         <span id="tb-name"></span>
       </div>
+      <!-- CC Notification Bell -->
+      <div id="cc-notif-bell" onclick="toggleCCNotifPanel()" style="position:relative;cursor:pointer;padding:6px 8px;border-radius:8px;display:flex;align-items:center;gap:6px;color:var(--m);transition:all .15s;">
+        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        <span id="cc-notif-badge" style="display:none;position:absolute;top:4px;right:4px;background:#EF4444;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;padding:0 3px;"></span>
+      </div>
+
+      <!-- CC Notification Panel -->
+      <div id="cc-notif-panel" style="display:none;position:fixed;top:58px;right:16px;width:380px;max-height:520px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 40px rgba(21,62,237,0.12);z-index:8000;overflow:hidden;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;font-weight:700;color:var(--w);">Notifications</span>
+          <button onclick="markCCAllRead()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;font-weight:600;">Mark all read</button>
+        </div>
+        <div id="cc-notif-list" style="overflow-y:auto;max-height:420px;"></div>
+      </div>
+
       <span class="topbar-link" onclick="doLogout()">Sign out</span>
     </div>
   </div>
@@ -8684,6 +8985,77 @@ function showToast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3500);
 }
+
+// ── Notification Center (Control Center) ─────────────────────────────────────
+let _ccNotifOpen = false;
+
+function toggleCCNotifPanel() {
+  _ccNotifOpen = !_ccNotifOpen;
+  const panel = document.getElementById('cc-notif-panel');
+  panel.style.display = _ccNotifOpen ? 'flex' : 'none';
+  if (_ccNotifOpen) loadCCNotifications();
+}
+
+document.addEventListener('click', function(e) {
+  const bell = document.getElementById('cc-notif-bell');
+  const panel = document.getElementById('cc-notif-panel');
+  if (bell && panel && !bell.contains(e.target) && !panel.contains(e.target)) {
+    panel.style.display = 'none';
+    _ccNotifOpen = false;
+  }
+});
+
+async function loadCCNotifications() {
+  try {
+    const r = await fetch('/api/notifications');
+    if (!r.ok) return;
+    const d = await r.json();
+    const badge = document.getElementById('cc-notif-badge');
+    if (d.unread > 0) {
+      badge.textContent = d.unread > 9 ? '9+' : d.unread;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    const list = document.getElementById('cc-notif-list');
+    if (!list) return;
+    if (!d.notifications || !d.notifications.length) {
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--m);font-size:13px;">No notifications</div>';
+      return;
+    }
+    const typeColor = {lead:'var(--blue)', signal:'#F59E0B', enrichment:'#10B981', stale:'#EF4444', action:'#10B981', info:'var(--m)'};
+    const typeIcon  = {lead:'user-plus', signal:'radio', enrichment:'sparkles', stale:'clock', action:'check-circle', info:'info'};
+    list.innerHTML = d.notifications.map(function(n) {
+      return '<div onclick="handleCCNotifClick(' + n.id + ',\\'' + (n.link||'') + '\\')" style="display:flex;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;background:' + (n.is_read ? 'transparent' : 'rgba(21,62,237,0.06)') + ';transition:background .15s;">' +
+        '<div style="width:32px;height:32px;border-radius:8px;background:' + (typeColor[n.type]||'var(--m)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.85;">' +
+          '<i data-lucide="' + (typeIcon[n.type]||'info') + '" style="width:16px;height:16px;color:#fff;"></i>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:12px;font-weight:' + (n.is_read?'500':'700') + ';color:var(--w);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + n.title + '</div>' +
+          '<div style="font-size:11px;color:var(--m);margin-top:2px;line-height:1.4;">' + (n.body||'') + '</div>' +
+          '<div style="font-size:10px;color:var(--m);margin-top:4px;opacity:0.6;">' + (n.created_at||'') + '</div>' +
+        '</div>' +
+        (!n.is_read ? '<div style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:4px;"></div>' : '') +
+      '</div>';
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch(e) { console.error('CC Notifications failed', e); }
+}
+
+async function handleCCNotifClick(id, link) {
+  await fetch('/api/notifications/' + id + '/read', {method:'POST'});
+  loadCCNotifications();
+  if (link) { window.location.href = link; }
+}
+
+async function markCCAllRead() {
+  await fetch('/api/notifications/read-all', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+  loadCCNotifications();
+}
+
+// Poll for new CC notifications every 60 seconds
+setInterval(loadCCNotifications, 60000);
+document.addEventListener('DOMContentLoaded', function() { setTimeout(loadCCNotifications, 1000); });
 </script>
 <script>lucide.createIcons();</script>
 </body>

@@ -187,6 +187,19 @@ class WeeklyCommit(Base):
     created_at          = Column(DateTime, default=datetime.utcnow)
     user                = relationship('User', back_populates='weekly_commits')
 
+class Notification(Base):
+    __tablename__ = 'cc_notifications'
+    id         = Column(Integer, primary_key=True)
+    country    = Column(String(5))          # 'no','dk','se' or None for global
+    account_id = Column(Integer, ForeignKey('cc_accounts.id'), nullable=True)
+    title      = Column(String(300), nullable=False)
+    body       = Column(Text)
+    type       = Column(String(30), default='info')  # 'lead','signal','enrichment','stale','action'
+    priority   = Column(String(10), default='medium') # 'high','medium','low'
+    is_read    = Column(Boolean, default=False)
+    link       = Column(String(200))        # e.g. '/app?account=matas'
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     _migrate_db()
