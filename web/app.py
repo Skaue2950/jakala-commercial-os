@@ -659,7 +659,7 @@ def scheduler_status():
 
 @app.route("/api/notifications")
 def get_notifications():
-    if not session.get("logged_in") and not session.get("cc_user_id"):
+    if not session.get("authenticated") and not session.get("cc_uid"):
         return jsonify({"error": "unauthorized"}), 401
     country = session.get("cc_country") or request.args.get("country", "no")
     db = SessionLocal()
@@ -716,7 +716,7 @@ def mark_all_read():
 @app.route("/api/leads/scan", methods=["POST"])
 def trigger_lead_scan():
     """Manually trigger a lead scan — useful for testing."""
-    if not session.get("logged_in") and not session.get("cc_user_id"):
+    if not session.get("authenticated") and not session.get("cc_uid"):
         return jsonify({"error": "unauthorized"}), 401
     import threading
     t = threading.Thread(target=job_scan_new_leads, daemon=True)
@@ -783,7 +783,7 @@ def api_accounts():
 
 @app.route("/api/accounts", methods=["POST"])
 def create_account():
-    if not session.get("logged_in") and not session.get("cc_user_id"):
+    if not session.get("authenticated") and not session.get("cc_uid"):
         return jsonify({"error": "unauthorized"}), 401
     data = request.json or {}
     db = SessionLocal()
