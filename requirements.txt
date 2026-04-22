@@ -3,3 +3,6 @@ anthropic>=0.40.0
 python-dotenv>=1.0.0
 gunicorn>=21.0.0
 python-pptx>=0.6.21
+sqlalchemy>=2.0.0
+bcrypt>=4.0.0
+apscheduler>=3.10.0
