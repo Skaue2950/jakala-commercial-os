@@ -617,7 +617,7 @@ def require_login():
     # Landing page + CC routes are always accessible
     if request.path == "/" or request.path.startswith("/cc") or request.path.startswith("/api/cc"):
         return
-    if request.endpoint in ("login", "static"):
+    if request.endpoint in ("login", "static", "api_debug"):
         return
     if not session.get("authenticated"):
         return redirect(url_for("login"))
