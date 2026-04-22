@@ -20,7 +20,7 @@ try:
     if _n == 0:
         try:
             from seed_db import seed
-            seed(force=True)
+            seed()
             print("[CC] DB seeded.")
         except Exception as _se:
             print(f"[CC] Seed warning: {_se}")
