@@ -10,10 +10,22 @@ from dotenv import load_dotenv
 
 try:
     import bcrypt
-    from models import init_db, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit, PartnerValidation, Notification
+    from models import init_db, Base, engine, SessionLocal, User, Industry, Account, Service, Activation, Signal, Prediction, Action, Meeting, WeeklyCommit, PartnerValidation, Notification
+    # Always drop + recreate schema on startup to handle migrations
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    # Seed if empty
+    _seed_db = SessionLocal()
+    if _seed_db.query(User).count() == 0:
+        from seed_db import seed
+        _seed_db.close()
+        seed()
+    else:
+        _seed_db.close()
     CC_DB_OK = True
+    print("[CC] Database ready.")
 except Exception as _cc_err:
-    print(f"[CC] Import error: {_cc_err}")
+    print(f"[CC] Import/seed error: {_cc_err}")
     CC_DB_OK = False
 
 try:
