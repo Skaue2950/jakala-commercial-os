@@ -205,21 +205,25 @@ def init_db():
     _migrate_db()
 
 def _migrate_db():
-    """Add new columns to existing tables if they don't exist."""
-    migrations = [
-        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage VARCHAR(30) DEFAULT 'identified'",
-        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS deal_stage_updated TIMESTAMP",
-        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP",
-        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS strategy_text TEXT",
-        "ALTER TABLE cc_accounts ADD COLUMN IF NOT EXISTS stakeholders_text TEXT",
+    """Add new columns to existing tables if they don't exist (SQLite-compatible)."""
+    columns_to_add = [
+        ("cc_accounts", "deal_stage",         "VARCHAR(30) DEFAULT 'identified'"),
+        ("cc_accounts", "deal_stage_updated",  "TIMESTAMP"),
+        ("cc_accounts", "last_activity",        "TIMESTAMP"),
+        ("cc_accounts", "strategy_text",        "TEXT"),
+        ("cc_accounts", "stakeholders_text",    "TEXT"),
     ]
     try:
         with engine.connect() as conn:
-            for sql in migrations:
-                try:
-                    conn.execute(text(sql))
-                except Exception:
-                    pass  # column already exists or SQLite (no IF NOT EXISTS support)
+            for table, col, col_type in columns_to_add:
+                # Check if column already exists (SQLite-compatible)
+                result = conn.execute(text(f"PRAGMA table_info({table})"))
+                existing = [row[1] for row in result]
+                if col not in existing:
+                    try:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                    except Exception:
+                        pass
             conn.commit()
     except Exception as e:
         print(f"[CC] Migration warning: {e}")
