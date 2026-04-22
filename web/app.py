@@ -628,8 +628,8 @@ LOGIN_HTML = """<!DOCTYPE html>
 
 @app.before_request
 def require_login():
-    # Landing page + CC routes are always accessible
-    if request.path == "/" or request.path.startswith("/cc") or request.path.startswith("/api/cc"):
+    # Landing page + CC routes + debug are always accessible
+    if request.path == "/" or request.path.startswith("/cc") or request.path.startswith("/api/cc") or request.path == "/api/debug":
         return
     if request.endpoint in ("login", "static", "api_debug"):
         return
