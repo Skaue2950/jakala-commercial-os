@@ -642,6 +642,21 @@ def logout():
 
 # ── API routes ───────────────────────────────────────────────────────────────
 
+@app.route("/api/debug")
+def api_debug():
+    import os as _os
+    db_url = _os.getenv("DATABASE_URL", "sqlite:///jakala_cc.db (default)")
+    info = {"cc_db_ok": CC_DB_OK, "database_url": db_url[:80], "accounts": 0, "users": 0, "error": None}
+    if CC_DB_OK:
+        try:
+            db = SessionLocal()
+            info["accounts"] = db.query(Account).count()
+            info["users"] = db.query(User).count()
+            db.close()
+        except Exception as e:
+            info["error"] = str(e)
+    return jsonify(info)
+
 @app.route("/api/scheduler/status")
 def scheduler_status():
     """Returns scheduler job status — useful for debugging."""
