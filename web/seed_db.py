@@ -5,11 +5,15 @@ from models import init_db, SessionLocal, User, Industry, Account, Service, Acti
 
 def hash_pw(pw): return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
 
-def seed():
+def seed(force=False):
+    from models import Base, engine
+    if force:
+        Base.metadata.drop_all(bind=engine)
+        print("Dropped all tables — reseeding fresh.")
     init_db()
     db = SessionLocal()
 
-    if db.query(User).count() > 0:
+    if not force and db.query(User).count() > 0:
         print("Already seeded — skipping.")
         db.close(); return
 
